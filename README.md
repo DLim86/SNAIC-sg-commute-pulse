@@ -16,7 +16,7 @@ OneMap Geocoding ─────────────────────
      │                                                  │
      ▼                                                  │
 ┌─────────────────────────────────────────────────────┐ │
-│                  DATA INGESTION                      │ │
+│                  DATA INGESTION                     │ │
 │  OneMap Routing  │  LTA Bus Arrival  │  LTA Alerts  │ │
 │  data.gov.sg Weather Forecast        │              │ │
 └─────────────────────────────────────────────────────┘ │
