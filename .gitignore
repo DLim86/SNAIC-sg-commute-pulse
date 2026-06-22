@@ -1,0 +1,32 @@
+# API keys — never commit
+config.py
+
+# Database
+*.duckdb
+*.duckdb.wal
+
+# Environment
+.env
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Raw API data (regenerated each pipeline run)
+data/raw/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+*.swp
