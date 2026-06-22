@@ -12,7 +12,7 @@ Built as a Data Engineering course assessment project at SIT (Singapore Institut
 Calendar Event
      │
      ▼
-OneMap Geocoding ──────────────────────────────────────┐
+OneMap Geocoding ───────────────────────────────────────┐
      │                                                  │
      ▼                                                  │
 ┌─────────────────────────────────────────────────────┐ │
@@ -22,7 +22,7 @@ OneMap Geocoding ─────────────────────
 └─────────────────────────────────────────────────────┘ │
      │                                                  │
      ▼                                                  │
-DuckDB (6 tables)  ◄───────────────────────────────────┘
+DuckDB (6 tables)  ◄────────────────────────────────────┘
      │
      ▼
 SQL Transformation (JOIN routes + weather + alerts)
