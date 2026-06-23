@@ -28,9 +28,9 @@
 │                    DUCKDB STORAGE                           │
 │              db/commute.duckdb  (gitignored)                │
 │                                                             │
-│  calendar_events  route_options  weather_forecast           │
-│  bus_arrivals     train_alerts   recommendations            │
-│  pipeline_runs                                              │
+│  calendar_events  route_options  route_legs (NEW)           │
+│  weather_forecast bus_arrivals   train_alerts               │
+│  recommendations  pipeline_runs                             │
 └──────────────────────┬──────────────────────────────────────┘
                        │ SQL VIEW: v_enriched_routes
                        │ JOIN + CASE WHEN + ROW_NUMBER() OVER
@@ -129,13 +129,13 @@ e:\SNAIC\Week 2\Assessment\          ← working directory
 ├── Dockerfile                       ← shared Docker image (to create)
 ├── docker-compose.yml               ← 3-service stack (to create)
 │
-├── scripts/                         ← ALL EMPTY — needs to be written
-│   ├── __init__.py                  ← makes scripts importable by Airflow
-│   ├── schema.py                    ← CREATE TABLE statements (write 1st)
-│   ├── ingest.py                    ← API fetching + retry + upsert
-│   ├── transform.py                 ← SQL views + write recommendations
-│   ├── serve.py                     ← Streamlit dashboard
-│   └── api.py                       ← FastAPI server
+├── scripts/
+│   ├── __init__.py                  ← makes scripts importable by Airflow ✓ DONE
+│   ├── schema.py                    ← 8 tables + v_enriched_routes view   ✓ DONE
+│   ├── ingest.py                    ← 4 APIs, retry, Parquet, legs        ✓ DONE
+│   ├── transform.py                 ← leave-latest/now, legs, warnings    ✓ DONE
+│   ├── serve.py                     ← Streamlit dashboard                 ← NEXT
+│   └── api.py                       ← FastAPI server                      ← TODO
 │
 ├── dags/                            ← to create
 │   ├── __init__.py
@@ -167,18 +167,20 @@ e:\SNAIC\Week 2\Assessment\          ← working directory
 ## Dependencies
 
 ```
-requests==2.31.0     # HTTP API calls
-pandas==2.1.0        # DataFrame handling, json_normalize, parquet write
-duckdb==0.10.0       # embedded analytical DB
-streamlit==1.35.0    # dashboard serving
-icalendar==5.0.11    # parse .ics calendar files
-shapely==2.0.4       # GPS point-in-polygon (nearest area)
-pytz==2024.1         # timezone handling for Singapore +08:00
-fastapi==0.111.0     # REST API serving layer
-uvicorn==0.30.0      # ASGI server for FastAPI
-pyarrow==16.1.0      # Parquet file write (used by pandas)
+requests>=2.31.0     # HTTP API calls
+pandas>=2.2.2        # DataFrame handling, Parquet write (>= for Python 3.14)
+duckdb>=1.0.0        # embedded analytical DB (>= for Python 3.14)
+streamlit>=1.35.0    # dashboard serving
+icalendar>=5.0.11    # parse .ics calendar files
+shapely>=2.0.4       # GPS point-in-polygon (>= for Python 3.14)
+pytz>=2024.1         # timezone handling for Singapore +08:00
+fastapi>=0.111.0     # REST API serving layer
+uvicorn>=0.29.0      # ASGI server for FastAPI
+pyarrow>=16.0.0      # Parquet file write (>= for Python 3.14)
 apache-airflow       # pipeline orchestration (install separately)
 ```
+NOTE: All C-extension packages use `>=` not `==` — Python 3.14 requires
+pre-built wheels which only exist in newer versions.
 
 ---
 
@@ -207,9 +209,11 @@ apache-airflow       # pipeline orchestration (install separately)
 
 ### Weather Area Mapping
 - `data.gov.sg` returns weather per named area: "Ang Mo Kio", "Bedok", "Marina South", etc.
-- No GPS coordinates in the response
-- Strategy: use a hardcoded mapping of approximate area centroids, compute closest area to `dest_lat/dest_lng`
-- Or: use `shapely` to do point-in-polygon with a GeoJSON of planning areas
+- GPS coordinates ARE available in the `area_metadata` field of the API response (`label_location.latitude/longitude`)
+- All 47 areas are upserted into `weather_forecast` table each run
+- The view joins weather by `fetched_at` (latest batch) — creates a cross-join of 47 areas × N routes
+- `route_rank = 1` still gives exactly one row per event (ROW_NUMBER partitioned by event_id)
+- Nearest area to destination is identified in Python using Haversine and logged — informational only
 
 ---
 

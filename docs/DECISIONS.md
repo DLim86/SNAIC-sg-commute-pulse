@@ -211,7 +211,7 @@ for attempt in range(max_retries):
 
 ## D15 — No `.ics` File Parsing in MVP
 
-**Decision:** MVP uses a hardcoded test event (`event_id = "E001"`) rather than parsing a real `.ics` file.
+**Decision:** MVP uses a hardcoded test event (`event_id = "EVT_TEST_001"`) rather than parsing a real `.ics` file.
 
 **Why:**
 - The core value of the project is the pipeline, transformation, and serving — not the calendar parsing
