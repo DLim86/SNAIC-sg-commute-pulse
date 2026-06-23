@@ -165,6 +165,8 @@ def ingest_routes(con, event_id, dest_lat, dest_lng, token):
         },
     )
 
+    if not isinstance(data, dict):
+        raise ValueError(f"Unexpected OneMap response type: {type(data).__name__} — {str(data)[:120]}")
     itineraries = data.get("plan", {}).get("itineraries", [])
     if not itineraries:
         log.warning("No route itineraries returned from OneMap")
@@ -196,6 +198,27 @@ def ingest_routes(con, event_id, dest_lat, dest_lng, token):
             "total_duration_min": duration_min, "walk_distance_m": walk_m,
             "num_transfers": transfers, "fare": fare, "fetched_at": fetched_at.isoformat(),
         })
+
+        # Save individual legs so transform can show step-by-step directions
+        mode_map = {"SUBWAY": "MRT", "TRAM": "LRT", "RAIL": "MRT"}
+        for j, leg in enumerate(it.get("legs", [])):
+            raw_mode = leg.get("mode", "WALK")
+            leg_mode = mode_map.get(raw_mode, raw_mode)
+            service_no = (leg.get("routeId") or
+                          leg.get("route", {}).get("shortName") or "")
+            from_name = leg.get("from", {}).get("name", "")
+            to_name = leg.get("to", {}).get("name", "")
+            leg_dur = round(leg.get("duration", 0) / 60)
+            leg_dist = round(leg.get("distance", 0))
+            leg_id = f"{option_id}_LEG_{j + 1}"
+            con.execute(
+                """INSERT OR REPLACE INTO route_legs
+                   (leg_id, option_id, leg_sequence, mode, service_no,
+                    from_name, to_name, duration_min, distance_m, fetched_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                [leg_id, option_id, j + 1, leg_mode, service_no,
+                 from_name, to_name, leg_dur, leg_dist, fetched_at],
+            )
 
     save_parquet(records, "onemap_route")
     log_run(con, "onemap_route", len(records), int((time.time() - t0) * 1000), "success")

@@ -56,15 +56,23 @@ Given a user's next calendar event, the pipeline:
 - `data/raw/weather/date=2026-06-23/weather_2026-06-23.parquet` — 47 rows
 - `data/raw/onemap_route/date=2026-06-23/onemap_route_2026-06-23.parquet` — 3 rows
 
+### Also done (added during build)
+- `scripts/transform.py` — **DONE**. Reads `v_enriched_routes`, writes recommendations. Shows leave-latest, leave-now (future-event aware), step-by-step legs, rain per walk leg, MRT disruption flag.
+- `route_legs` table added to schema (8th table) — stores individual leg steps from OneMap routing response (mode, service_no, from/to names, duration, distance)
+
 ### Still to build (in order)
 | File | Purpose | Build order |
 |---|---|---|
-| `scripts/transform.py` | Query `v_enriched_routes`, write rank-1 to `recommendations` | **NEXT** |
-| `scripts/serve.py` | Streamlit dashboard | 2nd |
-| `scripts/api.py` | FastAPI serving layer | 3rd |
+| `scripts/serve.py` | Streamlit dashboard | **NEXT** |
+| `scripts/api.py` | FastAPI serving layer | 2nd |
 | `dags/__init__.py` | Airflow DAG folder init | with DAG |
-| `dags/commute_pipeline_dag.py` | Airflow DAG orchestration | 4th |
-| `docker-compose.yml` + `Dockerfile` | Container orchestration | 5th |
+| `dags/commute_pipeline_dag.py` | Airflow DAG orchestration | 3rd |
+| `docker-compose.yml` + `Dockerfile` | Container orchestration | 4th |
+
+### Known bugs / pending
+- `route_legs` empty in DB: OneMap timed out during last ingest run. Re-run `python scripts/ingest.py` — legs will populate once routing succeeds.
+- `weather_forecast` field now included in `BEST_ROUTE_QUERY` in transform.py (was missing, showed "Clear")
+- "Leave now" suppressed when event > 6 hours away (was showing nonsense like "1046 min early")
 
 ---
 

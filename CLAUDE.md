@@ -71,24 +71,24 @@ Given a next calendar event, the pipeline:
 | `.gitignore` | Complete |
 | `config_example.py` | Complete — template only, no real keys |
 | `config.py` | Exists locally, gitignored — real LTA + OneMap credentials inside |
-| `requirements.txt` | Updated — uses `>=` for C-extension packages (Python 3.14 compat) |
+| `requirements.txt` | Uses `>=` for C-extension packages (Python 3.14 compat) |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Complete — interactive 12-station roadmap |
-| `docs/AI_HANDOFF.md` | Complete — full handoff context |
-| `docs/video_script.html` | Complete — 8-section timed video script |
-| `scripts/__init__.py` | Empty file — required for Airflow DAG imports |
-| `scripts/schema.py` | **DONE** — creates 7 tables + `v_enriched_routes` view. Run once with `python scripts/schema.py` |
-| `scripts/ingest.py` | **DONE** — all 4 APIs working with retry/backoff, Parquet raw zone, idempotent upsert |
-| `db/commute.duckdb` | Exists locally, gitignored — seeded with test event EVT_TEST_001 |
+| `docs/AI_HANDOFF.md` | Complete — full handoff context (keep updated) |
+| `docs/video_script.html` | Complete — timed video script, update after each new script |
+| `scripts/__init__.py` | Empty — required for Airflow DAG imports |
+| `scripts/schema.py` | **DONE** — 8 tables + `v_enriched_routes` view. Run once. |
+| `scripts/ingest.py` | **DONE** — 4 APIs, retry/backoff, Parquet raw zone, legs, idempotent upsert |
+| `scripts/transform.py` | **DONE** — leave-latest, leave-now, leg steps, rain/delay warnings |
+| `db/commute.duckdb` | Exists locally, gitignored — EVT_TEST_001 seeded |
 | `data/raw/bus_stops/bus_stops.parquet` | Cached — 5,205 LTA bus stops |
 | `data/raw/weather/` | Populated — 47 weather areas |
-| `data/raw/onemap_route/` | Populated — 3 route options for EVT_TEST_001 |
+| `data/raw/onemap_route/` | Populated — 3 route options (legs pending next ingest run) |
 
 ### Still to build (in order)
 | File | Purpose |
 |---|---|
-| `scripts/transform.py` | Read `v_enriched_routes`, write rank-1 row to `recommendations` — **NEXT** |
-| `scripts/serve.py` | Streamlit dashboard |
+| `scripts/serve.py` | Streamlit dashboard — **NEXT** |
 | `scripts/api.py` | FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status` |
 | `dags/__init__.py` + `dags/commute_pipeline_dag.py` | Airflow DAG, 5 tasks, `schedule="*/10 * * * *"` |
 | `docker-compose.yml` + `Dockerfile` | 3 services: pipeline, api, dashboard |
@@ -103,19 +103,18 @@ event_id  : EVT_TEST_001
 title     : Morning Meeting at SMU
 start_time: 2026-06-24 10:00:00+08:00
 location  : Singapore Management University, 81 Victoria Street
-dest_lat  : 1.29685
-dest_lng  : 103.85221
+dest_lat  : 1.29685  lng: 103.85221
+origin    : 1.3521, 103.8198 (hardcoded central SG placeholder)
 ```
 
 ---
 
 ## Next Tasks — Build in This Order
 
-1. **`scripts/transform.py`** — Query `v_enriched_routes`, pick route_rank=1, write to `recommendations`
-2. **`scripts/serve.py`** — Streamlit dashboard reading from `v_enriched_routes` (read_only=True connection)
-3. **`scripts/api.py`** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`
-4. **`dags/commute_pipeline_dag.py`** — Airflow DAG with 5 tasks, `schedule="*/10 * * * *"`
-5. **`docker-compose.yml` + `Dockerfile`** — 3 services: pipeline, api, dashboard
+1. **`scripts/serve.py`** — Streamlit dashboard (read_only=True DuckDB connection)
+2. **`scripts/api.py`** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`
+3. **`dags/commute_pipeline_dag.py`** — Airflow DAG with 5 tasks, `schedule="*/10 * * * *"`
+4. **`docker-compose.yml` + `Dockerfile`** — 3 services: pipeline, api, dashboard
 
 ---
 
@@ -213,10 +212,14 @@ git push
 - **data.gov.sg weather areas:** `area_metadata` in the API response includes `label_location` with lat/lng for each area — no separate lookup needed
 - **DuckDB write lock:** only one connection can write at a time; the pipeline must close its connection before FastAPI opens one
 - **`scripts/` imports `config.py` from project root** — all scripts must add `sys.path.insert(0, str(Path(__file__).parent.parent))` before `from config import ...`
-- **Python 3.14 compatibility:** C-extension packages (pandas, duckdb, pyarrow, shapely) must use `>=` version pins, not exact `==` pins — no pre-built wheels exist for old pinned versions on 3.14
-- **`datetime.utcnow()` deprecated in Python 3.12+** — use `datetime.now(timezone.utc).replace(tzinfo=None)` for naive UTC timestamps going into TIMESTAMP columns
+- **Python 3.14 compatibility:** C-extension packages (pandas, duckdb, pyarrow, shapely) must use `>=` version pins — no pre-built wheels for old pinned versions on 3.14
+- **`datetime.utcnow()` deprecated in Python 3.12+** — use `datetime.now(timezone.utc).replace(tzinfo=None)` for naive UTC into TIMESTAMP columns
 - **OneMap routing `duration` is in seconds** — divide by 60 for `total_duration_min`
 - **`get_onemap_token()` uses `requests.post`, not `fetch_with_retry`** — has its own retry loop with 30s timeout
+- **OneMap timeout on retry returns non-dict** — always check `isinstance(data, dict)` before calling `.get()` on API responses
+- **`v_enriched_routes` cross-join:** view joins all 47 weather areas per route (141 rows for 3 routes). `route_rank=1` still gives exactly one row per event — safe to use in transform.py
+- **"Leave now" is meaningless for future-day events** — check `hours_until_event > 6` before showing leave-now calculation
+- **`route_legs` table** added in latest schema.py — run `python scripts/schema.py` then `python scripts/ingest.py` to populate legs
 
 ---
 

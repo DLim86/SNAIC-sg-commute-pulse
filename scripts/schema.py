@@ -84,6 +84,20 @@ TABLES = [
         ran_at        TIMESTAMP DEFAULT now()
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS route_legs (
+        leg_id       VARCHAR PRIMARY KEY,
+        option_id    VARCHAR REFERENCES route_options(option_id),
+        leg_sequence INTEGER,
+        mode         VARCHAR,
+        service_no   VARCHAR,
+        from_name    VARCHAR,
+        to_name      VARCHAR,
+        duration_min INTEGER,
+        distance_m   INTEGER,
+        fetched_at   TIMESTAMP
+    )
+    """,
 ]
 
 VIEW = """
@@ -134,7 +148,7 @@ def main():
     try:
         for sql in TABLES:
             con.execute(sql)
-        log.info("7 tables created")
+        log.info("8 tables created")
         con.execute(VIEW)
         log.info("v_enriched_routes view created")
     finally:
