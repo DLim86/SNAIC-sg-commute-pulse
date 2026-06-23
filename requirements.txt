@@ -1,7 +1,10 @@
-requests==2.31.0
-pandas==2.1.0
-duckdb==0.10.0
-streamlit==1.35.0
-icalendar==5.0.11
-shapely==2.0.4
-pytz==2024.1
+requests>=2.31.0
+pandas>=2.2.2
+pyarrow>=16.0.0
+duckdb>=1.0.0
+streamlit>=1.35.0
+fastapi>=0.111.0
+uvicorn>=0.29.0
+icalendar>=5.0.11
+shapely>=2.0.4
+pytz>=2024.1

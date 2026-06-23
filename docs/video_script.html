@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Assessment Video Script — SNAIC SG Commute Pulse</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0F1117;
+    color: #C9D1D9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    padding: 40px 20px 80px;
+  }
+  .page { max-width: 820px; margin: 0 auto; }
+
+  h1 { color: #58A6FF; font-size: 26px; margin-bottom: 6px; }
+  .subtitle { color: #8B949E; margin-bottom: 40px; font-size: 13px; }
+
+  /* Section card */
+  .section {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 10px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: #1C2128;
+    border-bottom: 1px solid #30363D;
+  }
+  .section-num {
+    background: #1F6FEB;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-title { font-size: 15px; font-weight: 600; color: #E6EDF3; flex: 1; }
+  .timer {
+    background: #21262D;
+    border: 1px solid #30363D;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 11px;
+    color: #8B949E;
+    font-family: monospace;
+  }
+  .section-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Say this block */
+  .say {
+    background: #0D2137;
+    border-left: 3px solid #1F6FEB;
+    border-radius: 0 6px 6px 0;
+    padding: 14px 16px;
+  }
+  .say-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #58A6FF;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .say p { color: #C9D1D9; font-size: 14.5px; }
+  .say p + p { margin-top: 8px; }
+
+  /* Do this block */
+  .do {
+    background: #0D2F1A;
+    border-left: 3px solid #3FB950;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+  }
+  .do-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #3FB950;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .do ul { padding-left: 18px; }
+  .do li { color: #C9D1D9; font-size: 14px; margin-bottom: 4px; }
+
+  /* Note block */
+  .note {
+    background: #2D2000;
+    border-left: 3px solid #D29922;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+  }
+  .note-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #D29922;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .note p { color: #C9D1D9; font-size: 13.5px; }
+
+  /* Code inline */
+  code {
+    background: #21262D;
+    border: 1px solid #30363D;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    font-size: 13px;
+    color: #79C0FF;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    background: #21262D;
+    border-radius: 8px;
+    height: 6px;
+    margin-bottom: 32px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1F6FEB, #3FB950);
+    border-radius: 8px;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #8B949E;
+    margin-bottom: 6px;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .chip {
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .chip-blue  { background: #1F3A5F; color: #58A6FF; border: 1px solid #1F6FEB; }
+  .chip-green { background: #0D2F1A; color: #3FB950; border: 1px solid #238636; }
+  .chip-amber { background: #2D2000; color: #D29922; border: 1px solid #9E6A03; }
+  .chip-red   { background: #2D0F0F; color: #F85149; border: 1px solid #DA3633; }
+
+  hr { border: none; border-top: 1px solid #30363D; margin: 8px 0; }
+
+  .total-time {
+    text-align: center;
+    padding: 20px;
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 10px;
+    margin-bottom: 32px;
+  }
+  .total-time .big { font-size: 36px; font-weight: 700; color: #58A6FF; }
+  .total-time .label { font-size: 12px; color: #8B949E; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Assessment Video Script</h1>
+  <p class="subtitle">SNAIC · SG Commute Pulse · Data Engineering Week 2 · DLim86</p>
+
+  <div class="total-time">
+    <div class="big">~13 min</div>
+    <div class="label">Target runtime — leaves ~2 min buffer in your 15-minute slot</div>
+  </div>
+
+  <div class="progress-label">
+    <span>Start</span>
+    <span>15 min</span>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" style="width:100%"></div>
+  </div>
+
+  <!-- ─── SECTION 1 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Opening — Who I Am & What I Built</div>
+      <div class="timer">0:00 – 1:00</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Show your GitHub repo page: <code>github.com/DLim86/SNAIC-sg-commute-pulse</code></li>
+          <li>Camera on face for the first 15 seconds if allowed, then switch to screen</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This</div>
+        <p>Hi, I'm a Data Engineering student at SIT. This is my Week 2 assessment project — SNAIC SG Commute Pulse.</p>
+        <p>The system solves a specific daily problem: I look at my calendar, see a meeting at 10am in Jurong, and I have no idea whether to take the MRT or bus, whether there are disruptions, or whether I need to leave earlier because of rain.</p>
+        <p>This pipeline reads my next calendar event, figures out the best commute option in real time, and tells me exactly when to leave and why.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 2 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Business Problem & Target Audience</div>
+      <div class="timer">1:00 – 2:30</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Open <code>docs/roadmap.html</code> in browser — Station 1 is visible</li>
+          <li>Scroll slowly through the roadmap as you talk</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This</div>
+        <p>Singapore has one of the world's most complex public transport networks — over 5,000 bus stops, 6 MRT lines, and weather that changes every 2 hours. Commuters make routing decisions with incomplete information.</p>
+        <p>The target audience is Singapore-based office workers who use public transport daily. They have a Google Calendar event, they know the destination, but they don't know which route to take right now — factoring in train disruptions and whether it's going to rain during their walk.</p>
+        <p>The business output is one sentence: "Leave by 09:23 AM — take Bus 65 then East-West Line. Rain expected, avoid the long walk." That's what the system produces.</p>
+        <p>From a data engineering perspective, this is a real-time enrichment pipeline: four different data sources get ingested, joined in DuckDB, ranked with SQL window functions, and served via both a web dashboard and a REST API.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 3 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">API Registration — LTA DataMall & OneMap</div>
+      <div class="timer">2:30 – 4:30</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Show your LTA approval email (blur the API key itself)</li>
+          <li>Show your OneMap account login page briefly</li>
+          <li>Open <code>config_example.py</code> in VS Code</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This</div>
+        <p>The pipeline uses three data sources. Two require API keys.</p>
+        <p>First, LTA DataMall — this is Singapore's Land Transport Authority developer portal. I registered for free access and received an Account Key. This gives me two endpoints: real-time bus arrival times by bus stop code, and active MRT service alerts with severity levels.</p>
+        <p>Second, OneMap Singapore — this is the government's official geocoding and routing API. I registered using my email and get a JWT token that expires every 3 days. OneMap gives me two things: geocoding — turning an address like "NUS Shaw Foundation Alumni House" into GPS coordinates — and public transport routing, which returns up to 3 route options with total travel time, walking distance, number of transfers, and estimated fare.</p>
+        <p>Third, data.gov.sg — this is a completely open API, no registration needed. It gives me the 2-hour weather forecast broken down by area across Singapore.</p>
+        <p>All three API keys are stored in a file called <code>config.py</code> which is listed in <code>.gitignore</code>. It never goes to GitHub. You can see the template in <code>config_example.py</code> — only placeholders, never real keys.</p>
+      </div>
+      <div class="note">
+        <div class="note-label">Talking Point</div>
+        <p>If asked: "Why three APIs instead of one?" — Each API has a different owner, different auth model, and different update frequency. Combining them is the engineering problem.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 4 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">Project Structure & Design Decisions</div>
+      <div class="timer">4:30 – 6:00</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Open VS Code Explorer showing the full folder tree</li>
+          <li>Click through: <code>.gitignore</code>, <code>requirements.txt</code>, <code>config_example.py</code></li>
+          <li>Open <code>docs/ARCHITECTURE.md</code> briefly</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This</div>
+        <p>The folder structure follows a standard data engineering layout. <code>scripts/</code> holds all pipeline code. <code>data/raw/</code> stores raw API responses as Parquet files — date-partitioned so every API call is auditable. <code>data/processed/</code> holds cleaned data. <code>db/</code> holds the DuckDB database file, which is a single binary file — no server needed. <code>dags/</code> will hold the Airflow orchestration DAG.</p>
+        <p>I made three key architectural decisions early. First: DuckDB instead of PostgreSQL. DuckDB is embedded — zero infrastructure to set up, perfect for a local pipeline. It handles analytical SQL including window functions, which I need for route ranking.</p>
+        <p>Second: idempotency. Every insert uses <code>INSERT OR REPLACE</code>. If I run the pipeline twice, the data doesn't double-up. This is essential for a scheduler running every 10 minutes.</p>
+        <p>Third: a raw Parquet zone before DuckDB. I save every API response to a Parquet file first. If my SQL transform has a bug later, I can fix it and re-run the transformation from the saved files without hitting the APIs again.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 5 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">Security — What's Protected & Why</div>
+      <div class="timer">6:00 – 7:00</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Open <code>.gitignore</code> in VS Code</li>
+          <li>Run <code>git status</code> in terminal — show that config.py does NOT appear</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This</div>
+        <p>The <code>.gitignore</code> file protects four categories of sensitive files. API credentials in <code>config.py</code> — never committed. The DuckDB database file <code>commute.duckdb</code> — it's regenerated by running the pipeline, so there's no reason to version-control it. Raw data in <code>data/raw/</code> — also regenerated. And a <code>.env</code> file that will hold Docker secrets later.</p>
+        <p>Running <code>git status</code> confirms none of these appear as tracked files — git doesn't even see them. This means even if I accidentally ran <code>git add .</code>, my API keys would stay off GitHub.</p>
+        <p>The security model is: credentials live only on the machine running the pipeline, and the repo contains only code and templates.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 6 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div class="section-title">schema.py — Creating the DuckDB Database</div>
+      <div class="timer">7:00 – 11:00</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Open <code>scripts/schema.py</code> in VS Code</li>
+          <li>Walk through the code section by section as you speak</li>
+          <li>Then switch to terminal and run: <code>python scripts/schema.py</code></li>
+          <li>Show the output logs appearing</li>
+          <li>Open VS Code Explorer — show <code>db/commute.duckdb</code> has appeared</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This — Code Walkthrough</div>
+        <p>schema.py is the first script in the build order because everything else depends on the database existing first. It runs once — or safely any number of times — and creates 7 tables plus one SQL view.</p>
+        <p>The path to the database uses Python's <code>pathlib.Path</code> — I calculate the db folder relative to this script's location, so the code works regardless of which directory you run it from. Before connecting, I call <code>mkdir(parents=True, exist_ok=True)</code> — that creates the <code>db/</code> folder if it doesn't exist yet, without crashing if it already does.</p>
+        <p>Every table uses <code>CREATE TABLE IF NOT EXISTS</code> — so re-running schema.py on a database that already has data won't wipe anything. It's a no-op if the table is already there.</p>
+        <p>I use <code>TIMESTAMPTZ</code> — timestamp with time zone — for event start times and arrival times because Singapore commuters care about real clock time in the SGT +08:00 timezone. I use plain <code>TIMESTAMP</code> for internal tracking columns like <code>fetched_at</code> and <code>ran_at</code> — those are recorded when the pipeline runs and timezone ambiguity doesn't matter for monitoring.</p>
+        <p>The script uses Python's logging module, not print statements. In production pipelines, print statements don't integrate with monitoring tools. Every log line gets a timestamp automatically, which makes it easier to debug timing issues.</p>
+        <p>The connection is wrapped in a <code>try/finally</code> block that always calls <code>con.close()</code>. DuckDB only allows one writer at a time — if this script crashed without closing the connection, the next script would fail with a lock error. <code>finally</code> guarantees the lock is released.</p>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This — After Running</div>
+        <p>After running the script, three log lines confirm: 7 tables created, the view created, and the database path. DuckDB created the <code>commute.duckdb</code> file in the <code>db/</code> folder — you can see it in the file explorer. It's 192 kilobytes right now because there's no data yet, just the schema.</p>
+        <p>The view — <code>v_enriched_routes</code> — is worth explaining. It's a SQL view, not a table. It doesn't store data itself; it's a saved query. Every time I run a SELECT on it, it executes the join logic live against the four source tables. The view uses a window function — <code>ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY duration)</code> — to rank route options per event, with the fastest route getting rank 1. It also applies weather and disruption penalties: if it's rainy and the walk is over 400 metres, that option gets pushed down the ranking.</p>
+      </div>
+      <div class="note">
+        <div class="note-label">If Asked: Why a View and Not a Table?</div>
+        <p>A view always reflects the latest data — every time ingest.py adds new bus arrivals or weather, the view result changes automatically. A table would need to be re-populated manually. I'll only write to the <code>recommendations</code> table after the view picks the rank-1 route.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 7 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div class="section-title">DuckDB Schema — 7 Tables Explained</div>
+      <div class="timer">11:00 – 12:30</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Stay in <code>scripts/schema.py</code>, scroll through the TABLES list</li>
+          <li>Or open <code>docs/ARCHITECTURE.md</code> if it has the schema laid out cleanly</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This</div>
+        <p>The schema has 7 tables, each capturing a different data source or pipeline output.</p>
+        <p><code>calendar_events</code> — the input. Each event has an ID, title, start time, raw destination text, and geocoded GPS coordinates. This is populated first, before any routing can happen.</p>
+        <p><code>route_options</code> — three rows per event from OneMap: duration, walking distance, number of transfers, and fare. The foreign key to <code>calendar_events</code> enforces referential integrity.</p>
+        <p><code>weather_forecast</code> — one row per area per forecast window, composite primary key on area and valid_start time. The <code>is_rainy</code> boolean is computed at ingest time so the view doesn't need string matching.</p>
+        <p><code>bus_arrivals</code> — near-real-time, composite primary key on stop code, service number, and fetch timestamp. This lets me keep a short history of arrival predictions.</p>
+        <p><code>train_alerts</code> — active MRT disruptions with severity levels. The view filters for HEAVY severity alerts from the last 30 minutes.</p>
+        <p><code>recommendations</code> — the output table. One row per event, written by transform.py after the view picks the best route.</p>
+        <p><code>pipeline_runs</code> — monitoring. Every execution logs its source, how many rows it upserted, duration in milliseconds, and whether it succeeded. This is what the FastAPI status endpoint reads.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 8 ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <div class="section-title">What's Coming Next & Wrap-Up</div>
+      <div class="timer">12:30 – 13:30</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Screen Action</div>
+        <ul>
+          <li>Show the roadmap HTML — scroll to remaining stations</li>
+          <li>Return to GitHub repo for the final shot</li>
+        </ul>
+      </div>
+      <div class="say">
+        <div class="say-label">Say This</div>
+        <p>The schema is the foundation. The next script — <code>ingest.py</code> — will call all four APIs, apply exponential backoff retry so transient failures don't crash the pipeline, save raw responses as Parquet files, validate that all GPS coordinates fall within Singapore's bounds before they enter DuckDB, and upsert everything using <code>INSERT OR REPLACE</code>.</p>
+        <p>After that, <code>transform.py</code> queries the view, picks the rank-1 route per event, and writes the final recommendation row. Then <code>serve.py</code> presents it in a Streamlit dashboard, and <code>api.py</code> exposes it as a REST endpoint.</p>
+        <p>The full stack runs as three Docker containers orchestrated by Airflow on a 10-minute schedule — so every 10 minutes, the pipeline re-fetches live data and the dashboard updates automatically.</p>
+        <p>What I've demonstrated so far is: the project design, API registration, security setup, and a working DuckDB schema with 7 tables and a SQL view that contains all the recommendation logic. The database is live and ready for data. Thank you.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TIPS ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num" style="background:#3FB950">✓</div>
+      <div class="section-title">Before You Record — Checklist</div>
+      <div class="timer">Prep</div>
+    </div>
+    <div class="section-body">
+      <div class="chips">
+        <span class="chip chip-green">python scripts/schema.py runs clean</span>
+        <span class="chip chip-green">db/commute.duckdb file exists after run</span>
+        <span class="chip chip-green">config.py NOT in git status output</span>
+        <span class="chip chip-green">VS Code shows full folder tree</span>
+        <span class="chip chip-green">roadmap.html opens in browser</span>
+        <span class="chip chip-amber">LTA email visible (key blurred)</span>
+        <span class="chip chip-amber">Terminal font size ≥ 16px for readability</span>
+        <span class="chip chip-red">Never show config.py contents on screen</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

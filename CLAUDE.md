@@ -63,42 +63,59 @@ Given a next calendar event, the pipeline:
 
 ---
 
-## Current State (as of June 2026)
+## Current State (as of 23 June 2026)
 
-### What exists
-| File / Folder | Status |
+### Done — tested and working
+| File | Status |
 |---|---|
 | `.gitignore` | Complete |
 | `config_example.py` | Complete — template only, no real keys |
-| `requirements.txt` | Complete |
+| `config.py` | Exists locally, gitignored — real LTA + OneMap credentials inside |
+| `requirements.txt` | Updated — uses `>=` for C-extension packages (Python 3.14 compat) |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Complete — interactive 12-station roadmap |
-| `data/processed/.gitkeep` | Placeholder only |
-| `db/.gitkeep` | Placeholder only |
+| `docs/AI_HANDOFF.md` | Complete — full handoff context |
+| `docs/video_script.html` | Complete — 8-section timed video script |
+| `scripts/__init__.py` | Empty file — required for Airflow DAG imports |
+| `scripts/schema.py` | **DONE** — creates 7 tables + `v_enriched_routes` view. Run once with `python scripts/schema.py` |
+| `scripts/ingest.py` | **DONE** — all 4 APIs working with retry/backoff, Parquet raw zone, idempotent upsert |
+| `db/commute.duckdb` | Exists locally, gitignored — seeded with test event EVT_TEST_001 |
+| `data/raw/bus_stops/bus_stops.parquet` | Cached — 5,205 LTA bus stops |
+| `data/raw/weather/` | Populated — 47 weather areas |
+| `data/raw/onemap_route/` | Populated — 3 route options for EVT_TEST_001 |
 
-### What is EMPTY (needs to be written)
+### Still to build (in order)
 | File | Purpose |
 |---|---|
-| `scripts/schema.py` | Create DuckDB tables — write this FIRST |
-| `scripts/ingest.py` | Fetch all 4 APIs + retry/backoff + upsert |
-| `scripts/transform.py` | Run SQL transformation, write to recommendations |
+| `scripts/transform.py` | Read `v_enriched_routes`, write rank-1 row to `recommendations` — **NEXT** |
 | `scripts/serve.py` | Streamlit dashboard |
-| `scripts/api.py` | FastAPI serving layer |
-| `dags/commute_pipeline_dag.py` | Airflow DAG |
-| `docker-compose.yml` | Containerise the full stack |
-| `Dockerfile` | Shared image for all 3 Docker services |
+| `scripts/api.py` | FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status` |
+| `dags/__init__.py` + `dags/commute_pipeline_dag.py` | Airflow DAG, 5 tasks, `schedule="*/10 * * * *"` |
+| `docker-compose.yml` + `Dockerfile` | 3 services: pipeline, api, dashboard |
+
+---
+
+## Test Data in DB
+
+Event seeded for development:
+```
+event_id  : EVT_TEST_001
+title     : Morning Meeting at SMU
+start_time: 2026-06-24 10:00:00+08:00
+location  : Singapore Management University, 81 Victoria Street
+dest_lat  : 1.29685
+dest_lng  : 103.85221
+```
 
 ---
 
 ## Next Tasks — Build in This Order
 
-1. **`scripts/schema.py`** — Create all 7 DuckDB tables. Run once. (`python scripts/schema.py`)
-2. **`scripts/ingest.py`** — Fetch APIs with `fetch_with_retry()`, validate SG coordinates, upsert to DuckDB
-3. **`scripts/transform.py`** — Execute `v_enriched_routes` view SQL, write ranked recommendations
-4. **`scripts/serve.py`** — Streamlit dashboard reading from `v_enriched_routes`
-5. **`scripts/api.py`** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`
-6. **`dags/commute_pipeline_dag.py`** — Airflow DAG with 5 tasks, `schedule="*/10 * * * *"`
-7. **`docker-compose.yml` + `Dockerfile`** — 3 services: pipeline, api, dashboard
+1. **`scripts/transform.py`** — Query `v_enriched_routes`, pick route_rank=1, write to `recommendations`
+2. **`scripts/serve.py`** — Streamlit dashboard reading from `v_enriched_routes` (read_only=True connection)
+3. **`scripts/api.py`** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`
+4. **`dags/commute_pipeline_dag.py`** — Airflow DAG with 5 tasks, `schedule="*/10 * * * *"`
+5. **`docker-compose.yml` + `Dockerfile`** — 3 services: pipeline, api, dashboard
 
 ---
 
@@ -191,10 +208,15 @@ git push
 ## Known Issues / Gotchas
 
 - **OneMap token TTL:** expires every 3 days — call `get_onemap_token()` on every pipeline run, never cache it to disk
-- **LTA bus stops vs GPS:** LTA bus stop codes don't have GPS coordinates in the BusArrivalv2 endpoint — use Haversine distance against a bus stop list to find the nearest stop
-- **data.gov.sg weather areas:** the 2-hour forecast returns areas like "Ang Mo Kio", "Bedok" — not GPS. Map the destination coordinates to the nearest area by name lookup
+- **LTA bus stops vs GPS:** LTA bus stop codes don't have GPS coordinates in the BusArrivalv2 endpoint — use Haversine distance against a bus stop list to find the nearest stop. Bus stop list is cached at `data/raw/bus_stops/bus_stops.parquet`
+- **LTA BusArrivalv2 returns 404 (not empty array) for stops with no active services** — handle gracefully, treat as "no data" not an error
+- **data.gov.sg weather areas:** `area_metadata` in the API response includes `label_location` with lat/lng for each area — no separate lookup needed
 - **DuckDB write lock:** only one connection can write at a time; the pipeline must close its connection before FastAPI opens one
-- **`scripts/` folder has no `__init__.py`:** add one if importing between scripts (e.g., Airflow DAG imports from `scripts.ingest`)
+- **`scripts/` imports `config.py` from project root** — all scripts must add `sys.path.insert(0, str(Path(__file__).parent.parent))` before `from config import ...`
+- **Python 3.14 compatibility:** C-extension packages (pandas, duckdb, pyarrow, shapely) must use `>=` version pins, not exact `==` pins — no pre-built wheels exist for old pinned versions on 3.14
+- **`datetime.utcnow()` deprecated in Python 3.12+** — use `datetime.now(timezone.utc).replace(tzinfo=None)` for naive UTC timestamps going into TIMESTAMP columns
+- **OneMap routing `duration` is in seconds** — divide by 60 for `total_duration_min`
+- **`get_onemap_token()` uses `requests.post`, not `fetch_with_retry`** — has its own retry loop with 30s timeout
 
 ---
 

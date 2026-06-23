@@ -34,34 +34,37 @@ Given a user's next calendar event, the pipeline:
 
 ---
 
-## Current State
+## Current State (as of 23 June 2026)
 
-### Done
-- Project folder structure created
-- `.gitignore` protects credentials and database files
-- `config_example.py` — credential template (real keys in `config.py`, gitignored)
-- `requirements.txt` — all dependencies pinned
-- `README.md` — project overview for GitHub
-- `docs/roadmap.html` — interactive 12-station roadmap with code examples
-- DuckDB schema fully designed (7 tables)
-- Core SQL view `v_enriched_routes` designed with window functions
-- All API endpoints researched and documented
+### Done and tested
+- Project folder structure, `.gitignore`, `config_example.py`, `requirements.txt`, `README.md`
+- `docs/roadmap.html` — interactive 12-station roadmap
+- `docs/video_script.html` — 8-section timed video script for the 15-min assessment video
+- `scripts/__init__.py` — empty file (required for Airflow DAG imports)
+- **`scripts/schema.py`** — DONE. Creates 7 DuckDB tables + `v_enriched_routes` view. Run once.
+- **`scripts/ingest.py`** — DONE. All 4 API sources working with retry/backoff, Parquet raw zone, idempotent upsert.
 
-### Not yet written (scripts/ folder is empty)
-Every file below needs to be created from scratch:
+### Live data in `db/commute.duckdb` (gitignored, local only)
+- Test event EVT_TEST_001: "Morning Meeting at SMU", 2026-06-24 10:00 SGT, dest (1.29685, 103.85221)
+- 47 weather forecast areas loaded
+- 3 route options from OneMap
+- Bus stop 01012 checked (no active services at time of test — handled gracefully)
+- No active train disruptions at time of test
 
+### Cached files
+- `data/raw/bus_stops/bus_stops.parquet` — 5,205 LTA bus stops (re-used on each run, not date-partitioned)
+- `data/raw/weather/date=2026-06-23/weather_2026-06-23.parquet` — 47 rows
+- `data/raw/onemap_route/date=2026-06-23/onemap_route_2026-06-23.parquet` — 3 rows
+
+### Still to build (in order)
 | File | Purpose | Build order |
 |---|---|---|
-| `scripts/schema.py` | Create DuckDB tables | **1st** |
-| `scripts/ingest.py` | Fetch all 4 APIs + retry/backoff + upsert | 2nd |
-| `scripts/transform.py` | SQL transformation, populate recommendations | 3rd |
-| `scripts/serve.py` | Streamlit dashboard | 4th |
-| `scripts/__init__.py` | Makes scripts importable (needed for Airflow) | with schema.py |
-| `scripts/api.py` | FastAPI serving layer | 5th |
+| `scripts/transform.py` | Query `v_enriched_routes`, write rank-1 to `recommendations` | **NEXT** |
+| `scripts/serve.py` | Streamlit dashboard | 2nd |
+| `scripts/api.py` | FastAPI serving layer | 3rd |
 | `dags/__init__.py` | Airflow DAG folder init | with DAG |
-| `dags/commute_pipeline_dag.py` | Airflow DAG orchestration | 6th |
-| `docker-compose.yml` | Container orchestration | 7th |
-| `Dockerfile` | Shared container image | 7th |
+| `dags/commute_pipeline_dag.py` | Airflow DAG orchestration | 4th |
+| `docker-compose.yml` + `Dockerfile` | Container orchestration | 5th |
 
 ---
 
