@@ -7,26 +7,26 @@
   --border:#1E3354;--text:#D8E4F0;--muted:#7090A8;--dim:#3A5068;
   --flow:#00D4FF;--flow-dim:rgba(0,212,255,.12);
   --s1:#6B7280;--s2:#2563EB;--s3:#059669;--s4:#7C3AED;
-  --s5:#D97706;--s6:#DC2626;--s7:#B8962A;
+  --s5:#D97706;--s6:#DC2626;
+  --s7:#0E7490;--s8:#B45309;--s9:#1E40AF;--s10:#166534;--s11:#1E3A5F;
+  --sf:#B8962A;--locked:#2A3040;
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.65;padding-bottom:80px}
 
-/* ── HEADER ── */
 .page-header{padding:60px 40px 48px;max-width:900px;margin:0 auto}
 .header-eyebrow{font-family:monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--flow);margin-bottom:18px}
 .page-title{font-size:clamp(2.2rem,5vw,3.6rem);font-weight:900;line-height:1.05;letter-spacing:-.03em;color:#fff;margin-bottom:20px}
 .page-title span{color:var(--flow)}
 .page-subtitle{font-size:16px;color:var(--muted);max-width:580px;line-height:1.7;margin-bottom:36px}
 
-/* pipeline mini */
-.pipeline-mini{display:flex;flex-wrap:wrap;gap:0;align-items:center;margin-bottom:8px}
+.pipeline-mini{display:flex;flex-wrap:wrap;gap:0;align-items:center;margin-bottom:6px}
 .pipe-node{font-family:monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);padding:5px 11px;border-radius:4px;color:var(--text);white-space:nowrap}
 .pipe-arrow{color:var(--dim);padding:0 6px;font-size:12px}
 .pipe-node.active{background:var(--flow-dim);border-color:var(--flow);color:var(--flow)}
+.pipe-node.day2{background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9}
 
-/* ── ARCHITECTURE ── */
 .arch-section{max-width:900px;margin:0 auto 56px;padding:0 40px}
 .section-label{font-family:monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:16px;display:flex;align-items:center;gap:10px}
 .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
@@ -36,22 +36,21 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .arch-cell-items{display:flex;flex-direction:column;gap:5px}
 .arch-item{font-size:12px;color:var(--text);padding:3px 0}
 .arch-item::before{content:'→ ';color:var(--dim)}
+.arch-item.new{color:#67E8F9}
+.arch-item.new::before{content:'→ ';color:rgba(14,116,144,.6)}
 
-/* ── ROUTE MAP ── */
 .route-map{max-width:900px;margin:0 auto;padding:0 40px}
 .route-wrapper{}
 
 .station{display:flex;gap:20px;align-items:flex-start;margin-bottom:0}
 .station:last-child .route-line{display:none}
 
-/* left rail */
 .station-rail{display:flex;flex-direction:column;align-items:center;width:52px;flex-shrink:0;align-self:stretch}
 .station-dot{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:monospace;font-weight:700;font-size:13px;color:#fff;flex-shrink:0;position:relative;z-index:2;letter-spacing:-.02em}
 .route-line{width:3px;flex:1;min-height:40px;position:relative;overflow:hidden;background:var(--border)}
 .route-line::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 8px,var(--flow) 8px,var(--flow) 13px);animation:flow-down 1s linear infinite;opacity:.5}
 @keyframes flow-down{0%{transform:translateY(-13px)}100%{transform:translateY(0)}}
 
-/* station cards */
 .station-card{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:28px 28px 24px;margin-bottom:28px;position:relative;overflow:hidden}
 .station-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 
@@ -62,13 +61,19 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .s5 .station-dot,.s5 .station-card::before{background:var(--s5)}
 .s6 .station-dot,.s6 .station-card::before{background:var(--s6)}
 .s7 .station-dot,.s7 .station-card::before{background:var(--s7)}
+.s8 .station-dot,.s8 .station-card::before{background:var(--s8)}
+.s9 .station-dot,.s9 .station-card::before{background:var(--s9)}
+.s10 .station-dot,.s10 .station-card::before{background:var(--s10)}
+.s11 .station-dot,.s11 .station-card::before{background:var(--s11)}
+.sf .station-dot,.sf .station-card::before{background:var(--sf)}
 
 .s1 .route-line::after{opacity:.25}
 
-/* card internals */
 .card-eyebrow{font-family:monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
 .s1 .card-eyebrow{color:var(--s1)}.s2 .card-eyebrow{color:var(--s2)}.s3 .card-eyebrow{color:var(--s3)}
-.s4 .card-eyebrow{color:var(--s4)}.s5 .card-eyebrow{color:var(--s5)}.s6 .card-eyebrow{color:var(--s6)}.s7 .card-eyebrow{color:var(--s7)}
+.s4 .card-eyebrow{color:var(--s4)}.s5 .card-eyebrow{color:var(--s5)}.s6 .card-eyebrow{color:var(--s6)}
+.s7 .card-eyebrow{color:var(--s7)}.s8 .card-eyebrow{color:var(--s8)}.s9 .card-eyebrow{color:var(--s9)}
+.s10 .card-eyebrow{color:var(--s10)}.s11 .card-eyebrow{color:var(--s11)}.sf .card-eyebrow{color:var(--sf)}
 
 .card-title{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;color:#fff;margin-bottom:14px;line-height:1.2}
 .card-desc{color:var(--muted);font-size:14px;margin-bottom:20px;max-width:640px;line-height:1.7}
@@ -80,7 +85,6 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .block-label{font-family:monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 .block-content{font-size:13px;color:var(--text);line-height:1.6}
 
-/* chips */
 .chip-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
 .chip{font-family:monospace;font-size:11px;padding:4px 10px;border-radius:3px;border:1px solid;white-space:nowrap}
 .chip-blue{background:rgba(37,99,235,.15);border-color:rgba(37,99,235,.4);color:#93B4F8}
@@ -90,8 +94,9 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .chip-red{background:rgba(220,38,38,.15);border-color:rgba(220,38,38,.4);color:#FCA5A5}
 .chip-grey{background:rgba(107,114,128,.15);border-color:rgba(107,114,128,.4);color:#D1D5DB}
 .chip-cyan{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:var(--flow)}
+.chip-teal{background:rgba(14,116,144,.15);border-color:rgba(14,116,144,.4);color:#67E8F9}
+.chip-navy{background:rgba(30,58,95,.3);border-color:rgba(30,58,95,.7);color:#93C5FD}
 
-/* code blocks */
 .code-block{background:#07101E;border:1px solid var(--border);border-radius:6px;padding:18px 20px;margin-bottom:20px;overflow-x:auto}
 .code-block pre{font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC;white-space:pre}
 .code-block .c{color:var(--dim)}
@@ -102,12 +107,10 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .code-block .o{color:#FCD34D}
 .code-block .com{color:#445F78;font-style:italic}
 
-/* video tip box */
 .video-tip{background:var(--flow-dim);border:1px solid rgba(0,212,255,.25);border-radius:6px;padding:16px 18px;margin-top:4px}
 .video-tip-label{font-family:monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--flow);margin-bottom:8px}
 .video-tip p{font-size:13px;color:#A8C0D6;line-height:1.6;font-style:italic}
 
-/* schema table */
 .schema-table{width:100%;border-collapse:collapse;font-family:monospace;font-size:12px}
 .schema-table th{text-align:left;padding:8px 12px;background:var(--surface2);color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
 .schema-table td{padding:7px 12px;border-bottom:1px solid rgba(30,51,84,.6);color:var(--text);vertical-align:top}
@@ -115,7 +118,6 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .schema-table td:nth-child(2){color:#7DD3FC}
 .schema-table td:last-child{color:var(--muted);font-style:italic}
 
-/* ── VIDEO OUTLINE ── */
 .video-section{max-width:900px;margin:56px auto 0;padding:0 40px}
 .video-timeline{display:grid;grid-template-columns:80px 1fr;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}
 .vt-row{display:contents}
@@ -125,31 +127,50 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .vt-content p{font-size:12px;color:var(--muted);line-height:1.6}
 .vt-row:last-child .vt-time,.vt-row:last-child .vt-content{border-bottom:none}
 
-/* resume bullets */
 .resume-bullets{list-style:none;display:flex;flex-direction:column;gap:12px;margin-top:20px}
 .resume-bullets li{background:var(--surface2);border-left:3px solid var(--flow);padding:12px 16px;font-size:13px;color:var(--muted);line-height:1.6;border-radius:0 4px 4px 0}
 .resume-bullets li strong{color:var(--flow);font-family:monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
 
-/* footer */
-.page-footer{max-width:900px;margin:64px auto 0;padding:0 40px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:gap;border-top:1px solid var(--border);padding-top:24px}
+.page-footer{max-width:900px;margin:64px auto 0;padding:0 40px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid var(--border);padding-top:24px}
 .footer-text{font-family:monospace;font-size:11px;color:var(--dim)}
 .footer-badge{font-family:monospace;font-size:10px;padding:4px 10px;background:var(--flow-dim);border:1px solid rgba(0,212,255,.3);color:var(--flow);border-radius:3px;letter-spacing:.08em}
+
+/* ── PHASE DIVIDERS ── */
+.phase-divider{max-width:900px;margin:8px auto 0;padding:0 40px;display:flex;align-items:center;gap:16px}
+.phase-divider-line{flex:1;height:1px;background:var(--border)}
+.phase-divider-badge{font-family:monospace;font-size:10px;padding:3px 10px;border-radius:3px;white-space:nowrap;letter-spacing:.1em;text-transform:uppercase}
+.phase-divider-sub{max-width:900px;margin:10px auto 28px;padding:0 40px;font-family:monospace;font-size:11px;color:var(--dim);text-align:center;line-height:1.6}
+
+/* ── COMING SOON (locked) stations ── */
+.soon .station-card{opacity:0.32;pointer-events:none}
+.soon .station-dot{font-size:10px !important}
+.soon .route-line::after{opacity:0.08}
+.soon-label{font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);background:var(--surface2);border:1px solid var(--border);padding:3px 8px;border-radius:3px;display:inline-block;margin-bottom:12px}
 </style>
 
 <!-- PAGE HEADER -->
 <header class="page-header">
-  <div class="header-eyebrow">Data Engineering Assessment · SIT</div>
+  <div class="header-eyebrow">Data Engineering Assessment · SIT · 2026</div>
   <h1 class="page-title">Singapore <span>Commute</span><br>Recommender</h1>
   <p class="page-subtitle">A calendar-aware data pipeline that reads your next event, checks real-time bus arrivals, MRT disruptions, and weather — then tells you exactly when to leave and how to get there.</p>
 
-  <div class="pipeline-mini">
+  <div style="margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)">Phase 1 — Core Pipeline</div>
+  <div class="pipeline-mini" style="margin-bottom:14px">
     <span class="pipe-node">📅 Calendar</span><span class="pipe-arrow">→</span>
     <span class="pipe-node active">OneMap API</span><span class="pipe-arrow">→</span>
     <span class="pipe-node active">LTA DataMall</span><span class="pipe-arrow">→</span>
     <span class="pipe-node active">data.gov.sg</span><span class="pipe-arrow">→</span>
     <span class="pipe-node">🦆 DuckDB</span><span class="pipe-arrow">→</span>
     <span class="pipe-node">SQL Transform</span><span class="pipe-arrow">→</span>
-    <span class="pipe-node">Dashboard</span>
+    <span class="pipe-node">Streamlit</span>
+  </div>
+  <div style="margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--s7)">Phase 2 — Production Grade (Day 2)</div>
+  <div class="pipeline-mini">
+    <span class="pipe-node day2">Retry + Backoff</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node day2">Parquet Raw Zone</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node day2">FastAPI /docs</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node day2">Airflow DAG</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node day2">Docker Compose</span>
   </div>
 </header>
 
@@ -160,9 +181,9 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
     <div class="arch-cell">
       <div class="arch-cell-label">Data Sources</div>
       <div class="arch-cell-items">
-        <div class="arch-item">Calendar event (ICS / JSON)</div>
+        <div class="arch-item">Calendar event (ICS)</div>
         <div class="arch-item">OneMap routing API</div>
-        <div class="arch-item">LTA DataMall (bus + MRT)</div>
+        <div class="arch-item">LTA DataMall (bus+MRT)</div>
         <div class="arch-item">data.gov.sg weather</div>
       </div>
     </div>
@@ -170,9 +191,9 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
       <div class="arch-cell-label">Ingestion</div>
       <div class="arch-cell-items">
         <div class="arch-item">Python requests</div>
+        <div class="arch-item">Retry + backoff</div>
         <div class="arch-item">JSON → pandas flatten</div>
-        <div class="arch-item">Geocode location</div>
-        <div class="arch-item">Raw CSV save</div>
+        <div class="arch-item new">Parquet raw save</div>
       </div>
     </div>
     <div class="arch-cell">
@@ -181,25 +202,43 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
         <div class="arch-item">DuckDB (embedded)</div>
         <div class="arch-item">6 relational tables</div>
         <div class="arch-item">Typed schema</div>
-        <div class="arch-item">No server needed</div>
+        <div class="arch-item">Upsert (idempotent)</div>
       </div>
     </div>
     <div class="arch-cell">
       <div class="arch-cell-label">Transform</div>
       <div class="arch-cell-items">
         <div class="arch-item">Clean timestamps</div>
-        <div class="arch-item">Spatial join (region)</div>
-        <div class="arch-item">Route + weather join</div>
-        <div class="arch-item">Leave-by calculation</div>
+        <div class="arch-item">Route + weather JOIN</div>
+        <div class="arch-item">Window functions</div>
+        <div class="arch-item">Leave-by calc</div>
       </div>
     </div>
     <div class="arch-cell">
       <div class="arch-cell-label">Serving</div>
       <div class="arch-cell-items">
         <div class="arch-item">Streamlit dashboard</div>
-        <div class="arch-item">Best route card</div>
-        <div class="arch-item">Leave-by time alert</div>
-        <div class="arch-item">Weather + disruptions</div>
+        <div class="arch-item new">FastAPI REST layer</div>
+        <div class="arch-item new">Swagger /docs UI</div>
+        <div class="arch-item">Leave-by + warnings</div>
+      </div>
+    </div>
+    <div class="arch-cell">
+      <div class="arch-cell-label">Orchestration</div>
+      <div class="arch-cell-items">
+        <div class="arch-item new">Airflow DAG</div>
+        <div class="arch-item new">5 tasks / 10-min schedule</div>
+        <div class="arch-item new">Parallel fetch tasks</div>
+        <div class="arch-item new">Airflow UI</div>
+      </div>
+    </div>
+    <div class="arch-cell">
+      <div class="arch-cell-label">Infrastructure</div>
+      <div class="arch-cell-items">
+        <div class="arch-item new">Docker Compose</div>
+        <div class="arch-item new">3 containers</div>
+        <div class="arch-item new">Volume-mounted DuckDB</div>
+        <div class="arch-item new">docker compose up</div>
       </div>
     </div>
   </div>
@@ -207,7 +246,16 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 
 <!-- ROUTE MAP -->
 <div class="route-map">
-  <div class="section-label" style="margin-bottom:32px">7 Stations · Build in order</div>
+  <div class="section-label" style="margin-bottom:8px">12 Stations · 3 Coming Soon · Build in order</div>
+
+  <!-- PHASE 1 DIVIDER -->
+  <div class="phase-divider" style="margin-bottom:0">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-badge" style="background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.3);color:#6EE7B7">PHASE 1 · DAY 1 · CORE PIPELINE</div>
+    <div class="phase-divider-line"></div>
+  </div>
+  <div class="phase-divider-sub">Build and test all 6 stations end-to-end before moving to Phase 2.</div>
+
   <div class="route-wrapper">
 
     <!-- STATION 01 -->
@@ -252,7 +300,7 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
             <div class="block-content" style="display:flex;flex-direction:column;gap:10px">
               <div>
                 <div style="font-size:11px;color:#C4B5FD;margin-bottom:3px">LTA DataMall</div>
-                <div style="font-size:12px;color:var(--muted)">Free account at datamall.lta.gov.sg — approval takes 1–2 days. Gives you bus arrivals, train alerts.</div>
+                <div style="font-size:12px;color:var(--muted)">Free at datamall.lta.gov.sg — approval takes 1–2 days. Gives bus arrivals, train alerts.</div>
               </div>
               <div>
                 <div style="font-size:11px;color:#C4B5FD;margin-bottom:3px">OneMap API</div>
@@ -260,26 +308,29 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
               </div>
               <div>
                 <div style="font-size:11px;color:#C4B5FD;margin-bottom:3px">data.gov.sg</div>
-                <div style="font-size:12px;color:var(--muted)">No registration needed. Open API for weather and rainfall.</div>
+                <div style="font-size:12px;color:var(--muted)">No registration needed. Open API for weather.</div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="code-block">
-          <pre><span class="com"># requirements.txt — install with: pip install -r requirements.txt</span>
+          <pre><span class="com"># requirements.txt</span>
 <span class="n">requests</span>==2.31.0
 <span class="n">pandas</span>==2.1.0
 <span class="n">duckdb</span>==0.10.0
 <span class="n">streamlit</span>==1.35.0
-<span class="n">icalendar</span>==5.0.11    <span class="com"># for .ics calendar files</span>
-<span class="n">shapely</span>==2.0.4       <span class="com"># for GPS point-in-polygon (regions)</span>
-<span class="n">pytz</span>==2024.1</pre>
+<span class="n">icalendar</span>==5.0.11    <span class="com"># .ics calendar files</span>
+<span class="n">shapely</span>==2.0.4       <span class="com"># GPS point-in-polygon</span>
+<span class="n">pytz</span>==2024.1
+<span class="n">fastapi</span>==0.111.0     <span class="com"># Station 09 — add when ready</span>
+<span class="n">uvicorn</span>==0.30.0      <span class="com"># Station 09 — add when ready</span>
+<span class="n">pyarrow</span>==16.1.0      <span class="com"># Station 08 — for Parquet</span></pre>
         </div>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I set up a clean project structure that separates data ingestion, transformation, and serving — following the data engineering lifecycle. I registered for LTA DataMall and OneMap APIs early, because they require approval."</p>
+          <p>"I set up a clean project structure separating data ingestion, transformation, and serving — following the data engineering lifecycle. I registered for LTA DataMall and OneMap APIs early, because LTA approval takes 1–2 days."</p>
         </div>
       </div>
     </div>
@@ -306,15 +357,13 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
           <pre><span class="com"># scripts/ingest.py — Step 1: Read event + geocode</span>
 <span class="k">import</span> requests, json
 
-<span class="com"># Demo event — later replace with .ics file or Google Calendar</span>
 event = {
     <span class="s">"event_id"</span>: <span class="s">"E001"</span>,
     <span class="s">"title"</span>: <span class="s">"Team Meeting"</span>,
-    <span class="s">"start_time"</span>: <span class="s">"2026-06-23T10:00:00+08:00"</span>,
+    <span class="s">"start_time"</span>: <span class="s">"2026-07-15T10:00:00+08:00"</span>,
     <span class="s">"location"</span>: <span class="s">"Marina Bay Sands, Singapore"</span>
 }
 
-<span class="com"># Geocode the destination with OneMap</span>
 <span class="k">def</span> <span class="f">geocode</span>(address, token):
     r = requests.get(
         <span class="s">"https://www.onemap.gov.sg/api/common/elastic/search"</span>,
@@ -324,7 +373,6 @@ event = {
     result = r.json()[<span class="s">"results"</span>][0]
     <span class="k">return</span> float(result[<span class="s">"LATITUDE"</span>]), float(result[<span class="s">"LONGITUDE"</span>])
 
-<span class="com"># Get OneMap token (run once, valid 3 days)</span>
 <span class="k">def</span> <span class="f">get_onemap_token</span>(email, password):
     r = requests.post(<span class="s">"https://www.onemap.gov.sg/api/auth/post/getToken"</span>,
                       json={<span class="s">"email"</span>: email, <span class="s">"password"</span>: password})
@@ -335,9 +383,9 @@ event = {
           <div class="block-label">DuckDB Table: calendar_events</div>
           <table class="schema-table">
             <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
-            <tr><td>event_id</td><td>VARCHAR</td><td>Primary key, e.g. "E001"</td></tr>
+            <tr><td>event_id</td><td>VARCHAR</td><td>Primary key</td></tr>
             <tr><td>title</td><td>VARCHAR</td><td>Event name</td></tr>
-            <tr><td>start_time</td><td>TIMESTAMPTZ</td><td>In Singapore time +08:00</td></tr>
+            <tr><td>start_time</td><td>TIMESTAMPTZ</td><td>+08:00 Singapore time</td></tr>
             <tr><td>location_raw</td><td>VARCHAR</td><td>Original address string</td></tr>
             <tr><td>dest_lat</td><td>DOUBLE</td><td>From OneMap geocoding</td></tr>
             <tr><td>dest_lng</td><td>DOUBLE</td><td>From OneMap geocoding</td></tr>
@@ -347,7 +395,7 @@ event = {
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"My data source is a calendar event — I extract the destination and convert it to GPS coordinates using Singapore's OneMap geocoding API. This is the input that drives the whole pipeline. I also handle the case where an address needs to be standardised before geocoding."</p>
+          <p>"My data source is a calendar event. I extract the destination and convert it to GPS coordinates using Singapore's OneMap geocoding API. This drives the entire pipeline. I also handle OneMap's JWT token — it expires every 3 days, so I refresh it automatically on each run."</p>
         </div>
       </div>
     </div>
@@ -376,73 +424,56 @@ event = {
             <div class="block-label">API A — OneMap Routing</div>
             <div class="block-content">
               <div style="font-family:monospace;font-size:11px;color:#86EFAC;margin-bottom:8px">GET /api/public/routingsvc/route</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Returns: walk, bus, MRT route options with duration, steps, fare estimate.</div>
-              <div style="font-family:monospace;font-size:11px;color:var(--muted)">routeType: "pt" (public transport)<br>mode: "TRANSIT"<br>date, time, start, end coords</div>
+              <div style="font-size:12px;color:var(--muted)">Returns walk, bus, MRT route options with duration, steps, fare estimate. routeType: "pt", mode: "TRANSIT"</div>
             </div>
           </div>
           <div class="card-block">
             <div class="block-label">API B — LTA Bus Arrival</div>
             <div class="block-content">
               <div style="font-family:monospace;font-size:11px;color:#86EFAC;margin-bottom:8px">GET /BusArrivalv2?BusStopCode=</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Returns: next 3 arrivals per service, estimated time, load (seats).</div>
-              <div style="font-family:monospace;font-size:11px;color:var(--muted)">Header: AccountKey: {LTA_KEY}<br>Find nearest stop: Haversine distance</div>
+              <div style="font-size:12px;color:var(--muted)">Next 3 arrivals per service, estimated time, load (SEA/SDA/LSD). Header: AccountKey: {LTA_KEY}</div>
             </div>
           </div>
           <div class="card-block">
             <div class="block-label">API C — Weather Forecast</div>
             <div class="block-content">
               <div style="font-family:monospace;font-size:11px;color:#86EFAC;margin-bottom:8px">GET /v1/environment/2-hour-weather-forecast</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Returns: forecast per area (Ang Mo Kio, Bedok, etc.) for 2-hour window. No auth needed.</div>
-              <div style="font-family:monospace;font-size:11px;color:var(--muted)">api.data.gov.sg</div>
+              <div style="font-size:12px;color:var(--muted)">Forecast per area for 2-hour window. api.data.gov.sg — no auth needed.</div>
             </div>
           </div>
           <div class="card-block">
             <div class="block-label">API D — Train Alerts</div>
             <div class="block-content">
               <div style="font-family:monospace;font-size:11px;color:#86EFAC;margin-bottom:8px">GET /TrainServiceAlerts</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Returns: affected lines, message, severity. Empty when all lines are normal.</div>
-              <div style="font-family:monospace;font-size:11px;color:var(--muted)">Header: AccountKey: {LTA_KEY}</div>
+              <div style="font-size:12px;color:var(--muted)">Affected lines, message, severity. Empty when all lines normal. Header: AccountKey: {LTA_KEY}</div>
             </div>
           </div>
         </div>
 
         <div class="code-block">
           <pre><span class="com"># scripts/ingest.py — Flatten OneMap route response</span>
-<span class="k">import</span> pandas <span class="k">as</span> pd
-<span class="k">from</span> datetime <span class="k">import</span> datetime, timezone
-
 <span class="k">def</span> <span class="f">fetch_routes</span>(origin_lat, origin_lng, dest_lat, dest_lng, token, event_id):
     r = requests.get(
         <span class="s">"https://www.onemap.gov.sg/api/public/routingsvc/route"</span>,
-        params={
-            <span class="s">"token"</span>: token,
-            <span class="s">"start"</span>: <span class="f">f"</span><span class="s">{origin_lat},{origin_lng}"</span>,
-            <span class="s">"end"</span>: <span class="f">f"</span><span class="s">{dest_lat},{dest_lng}"</span>,
-            <span class="s">"routeType"</span>: <span class="s">"pt"</span>,
-            <span class="s">"date"</span>: <span class="s">"06-23-2026"</span>,
-            <span class="s">"time"</span>: <span class="s">"09:00:00"</span>,
-            <span class="s">"mode"</span>: <span class="s">"TRANSIT"</span>,
-            <span class="s">"numItineraries"</span>: <span class="n">3</span>
-        }
+        params={<span class="s">"token"</span>: token, <span class="s">"start"</span>: <span class="f">f"</span><span class="s">{origin_lat},{origin_lng}"</span>,
+                <span class="s">"end"</span>: <span class="f">f"</span><span class="s">{dest_lat},{dest_lng}"</span>, <span class="s">"routeType"</span>: <span class="s">"pt"</span>,
+                <span class="s">"mode"</span>: <span class="s">"TRANSIT"</span>, <span class="s">"numItineraries"</span>: <span class="n">3</span>}
     ).json()
-
     rows = []
     <span class="k">for</span> i, it <span class="k">in</span> enumerate(r.get(<span class="s">"plan"</span>, {}).get(<span class="s">"itineraries"</span>, [])):
         rows.append({
-            <span class="s">"option_id"</span>: <span class="f">f"</span><span class="s">{event_id}_opt{i}"</span>,
-            <span class="s">"event_id"</span>: event_id,
+            <span class="s">"option_id"</span>: <span class="f">f"</span><span class="s">{event_id}_opt{i}"</span>, <span class="s">"event_id"</span>: event_id,
             <span class="s">"total_duration_min"</span>: it[<span class="s">"duration"</span>] // <span class="n">60</span>,
             <span class="s">"walk_distance_m"</span>: it[<span class="s">"walkDistance"</span>],
             <span class="s">"num_transfers"</span>: it[<span class="s">"transfers"</span>],
             <span class="s">"fare"</span>: it.get(<span class="s">"fare"</span>, <span class="n">0</span>),
-            <span class="s">"fetched_at"</span>: datetime.now(timezone.utc)
         })
     <span class="k">return</span> pd.DataFrame(rows)</pre>
         </div>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I collect data from four sources — OneMap for routing, LTA DataMall for live bus arrivals and train alerts, and data.gov.sg for the 2-hour weather forecast. Each API returns nested JSON, so I flatten them into tabular rows using pandas before saving to DuckDB. I also record a fetched_at timestamp so I know how fresh each reading is."</p>
+          <p>"I collect from four sources — OneMap for routing, LTA DataMall for live bus arrivals and train alerts, and data.gov.sg for the 2-hour weather forecast. Each API returns nested JSON, so I flatten them into tabular rows before loading to DuckDB. I record a fetched_at timestamp so I always know how fresh each reading is."</p>
         </div>
       </div>
     </div>
@@ -456,7 +487,7 @@ event = {
       <div class="station-card">
         <div class="card-eyebrow">Data Storage</div>
         <div class="card-title">DuckDB Schema Design</div>
-        <div class="card-desc">Store all cleaned data in DuckDB — an embedded analytical database that needs no server. You design six tables that model the domain clearly. DuckDB is ideal here: it handles analytical SQL beautifully, stores everything in one file you can version control, and runs in-process with Python.</div>
+        <div class="card-desc">Store all cleaned data in DuckDB — an embedded analytical database that needs no server. Six tables model the domain clearly. DuckDB handles analytical SQL beautifully, stores everything in one file, and runs in-process with Python.</div>
 
         <div class="chip-row">
           <span class="chip chip-purple">DuckDB 0.10</span>
@@ -469,11 +500,9 @@ event = {
         <div class="code-block">
           <pre><span class="com"># scripts/schema.py — Run once to create all tables</span>
 <span class="k">import</span> duckdb
-
 con = duckdb.connect(<span class="s">"db/commute.duckdb"</span>)
 
-con.execute(<span class="s">"""
-CREATE TABLE IF NOT EXISTS calendar_events (
+con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS calendar_events (
     event_id     VARCHAR PRIMARY KEY,
     title        VARCHAR,
     start_time   TIMESTAMPTZ,
@@ -483,8 +512,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     ingested_at  TIMESTAMP DEFAULT now()
 );"""</span>)
 
-con.execute(<span class="s">"""
-CREATE TABLE IF NOT EXISTS route_options (
+con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS route_options (
     option_id          VARCHAR PRIMARY KEY,
     event_id           VARCHAR REFERENCES calendar_events(event_id),
     total_duration_min INTEGER,
@@ -494,8 +522,7 @@ CREATE TABLE IF NOT EXISTS route_options (
     fetched_at         TIMESTAMP
 );"""</span>)
 
-con.execute(<span class="s">"""
-CREATE TABLE IF NOT EXISTS weather_forecast (
+con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS weather_forecast (
     area        VARCHAR,
     forecast    VARCHAR,
     is_rainy    BOOLEAN,
@@ -505,44 +532,50 @@ CREATE TABLE IF NOT EXISTS weather_forecast (
     PRIMARY KEY (area, valid_start)
 );"""</span>)
 
-con.execute(<span class="s">"""
-CREATE TABLE IF NOT EXISTS bus_arrivals (
+con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS bus_arrivals (
     bus_stop_code VARCHAR,
     service_no    VARCHAR,
     next_bus_mins INTEGER,
-    load          VARCHAR,   -- SEA / SDA / LSD (seats)
+    load          VARCHAR,   -- SEA / SDA / LSD
     fetched_at    TIMESTAMP,
     PRIMARY KEY (bus_stop_code, service_no, fetched_at)
 );"""</span>)
 
-con.execute(<span class="s">"""
-CREATE TABLE IF NOT EXISTS train_alerts (
-    alert_id     VARCHAR PRIMARY KEY,
+con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS train_alerts (
+    alert_id      VARCHAR PRIMARY KEY,
     affected_line VARCHAR,
-    message      VARCHAR,
-    severity     VARCHAR,
-    fetched_at   TIMESTAMP
+    message       VARCHAR,
+    severity      VARCHAR,
+    fetched_at    TIMESTAMP
 );"""</span>)
 
-con.execute(<span class="s">"""
-CREATE TABLE IF NOT EXISTS recommendations (
-    event_id          VARCHAR PRIMARY KEY,
-    recommended_mode  VARCHAR,
+con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS recommendations (
+    event_id           VARCHAR PRIMARY KEY,
+    recommended_mode   VARCHAR,
     total_duration_min INTEGER,
-    leave_by          TIMESTAMPTZ,
-    estimated_arrival TIMESTAMPTZ,
-    weather_warning   VARCHAR,
+    leave_by           TIMESTAMPTZ,
+    estimated_arrival  TIMESTAMPTZ,
+    weather_warning    VARCHAR,
     disruption_warning VARCHAR,
-    reason            VARCHAR,
-    created_at        TIMESTAMP DEFAULT now()
+    reason             VARCHAR,
+    created_at         TIMESTAMP DEFAULT now()
 );"""</span>)
 
-<span class="k">print</span>(<span class="s">"Schema created."</span>)</pre>
+con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
+    run_id        VARCHAR PRIMARY KEY,
+    source        VARCHAR,
+    rows_upserted INTEGER,
+    duration_ms   INTEGER,
+    status        VARCHAR,   -- 'success' / 'error'
+    error_msg     VARCHAR,
+    ran_at        TIMESTAMP DEFAULT now()
+);"""</span>)
+<span class="k">print</span>(<span class="s">"Schema created — 7 tables."</span>)</pre>
         </div>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I chose DuckDB as my storage layer because it's embedded — no server to set up — and it supports the full SQL feature set I need for analytical queries. I designed six tables following relational database principles: primary keys on each table, a foreign key linking route_options back to calendar_events, and typed columns including TIMESTAMPTZ so timezone handling is correct for Singapore."</p>
+          <p>"I chose DuckDB as my storage layer because it's embedded — no server to set up — and supports the full SQL feature set I need. I designed seven tables: six for domain data and a pipeline_runs table for monitoring. I used TIMESTAMPTZ for all time columns so timezone handling is correct for Singapore."</p>
         </div>
       </div>
     </div>
@@ -556,7 +589,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
       <div class="station-card">
         <div class="card-eyebrow">Data Transformation</div>
         <div class="card-title">SQL Cleaning & Recommendation Logic</div>
-        <div class="card-desc">Write SQL views that join your three data streams — routes, weather, and alerts — into a single enriched recommendation table. Calculate the leave-by time (event start minus travel duration minus a 10-minute buffer). Flag rainy walks and disrupted MRT lines. Score routes and pick the best one per event.</div>
+        <div class="card-desc">Write SQL views that join your three data streams — routes, weather, and alerts — into a single enriched recommendation. Calculate the leave-by time, flag rainy walks, detect disrupted MRT lines, and rank routes per event using window functions.</div>
 
         <div class="chip-row">
           <span class="chip chip-amber">SQL JOINs</span>
@@ -571,38 +604,28 @@ CREATE TABLE IF NOT EXISTS recommendations (
 
 <span class="k">CREATE OR REPLACE VIEW</span> v_enriched_routes <span class="k">AS</span>
 <span class="k">SELECT</span>
-    r.option_id,
-    r.event_id,
-    r.total_duration_min,
-    r.walk_distance_m,
-    r.num_transfers,
-    r.fare,
-    e.start_time,
-    e.title,
-    e.dest_lat,
-    e.dest_lng,
+    r.option_id, r.event_id, r.total_duration_min,
+    r.walk_distance_m, r.num_transfers, r.fare,
+    e.start_time, e.title, e.dest_lat, e.dest_lng,
 
     <span class="com">-- When to leave (10 min buffer)</span>
     e.start_time - <span class="k">INTERVAL</span> (r.total_duration_min + <span class="n">10</span>) MINUTE <span class="k">AS</span> leave_by,
 
-    <span class="com">-- Closest weather area (simplified: use dest area)</span>
     w.forecast <span class="k">AS</span> weather_forecast,
     w.is_rainy,
+    <span class="k">CASE WHEN</span> ta.alert_id <span class="k">IS NOT NULL THEN</span> ta.message <span class="k">ELSE NULL END AS</span> alert_msg,
 
-    <span class="com">-- Any active train alerts?</span>
-    <span class="k">CASE</span> <span class="k">WHEN</span> ta.alert_id <span class="k">IS NOT NULL</span> <span class="k">THEN</span> ta.message <span class="k">ELSE NULL</span> <span class="k">END</span> <span class="k">AS</span> alert_msg,
-
-    <span class="com">-- Recommendation scoring</span>
+    <span class="com">-- Recommendation label</span>
     <span class="k">CASE</span>
         <span class="k">WHEN</span> w.is_rainy <span class="k">AND</span> r.walk_distance_m > <span class="n">400</span>
             <span class="k">THEN</span> <span class="s">'⚠ Rainy — take covered transport'</span>
         <span class="k">WHEN</span> ta.alert_id <span class="k">IS NOT NULL</span>
             <span class="k">THEN</span> <span class="s">'⚠ MRT disruption — add 20 min buffer'</span>
-        <span class="k">WHEN</span> r.total_duration_min = <span class="k">MIN</span>(r.total_duration_min) <span class="k">OVER</span>
-                (<span class="k">PARTITION BY</span> r.event_id)
+        <span class="k">WHEN</span> r.total_duration_min = <span class="k">MIN</span>(r.total_duration_min)
+                <span class="k">OVER</span> (<span class="k">PARTITION BY</span> r.event_id)
             <span class="k">THEN</span> <span class="s">'✓ Fastest option'</span>
         <span class="k">ELSE</span> <span class="s">'Alternative route'</span>
-    <span class="k">END</span> <span class="k">AS</span> recommendation_reason,
+    <span class="k">END AS</span> recommendation_reason,
 
     <span class="com">-- Rank routes per event (1 = best)</span>
     <span class="k">ROW_NUMBER</span>() <span class="k">OVER</span> (
@@ -621,19 +644,9 @@ CREATE TABLE IF NOT EXISTS recommendations (
    <span class="k">AND</span> ta.fetched_at > <span class="k">NOW</span>() - <span class="k">INTERVAL</span> <span class="s">'30 minutes'</span>;</pre>
         </div>
 
-        <div class="card-block" style="margin-bottom:20px">
-          <div class="block-label">Key Transformation Decisions</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
-            <div style="font-size:13px;color:var(--muted)"><strong style="color:var(--text);display:block;margin-bottom:3px">Leave-by time</strong>event start − duration − 10 min buffer. The 10-min buffer is a design choice — document it.</div>
-            <div style="font-size:13px;color:var(--muted)"><strong style="color:var(--text);display:block;margin-bottom:3px">Rain + walking rule</strong>Flag walks over 400m as inadvisable when rain is forecast. Threshold is adjustable.</div>
-            <div style="font-size:13px;color:var(--muted)"><strong style="color:var(--text);display:block;margin-bottom:3px">Disruption detection</strong>Join train_alerts only for rows within the last 30 minutes — stale alerts should not affect recommendations.</div>
-            <div style="font-size:13px;color:var(--muted)"><strong style="color:var(--text);display:block;margin-bottom:3px">Route ranking</strong>Window function ranks options per event. Rank 1 = recommended. Penalise rainy walks first, then sort by duration.</div>
-          </div>
-        </div>
-
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The transformation layer is where I join the three data streams. The key logic is: calculate the leave-by time from the event start and travel duration, then apply business rules — if it's raining and the walking distance is over 400 metres, I penalise that route in the ranking. I used a SQL window function to rank routes per event, so the dashboard always shows the best option first."</p>
+          <p>"The transformation layer joins three data streams. The key logic: calculate leave-by time from event start minus travel duration, apply business rules — if it's raining and walking distance exceeds 400m, penalise that route — then use a window function to rank routes per event. The dashboard always shows rank 1: the best option given current conditions."</p>
         </div>
       </div>
     </div>
@@ -647,40 +660,30 @@ CREATE TABLE IF NOT EXISTS recommendations (
       <div class="station-card">
         <div class="card-eyebrow">Data Serving</div>
         <div class="card-title">Streamlit Dashboard</div>
-        <div class="card-desc">Build a Streamlit dashboard that reads from DuckDB and shows the top commute recommendation for the next calendar event. The dashboard should be self-refreshing (every 5 minutes), show the leave-by time prominently, and warn when weather or train disruptions affect the recommendation.</div>
+        <div class="card-desc">Build a Streamlit dashboard that reads from DuckDB and shows the top commute recommendation for the next calendar event. Self-refreshing every 5 minutes, shows leave-by time prominently, and warns when weather or train disruptions affect the recommendation.</div>
 
         <div class="chip-row">
           <span class="chip chip-red">Streamlit</span>
           <span class="chip chip-red">DuckDB Python API</span>
           <span class="chip chip-red">pandas</span>
           <span class="chip chip-red">st.metric</span>
-          <span class="chip chip-red">st.dataframe</span>
+          <span class="chip chip-red">@st.cache_data</span>
         </div>
 
         <div class="code-block">
-          <pre><span class="com"># scripts/serve.py — Run with: streamlit run scripts/serve.py</span>
+          <pre><span class="com"># scripts/serve.py — streamlit run scripts/serve.py</span>
 <span class="k">import</span> streamlit <span class="k">as</span> st
 <span class="k">import</span> duckdb, pandas <span class="k">as</span> pd
-<span class="k">from</span> datetime <span class="k">import</span> datetime
 
 st.set_page_config(page_title=<span class="s">"SG Commute Recommender"</span>, page_icon=<span class="s">"🚇"</span>, layout=<span class="s">"wide"</span>)
 
-<span class="k">@st.cache_data</span>(ttl=<span class="n">300</span>)  <span class="com"># refresh every 5 minutes</span>
+<span class="o">@st.cache_data</span>(ttl=<span class="n">300</span>)  <span class="com"># refresh every 5 minutes</span>
 <span class="k">def</span> <span class="f">load_recommendation</span>():
     con = duckdb.connect(<span class="s">"db/commute.duckdb"</span>, read_only=<span class="k">True</span>)
     <span class="k">return</span> con.execute(<span class="s">"""
         SELECT * FROM v_enriched_routes
         WHERE route_rank = 1
-        ORDER BY start_time
-        LIMIT 1
-    """</span>).df()
-
-<span class="k">def</span> <span class="f">load_all_options</span>():
-    con = duckdb.connect(<span class="s">"db/commute.duckdb"</span>, read_only=<span class="k">True</span>)
-    <span class="k">return</span> con.execute(<span class="s">"""
-        SELECT total_duration_min, walk_distance_m, num_transfers,
-               fare, recommendation_reason, route_rank
-        FROM v_enriched_routes ORDER BY route_rank
+        ORDER BY start_time LIMIT 1
     """</span>).df()
 
 st.title(<span class="s">"🚇 SG Commute Recommender"</span>)
@@ -689,42 +692,504 @@ rec = load_recommendation()
 <span class="k">if not</span> rec.empty:
     r = rec.iloc[<span class="n">0</span>]
     st.subheader(<span class="f">f"</span><span class="s">Next: {r['title']}"</span>)
-
     col1, col2, col3 = st.columns(<span class="n">3</span>)
     col1.metric(<span class="s">"Leave by"</span>, r[<span class="s">"leave_by"</span>].strftime(<span class="s">"%H:%M"</span>))
     col2.metric(<span class="s">"Travel time"</span>, <span class="f">f"</span><span class="s">{r['total_duration_min']} min"</span>)
     col3.metric(<span class="s">"Fare"</span>, <span class="f">f"</span><span class="s">S${r['fare']:.2f}"</span>)
-
-    <span class="k">if</span> r[<span class="s">"is_rainy"</span>]:
-        st.warning(<span class="s">"🌧 Rain forecast at destination — avoid long walks."</span>)
-    <span class="k">if</span> r[<span class="s">"alert_msg"</span>]:
-        st.error(<span class="f">f"</span><span class="s">🚨 {r['alert_msg']}"</span>)
-
-    st.caption(r[<span class="s">"recommendation_reason"</span>])
-    st.dataframe(load_all_options(), use_container_width=<span class="k">True</span>)</pre>
+    <span class="k">if</span> r[<span class="s">"is_rainy"</span>]: st.warning(<span class="s">"🌧 Rain forecast — avoid long walks."</span>)
+    <span class="k">if</span> r[<span class="s">"alert_msg"</span>]: st.error(<span class="f">f"</span><span class="s">🚨 {r['alert_msg']}"</span>)
+    st.caption(r[<span class="s">"recommendation_reason"</span>])</pre>
         </div>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"For the serving layer, I built a Streamlit dashboard that reads directly from DuckDB. The key metric is the leave-by time — displayed prominently so the user sees it immediately. I used @st.cache_data with a 5-minute TTL so the dashboard auto-refreshes without hammering the APIs. If there's rain or a train disruption, a warning appears automatically from the recommendation logic in the SQL layer."</p>
+          <p>"The Streamlit dashboard reads from DuckDB. The key metric is the leave-by time — shown prominently so the user sees it immediately. I used @st.cache_data with a 5-minute TTL so it auto-refreshes without hammering the APIs. Weather warnings and train disruption alerts appear automatically from the SQL layer — the dashboard just displays what the transformation logic already decided."</p>
         </div>
       </div>
     </div>
 
-    <!-- STATION 07 -->
+  </div><!-- end route-wrapper phase 1 -->
+</div><!-- end route-map phase 1 -->
+
+<!-- PHASE 2 DIVIDER -->
+<div class="phase-divider" style="margin-top:12px">
+  <div class="phase-divider-line"></div>
+  <div class="phase-divider-badge" style="background:rgba(14,116,144,.1);border:1px solid rgba(14,116,144,.35);color:#67E8F9">PHASE 2 · DAY 2 · PRODUCTION GRADE</div>
+  <div class="phase-divider-line"></div>
+</div>
+<div class="phase-divider-sub">Build these after Phase 1 works end-to-end. Each station maps directly to a Day 2 topic and makes the project employer-grade.</div>
+
+<div class="route-map">
+  <div class="route-wrapper">
+
+    <!-- STATION 07 — Robust Ingestion -->
     <div class="station s7">
       <div class="station-rail">
         <div class="station-dot">07</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="card-eyebrow">Production Quality · Day 2</div>
+        <div class="card-title">Retry, Idempotency & Data Quality</div>
+        <div class="card-desc">The LTA API times out during rush hour. The OneMap token expires silently. A double-run creates duplicate rows. Add three things to every API call: exponential backoff retry, INSERT OR REPLACE so re-runs are safe, and coordinate validation that rejects bad GPS data before it reaches DuckDB.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-teal">retry + backoff</span>
+          <span class="chip chip-teal">INSERT OR REPLACE</span>
+          <span class="chip chip-teal">coord validation</span>
+          <span class="chip chip-teal">pipeline_runs log</span>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="com"># scripts/ingest.py — wrap every requests.get() in this function</span>
+<span class="k">import</span> time, logging
+
+<span class="k">def</span> <span class="f">fetch_with_retry</span>(url, headers=<span class="k">None</span>, params=<span class="k">None</span>, max_retries=<span class="n">3</span>):
+    <span class="k">for</span> attempt <span class="k">in</span> range(max_retries):
+        <span class="k">try</span>:
+            resp = requests.get(url, headers=headers, params=params, timeout=<span class="n">10</span>)
+            resp.raise_for_status()
+            <span class="k">return</span> resp.json()
+        <span class="k">except</span> requests.RequestException <span class="k">as</span> e:
+            <span class="k">if</span> attempt == max_retries - <span class="n">1</span>: <span class="k">raise</span>
+            wait = <span class="n">2</span> ** attempt  <span class="com"># 1s → 2s → 4s (exponential backoff)</span>
+            logging.warning(<span class="f">f"</span><span class="s">Attempt {attempt+1} failed. Retrying in {wait}s"</span>)
+            time.sleep(wait)
+
+<span class="com"># Validate GPS is inside Singapore before inserting</span>
+<span class="k">def</span> <span class="f">validate_sg_coords</span>(lat, lng):
+    <span class="k">if not</span> (<span class="n">1.15</span> &lt;= lat &lt;= <span class="n">1.47</span> <span class="k">and</span> <span class="n">103.6</span> &lt;= lng &lt;= <span class="n">104.1</span>):
+        <span class="k">raise</span> ValueError(<span class="f">f"</span><span class="s">Coords ({lat}, {lng}) outside Singapore bounds"</span>)
+
+<span class="com"># Idempotent insert — safe to re-run, no duplicates</span>
+con.execute(<span class="s">"""
+    INSERT OR REPLACE INTO weather_forecast
+    SELECT * FROM staging_weather
+"""</span>)</pre>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Log every run to pipeline_runs</div>
+            <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">import uuid, time
+
+start = time.time()
+try:
+    rows = fetch_and_load_weather(con)
+    con.execute("""INSERT INTO pipeline_runs VALUES (?,?,?,?,?,?,now())""",
+        [str(uuid.uuid4()), "weather", rows,
+         int((time.time()-start)*1000), "success", None])
+except Exception as e:
+    con.execute("""INSERT INTO pipeline_runs VALUES (?,?,?,?,?,?,now())""",
+        [str(uuid.uuid4()), "weather", 0,
+         int((time.time()-start)*1000), "error", str(e)])</pre>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Why each matters</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.7">
+              <div style="margin-bottom:8px"><strong style="color:var(--text)">Retry/backoff</strong> — LTA returns 429 or 500 during peak hours. One failure kills the run without retry.</div>
+              <div style="margin-bottom:8px"><strong style="color:var(--text)">Idempotency</strong> — If the pipeline crashes halfway and restarts, INSERT OR REPLACE prevents duplicate rows.</div>
+              <div><strong style="color:var(--text)">Coord validation</strong> — OneMap returns (0, 0) for unresolved addresses. A bus stop in the Indian Ocean corrupts all downstream recommendations.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"I implemented exponential backoff on all API calls — if LTA's API fails at 8am rush hour, the pipeline retries up to three times with increasing wait times before raising an error. Every insert uses INSERT OR REPLACE so the pipeline is safe to re-run after a crash — no duplicates. And I validate that coordinates are inside Singapore's bounding box, because OneMap occasionally returns (0, 0) for unrecognised addresses."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATION 08 — Parquet Raw Layer -->
+    <div class="station s8">
+      <div class="station-rail">
+        <div class="station-dot">08</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="card-eyebrow">Raw Data Zone · Day 2</div>
+        <div class="card-title">Parquet as Intermediate Storage</div>
+        <div class="card-desc">Before loading API responses into DuckDB, save them as Parquet files in a date-partitioned raw zone. This gives you replayability: if your SQL has a bug, fix it and re-transform from the raw files without re-calling the APIs. It also creates an audit trail — you can see exactly what LTA returned at any timestamp.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-amber">Parquet</span>
+          <span class="chip chip-amber">columnar storage</span>
+          <span class="chip chip-amber">date partitioning</span>
+          <span class="chip chip-amber">raw zone</span>
+          <span class="chip chip-amber">read_parquet</span>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="com"># scripts/ingest.py — save raw before loading to DuckDB</span>
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> datetime <span class="k">import</span> date
+
+<span class="k">def</span> <span class="f">save_raw_parquet</span>(df, source_name):
+    today = date.today().isoformat()          <span class="com"># e.g. "2026-07-15"</span>
+    path = Path(<span class="f">f"</span><span class="s">data/raw/{source_name}/date={today}"</span>)
+    path.mkdir(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+    out = path / <span class="f">f"</span><span class="s">{source_name}_{today}.parquet"</span>
+    df.to_parquet(out, index=<span class="k">False</span>, compression=<span class="s">"snappy"</span>)
+    <span class="k">return</span> out
+
+<span class="com"># Use it in your ingestion flow:</span>
+raw_df = pd.DataFrame(fetch_with_retry(LTA_BUS_URL, headers=LTA_HEADERS))
+save_raw_parquet(raw_df, <span class="s">"bus_arrivals"</span>)          <span class="com"># ← save first</span>
+con.execute(<span class="s">"INSERT OR REPLACE INTO bus_arrivals SELECT * FROM raw_df"</span>)
+
+<span class="com"># DuckDB can query Parquet directly — replay any date without the API:</span>
+con.execute(<span class="s">"""
+    SELECT * FROM 'data/raw/bus_arrivals/date=2026-07-15/*.parquet'
+    WHERE bus_stop_code = '83139'
+"""</span>)</pre>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">Raw zone folder structure (gitignored)</div>
+          <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">data/raw/
+├── bus_arrivals/
+│   └── date=2026-07-15/
+│       └── bus_arrivals_2026-07-15.parquet
+├── weather/
+│   └── date=2026-07-15/
+│       └── weather_2026-07-15.parquet
+└── train_alerts/
+    └── date=2026-07-15/
+        └── train_alerts_2026-07-15.parquet</pre>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"Before loading API data into DuckDB, I save it as Parquet in a date-partitioned raw zone. This follows the data lake pattern: raw zone stores exactly what the API returned, curated zone is the cleaned DuckDB tables. If I find a bug in my transformation SQL, I can replay from the raw files without calling the APIs again — DuckDB can query Parquet directly using a glob path."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATION 09 — FastAPI -->
+    <div class="station s9">
+      <div class="station-rail">
+        <div class="station-dot">09</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="card-eyebrow">Data Serving · Day 2</div>
+        <div class="card-title">FastAPI Recommendation Endpoint</div>
+        <div class="card-desc">Add a FastAPI layer between your database and dashboard. Instead of Streamlit querying DuckDB directly, it calls your API — meaning any client (mobile app, Telegram bot, a teammate's script) can consume the same recommendation logic. FastAPI auto-generates Swagger UI at /docs: the most impressive 30 seconds in your entire video.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-blue">FastAPI</span>
+          <span class="chip chip-blue">uvicorn</span>
+          <span class="chip chip-blue">REST API</span>
+          <span class="chip chip-blue">Swagger /docs</span>
+          <span class="chip chip-blue">data product</span>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="com"># scripts/api.py — uvicorn scripts.api:app --reload --port 8000</span>
+<span class="k">from</span> fastapi <span class="k">import</span> FastAPI, HTTPException
+<span class="k">import</span> duckdb
+
+app = FastAPI(title=<span class="s">"SG Commute API"</span>, version=<span class="s">"1.0"</span>)
+
+<span class="k">def</span> <span class="f">get_db</span>():
+    <span class="k">return</span> duckdb.connect(<span class="s">"db/commute.duckdb"</span>, read_only=<span class="k">True</span>)
+
+<span class="o">@app.get</span>(<span class="s">"/health"</span>)
+<span class="k">def</span> <span class="f">health</span>():
+    <span class="k">return</span> {<span class="s">"status"</span>: <span class="s">"ok"</span>}
+
+<span class="o">@app.get</span>(<span class="s">"/api/v1/recommendation/{event_id}"</span>)
+<span class="k">def</span> <span class="f">get_recommendation</span>(event_id: str):
+    rows = get_db().execute(<span class="s">"""
+        SELECT event_id, title, leave_by, total_duration_min,
+               fare, weather_forecast, is_rainy, alert_msg,
+               recommendation_reason
+        FROM v_enriched_routes
+        WHERE event_id = ? AND route_rank = 1
+    """</span>, [event_id]).df().to_dict(orient=<span class="s">"records"</span>)
+    <span class="k">if not</span> rows: <span class="k">raise</span> HTTPException(<span class="n">404</span>, <span class="s">"Event not found"</span>)
+    <span class="k">return</span> rows[<span class="n">0</span>]
+
+<span class="o">@app.get</span>(<span class="s">"/api/v1/pipeline/status"</span>)
+<span class="k">def</span> <span class="f">pipeline_status</span>():
+    <span class="k">return</span> get_db().execute(<span class="s">"""
+        SELECT source, status, rows_upserted, ran_at
+        FROM pipeline_runs ORDER BY ran_at DESC LIMIT 10
+    """</span>).df().to_dict(orient=<span class="s">"records"</span>)</pre>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Start and test</div>
+            <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">pip install fastapi uvicorn
+
+uvicorn scripts.api:app --reload --port 8000
+
+# Open in browser:
+http://localhost:8000/docs        ← Swagger UI
+http://localhost:8000/health
+http://localhost:8000/api/v1/recommendation/E001</pre>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Architecture shift</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div><span style="color:var(--dim)">Before:</span> <span style="font-family:monospace;color:#A8C4DC">Streamlit → DuckDB</span></div>
+              <div style="margin-top:8px"><span style="color:var(--text)">After:</span><br>
+              <span style="font-family:monospace;color:#93B4F8">Streamlit → FastAPI → DuckDB</span><br>
+              <span style="font-family:monospace;color:#6EE7B7">Mobile app → FastAPI → DuckDB</span><br>
+              <span style="font-family:monospace;color:#6EE7B7">Telegram bot → FastAPI → DuckDB</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"I separated the serving layer from the storage layer by adding FastAPI between my dashboard and the database. My Streamlit dashboard is just one consumer — another team could build a mobile app calling the same endpoint without touching DuckDB. FastAPI also auto-generates this Swagger UI — which is exactly how production APIs are documented and tested. In my video I'll click 'Try it out' live and show the API returning a recommendation."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATION 10 — Airflow -->
+    <div class="station s10">
+      <div class="station-rail">
+        <div class="station-dot">10</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="card-eyebrow">Orchestration · Day 2</div>
+        <div class="card-title">Airflow Pipeline DAG</div>
+        <div class="card-desc">Replace manual script execution with a scheduled DAG. Airflow defines the pipeline as a task graph — what runs first, what runs in parallel, when to retry on failure, how often to schedule. Running locally with airflow standalone gives you a web UI showing which tasks succeeded or failed, with logs per task. This is the Airflow that hiring managers ask about.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-green">Apache Airflow</span>
+          <span class="chip chip-green">DAG</span>
+          <span class="chip chip-green">PythonOperator</span>
+          <span class="chip chip-green">task dependencies</span>
+          <span class="chip chip-green">airflow standalone</span>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="com"># dags/commute_pipeline_dag.py</span>
+<span class="k">from</span> airflow <span class="k">import</span> DAG
+<span class="k">from</span> airflow.operators.python <span class="k">import</span> PythonOperator
+<span class="k">from</span> datetime <span class="k">import</span> datetime, timedelta
+<span class="k">from</span> scripts.ingest <span class="k">import</span> (fetch_calendar, geocode_event,
+    fetch_weather, fetch_bus_arrivals, fetch_train_alerts)
+<span class="k">from</span> scripts.transform <span class="k">import</span> run_transformation
+
+<span class="k">with</span> DAG(
+    dag_id=<span class="s">"commute_pipeline"</span>,
+    schedule=<span class="s">"*/10 * * * *"</span>,       <span class="com"># every 10 minutes</span>
+    start_date=datetime(<span class="n">2026</span>, <span class="n">7</span>, <span class="n">1</span>),
+    catchup=<span class="k">False</span>,
+    default_args={<span class="s">"retries"</span>: <span class="n">2</span>, <span class="s">"retry_delay"</span>: timedelta(minutes=<span class="n">1</span>)}
+) <span class="k">as</span> dag:
+
+    t1 = PythonOperator(task_id=<span class="s">"fetch_calendar"</span>,   python_callable=fetch_calendar)
+    t2 = PythonOperator(task_id=<span class="s">"geocode_destination"</span>, python_callable=geocode_event)
+    t3 = PythonOperator(task_id=<span class="s">"fetch_weather"</span>,     python_callable=fetch_weather)
+    t4 = PythonOperator(task_id=<span class="s">"fetch_bus_arrivals"</span>, python_callable=fetch_bus_arrivals)
+    t5 = PythonOperator(task_id=<span class="s">"fetch_train_alerts"</span>, python_callable=fetch_train_alerts)
+    t6 = PythonOperator(task_id=<span class="s">"sql_transform"</span>,     python_callable=run_transformation)
+
+    <span class="com"># Task graph: calendar → geocode → [weather, bus, alerts] → transform</span>
+    t1 >> t2 >> [t3, t4, t5] >> t6</pre>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Run Airflow locally for demo</div>
+            <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">pip install apache-airflow
+
+# One command: scheduler + webserver + db
+airflow standalone
+
+# Open Airflow UI:
+http://localhost:8080
+# Login: admin / (shown in terminal)
+# Find: commute_pipeline
+# Click "Trigger DAG" to run manually</pre>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Task graph</div>
+            <div class="block-content" style="font-family:monospace;font-size:12px;line-height:2.1;color:#6EE7B7;padding-top:4px">
+              fetch_calendar<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+              geocode_destination<br>
+              &nbsp;&nbsp;↙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘<br>
+              <span style="color:#A8C4DC">weather&nbsp;&nbsp;&nbsp;bus&nbsp;&nbsp;&nbsp;alerts</span><br>
+              &nbsp;&nbsp;&nbsp;↘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↙<br>
+              sql_transform
+            </div>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"Instead of running scripts manually, I defined a DAG in Airflow that orchestrates the entire pipeline. Fetch calendar first, geocode the destination, then fetch weather, bus arrivals, and train alerts in parallel — those three don't depend on each other — then run the SQL transformation once all three complete. I can show the Airflow UI where each task is green for success, with full logs if anything fails."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATION 11 — Docker Compose -->
+    <div class="station s11">
+      <div class="station-rail">
+        <div class="station-dot">11</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="card-eyebrow">Infrastructure · Day 2</div>
+        <div class="card-title">Docker Compose — One Command Start</div>
+        <div class="card-desc">Package the entire system into three Docker containers: the pipeline, the FastAPI server, and the Streamlit dashboard. With a single docker compose up, anyone can run the full system on any machine without installing Python or configuring anything. The DuckDB file is volume-mounted so data persists across restarts.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-navy">Docker</span>
+          <span class="chip chip-navy">docker-compose.yml</span>
+          <span class="chip chip-navy">volumes</span>
+          <span class="chip chip-navy">service networking</span>
+          <span class="chip chip-navy">port mapping</span>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="com"># docker-compose.yml</span>
+<span class="k">version</span>: <span class="s">"3.9"</span>
+<span class="k">services</span>:
+
+  <span class="n">pipeline</span>:
+    build: .
+    command: python -m scripts.ingest
+    volumes:
+      - ./db:/app/db         <span class="com"># DuckDB file persists across runs</span>
+      - ./data:/app/data     <span class="com"># Parquet raw zone</span>
+    env_file: .env           <span class="com"># API keys via .env (gitignored)</span>
+
+  api:
+    build: .
+    command: uvicorn scripts.api:app --host 0.0.0.0 --port 8000
+    ports: [<span class="s">"8000:8000"</span>]
+    volumes: [./db:/app/db]
+    depends_on: [pipeline]
+
+  dashboard:
+    build: .
+    command: streamlit run scripts/serve.py --server.port 8501
+    ports: [<span class="s">"8501:8501"</span>]
+    volumes: [./db:/app/db]
+    environment:
+      - API_URL=http://api:8000  <span class="com"># container-to-container via service name</span>
+    depends_on: [api]</pre>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Dockerfile (shared by all 3 services)</div>
+            <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+# No CMD — each service defines its own command</pre>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Commands</div>
+            <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC"># Start everything:
+docker compose up
+
+# Rebuild after code changes:
+docker compose up --build
+
+# Run just the pipeline once:
+docker compose run pipeline
+
+# Stop everything:
+docker compose down</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"I containerised the system with Docker Compose — three services: pipeline, API, and dashboard. The DuckDB file is volume-mounted so data persists between container restarts. Anyone reviewing my project can clone the repo, add API keys to a .env file, and run docker compose up. No Python installation, no virtual environment setup. That's the point of containerisation — reproducible, deployable anywhere."</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end route-wrapper phase 2 -->
+</div><!-- end route-map phase 2 -->
+
+<!-- COMING SOON DIVIDER -->
+<div class="phase-divider" style="margin-top:12px">
+  <div class="phase-divider-line"></div>
+  <div class="phase-divider-badge" style="background:rgba(42,48,64,.4);border:1px solid var(--border);color:var(--dim)">DAY 3 · DAY 4 · DAY 5 · COMING SOON</div>
+  <div class="phase-divider-line"></div>
+</div>
+<div class="phase-divider-sub">Locked — content updates after each class. Focus on Phase 1 and Phase 2 first.</div>
+
+<div class="route-map">
+  <div class="route-wrapper">
+
+    <div class="station soon">
+      <div class="station-rail">
+        <div class="station-dot" style="background:var(--locked);font-size:10px">D3</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="soon-label">🔒 Unlocks after Day 3</div>
+        <div class="card-title">Advanced Ingestion Patterns</div>
+        <div class="card-desc">Content releases after Day 3. Likely covers streaming ingestion, incremental loading (cursor-based, only fetch new records), or cloud storage integration. Placeholder — update after class.</div>
+      </div>
+    </div>
+
+    <div class="station soon">
+      <div class="station-rail">
+        <div class="station-dot" style="background:var(--locked);font-size:10px">D4</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="soon-label">🔒 Unlocks after Day 4</div>
+        <div class="card-title">Monitoring & Observability</div>
+        <div class="card-desc">Content releases after Day 4. Likely covers data quality dashboards, alerting on pipeline failures, row-count anomaly detection, and SLA monitoring. Placeholder — update after class.</div>
+      </div>
+    </div>
+
+    <div class="station soon">
+      <div class="station-rail">
+        <div class="station-dot" style="background:var(--locked);font-size:10px">D5</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="soon-label">🔒 Unlocks after Day 5</div>
+        <div class="card-title">Cloud Deployment & Scaling</div>
+        <div class="card-desc">Content releases after Day 5. Likely covers deploying to a cloud provider (AWS/GCP), scaling beyond a single machine, managed Airflow, and production-grade secrets management. Placeholder — update after class.</div>
+      </div>
+    </div>
+
+    <!-- STATION 12 — Assessment Video (Final) -->
+    <div class="station sf">
+      <div class="station-rail">
+        <div class="station-dot">12</div>
       </div>
       <div class="station-card">
         <div class="card-eyebrow">Assessment · 15-Minute Video</div>
         <div class="card-title">Video Presentation Guide</div>
-        <div class="card-desc">Your video is essentially an interview answer to: "Tell me about a data engineering project you built." Structure it like a technical narrative — problem, data, pipeline, tools, demo, challenges, improvements. You already have all the material. This station is about organising it to land clearly in 15 minutes.</div>
+        <div class="card-desc">Your video is an interview answer to: "Tell me about a data engineering project you built." Structure it as a technical narrative — problem, data, pipeline, tools, live demo, challenges, and what you'd add next. With Phase 2 complete, you now have 4 distinct systems to show: the Airflow UI, the FastAPI Swagger UI, the Streamlit dashboard, and the Docker Compose stack.</div>
 
         <div class="chip-row">
           <span class="chip" style="background:rgba(184,150,42,.15);border-color:rgba(184,150,42,.4);color:#FDE68A">Screen recorder</span>
           <span class="chip" style="background:rgba(184,150,42,.15);border-color:rgba(184,150,42,.4);color:#FDE68A">Live demo</span>
-          <span class="chip" style="background:rgba(184,150,42,.15);border-color:rgba(184,150,42,.4);color:#FDE68A">Pipeline diagram</span>
+          <span class="chip" style="background:rgba(184,150,42,.15);border-color:rgba(184,150,42,.4);color:#FDE68A">Architecture diagram</span>
           <span class="chip" style="background:rgba(184,150,42,.15);border-color:rgba(184,150,42,.4);color:#FDE68A">Resume bullets</span>
         </div>
 
@@ -733,61 +1198,69 @@ rec = load_recommendation()
           <div class="video-timeline">
             <div class="vt-row">
               <div class="vt-time">00:00</div>
-              <div class="vt-content"><strong>Problem Statement (1 min)</strong><p>You're late for meetings because you check travel time too late. Say: who has this problem, why existing tools don't solve it (they don't know your calendar), and what your system does differently.</p></div>
+              <div class="vt-content"><strong>Problem (1 min)</strong><p>You're late for meetings because you check travel time too late. Say: who has this problem, why existing tools don't solve it (they don't know your calendar), what your system does differently.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">01:00</div>
-              <div class="vt-content"><strong>Data Sources (2 min)</strong><p>Walk through your four sources: OneMap routing, LTA bus arrivals, LTA train alerts, data.gov.sg weather. For each: what it gives you, what format (JSON), and why you chose it. Mention LTA DataMall registration.</p></div>
+              <div class="vt-content"><strong>Architecture (2 min)</strong><p>Show the two-row pipeline diagram: Phase 1 (4 APIs → DuckDB → SQL → Streamlit) and Phase 2 (Retry, Parquet, FastAPI, Airflow, Docker). Walk through each layer in 30 seconds.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">03:00</div>
-              <div class="vt-content"><strong>Pipeline Walkthrough (3 min)</strong><p>Show your architecture diagram. Walk through each stage: ingestion → DuckDB storage → SQL transformation → Streamlit serving. Explain the leave-by calculation and the rain + walking business rule. Show a schema diagram or the CREATE TABLE code briefly.</p></div>
+              <div class="vt-content"><strong>Airflow DAG UI (2 min)</strong><p>Open Airflow at localhost:8080. Show the commute_pipeline DAG graph. Point out the parallel branch (weather + bus + alerts). Trigger a run and watch tasks go green. Explain the 10-minute schedule.</p></div>
             </div>
             <div class="vt-row">
-              <div class="vt-time">06:00</div>
-              <div class="vt-content"><strong>Live Demo (3 min)</strong><p>Run streamlit run scripts/serve.py live on screen. Add a test event ("Team meeting at Raffles City, 10:00am"). Show the dashboard update with leave-by time, route options, and a weather warning. This is the strongest 3 minutes of your video.</p></div>
+              <div class="vt-time">05:00</div>
+              <div class="vt-content"><strong>FastAPI Swagger UI (2 min)</strong><p>Open localhost:8000/docs. Show the three endpoints. Click "Try it out" on /api/v1/recommendation and run it live. Show the JSON response including leave_by and recommendation_reason. This is the "data product" moment.</p></div>
+            </div>
+            <div class="vt-row">
+              <div class="vt-time">07:00</div>
+              <div class="vt-content"><strong>Streamlit Dashboard (2 min)</strong><p>Open localhost:8501. Show the leave-by metric. Simulate rain by updating weather data and triggering a refresh — watch the warning appear. Show the route ranking table.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">09:00</div>
-              <div class="vt-content"><strong>Tools Used — Why Each (2 min)</strong><p>DuckDB: embedded, no server, fast SQL, great for this data size. Streamlit: quick dashboard, no frontend code. pandas: JSON flattening, CSV handling. OneMap + LTA: official Singapore government data, reliable and free.</p></div>
+              <div class="vt-content"><strong>SQL Walkthrough (2 min)</strong><p>Open transform.py. Walk through the window function: ROW_NUMBER() OVER (PARTITION BY event_id). Explain the rain penalty CASE WHEN. Show the leave_by INTERVAL calculation. This is your SQL showcase moment.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">11:00</div>
-              <div class="vt-content"><strong>Challenges (2 min)</strong><p>OneMap token expires every 3 days — had to build auto-refresh. LTA bus stop codes don't match GPS — had to compute Haversine distance to find nearest stop. Timestamps had timezone offset (+08:00) — standardised with TIMESTAMPTZ. Weather areas don't match exactly to GPS — used closest-area lookup.</p></div>
+              <div class="vt-content"><strong>Challenges (2 min)</strong><p>OneMap JWT expires every 3 days — built auto-refresh. LTA bus stop codes don't match GPS — used Haversine distance. Timestamps needed TIMESTAMPTZ for correct +08:00 handling. API occasionally returns (0,0) — added coord validation.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">13:00</div>
-              <div class="vt-content"><strong>Improvements + Resume Bullets (2 min)</strong><p>What you'd add with more time: Airflow for scheduled ingestion every 10 minutes. Google Calendar API integration. ML model to predict travel time from historical patterns. Notification via Telegram bot. Then read your resume bullets directly from the screen.</p></div>
+              <div class="vt-content"><strong>Resume Bullets + Next Steps (2 min)</strong><p>Read your resume bullets. Then: "With more time I'd add Kafka streaming for real-time bus arrivals and a Telegram bot for push notifications." Knowing what comes next shows engineering maturity.</p></div>
             </div>
           </div>
         </div>
 
         <div class="card-block">
-          <div class="block-label">Resume Bullets — Copy These Directly</div>
+          <div class="block-label">Resume Bullets — Copy These</div>
           <ul class="resume-bullets">
             <li>
               <strong>Pipeline Design</strong>
-              Built an end-to-end data pipeline ingesting real-time transport data from LTA DataMall (bus arrivals, train alerts), OneMap routing API, and Singapore's weather API — storing structured data in DuckDB with a typed 6-table relational schema.
+              Built an end-to-end data pipeline ingesting real-time transport data from LTA DataMall, OneMap routing API, and Singapore's weather API — storing structured data in DuckDB with a typed 7-table schema including pipeline monitoring.
             </li>
             <li>
               <strong>SQL Transformation</strong>
-              Designed a SQL transformation layer joining route options, weather forecasts, and disruption alerts; implemented window-function-based route ranking with business rules (rain penalty, disruption buffer) to generate per-event recommendations.
+              Designed a SQL transformation layer joining route options, weather forecasts, and disruption alerts; implemented window-function-based route ranking with business rules (rain penalty, disruption buffer) to generate per-event commute recommendations.
             </li>
             <li>
-              <strong>Data Serving</strong>
-              Served commute recommendations via a Streamlit dashboard with leave-by time calculation, real-time weather warnings, and auto-refresh — reading directly from DuckDB using cached queries.
+              <strong>Production Robustness</strong>
+              Implemented exponential backoff retry on all API calls, idempotent upsert pattern (INSERT OR REPLACE), GPS coordinate validation, and a pipeline_runs monitoring table — making the pipeline safe to run in production.
             </li>
             <li>
-              <strong>Data Engineering Lifecycle</strong>
-              Applied the full data engineering lifecycle — source ingestion, JSON flattening, timestamp standardisation, relational storage, SQL transformation, and dashboard serving — using Python, pandas, DuckDB, and public Singapore government APIs.
+              <strong>Data Serving API</strong>
+              Designed a REST API serving layer with FastAPI exposing commute recommendations as a queryable endpoint with auto-generated Swagger documentation — decoupling the recommendation engine from any specific frontend.
+            </li>
+            <li>
+              <strong>Orchestration & Infrastructure</strong>
+              Orchestrated the pipeline with an Apache Airflow DAG (5 tasks, 10-minute schedule, parallel fetch phase); containerised the full stack with Docker Compose — pipeline, API, and dashboard as three services with volume-mounted persistent storage.
             </li>
           </ul>
         </div>
       </div>
     </div>
 
-  </div><!-- end route-wrapper -->
-</div><!-- end route-map -->
+  </div><!-- end route-wrapper final -->
+</div><!-- end route-map final -->
 
 <!-- GITHUB SECTION -->
 <section class="arch-section" style="margin-top:64px">
@@ -795,43 +1268,18 @@ rec = load_recommendation()
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card-block">
-      <div class="block-label">Step 1 — Create account &amp; repo</div>
+      <div class="block-label">Repo already created</div>
       <div style="font-size:13px;color:var(--muted);line-height:1.7">
-        1. Go to <span style="font-family:monospace;color:var(--flow)">github.com</span> → Sign Up (use your SIT email)<br>
-        2. Click <strong style="color:var(--text)">New repository</strong> (+ icon top right)<br>
-        3. Name it <span style="font-family:monospace;color:#86EFAC">sg-commute-recommender</span><br>
-        4. Set to <strong style="color:var(--text)">Public</strong> (assessors need to see it)<br>
-        5. Tick <strong style="color:var(--text)">Add a README file</strong><br>
-        6. Click <strong style="color:var(--text)">Create repository</strong>
+        Repo: <span style="font-family:monospace;color:var(--flow)">github.com/DLim86/SNAIC-sg-commute-pulse</span><br>
+        Status: pushed with project structure, .gitignore, README<br>
+        Next: commit each script as you complete it
       </div>
     </div>
     <div class="card-block">
-      <div class="block-label">Step 2 — Clone to your computer</div>
-      <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:10px">Open a terminal in <span style="font-family:monospace;color:var(--flow)">e:\SNAIC\Week 2\Assessment</span> and run:</div>
-      <div class="code-block" style="margin-bottom:0">
-        <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#7DD3FC">git</span> clone https://github.com/<span style="color:#C4B5FD">YOUR_USERNAME</span>/sg-commute-recommender.git
-<span style="color:#7DD3FC">cd</span> sg-commute-recommender</pre>
-      </div>
-    </div>
-    <div class="card-block">
-      <div class="block-label">Step 3 — Create .gitignore (critical — protects API keys)</div>
+      <div class="block-label">Daily workflow</div>
       <div class="code-block" style="margin:8px 0 0">
-        <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># File: .gitignore — create this FIRST before any commits</span>
-config.py          <span style="color:#445F78;font-style:italic"># contains your API keys — never commit</span>
-*.duckdb           <span style="color:#445F78;font-style:italic"># database file — too large for git</span>
-.env               <span style="color:#445F78;font-style:italic"># environment variables</span>
-venv/              <span style="color:#445F78;font-style:italic"># Python virtual environment</span>
-__pycache__/
-*.pyc
-data/raw/          <span style="color:#445F78;font-style:italic"># raw API responses (regenerated each run)</span></pre>
-      </div>
-    </div>
-    <div class="card-block">
-      <div class="block-label">Step 4 — Your daily workflow</div>
-      <div class="code-block" style="margin:8px 0 0">
-        <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># After you write or change any file:</span>
-<span style="color:#7DD3FC">git</span> add scripts/ingest.py    <span style="color:#445F78;font-style:italic"># add specific file</span>
-<span style="color:#7DD3FC">git</span> commit -m <span style="color:#86EFAC">"add LTA bus arrival fetcher"</span>
+        <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#7DD3FC">git</span> add scripts/ingest.py
+<span style="color:#7DD3FC">git</span> commit -m <span style="color:#86EFAC">"add LTA bus arrival fetcher with retry"</span>
 <span style="color:#7DD3FC">git</span> push
 
 <span style="color:#445F78;font-style:italic"># Check what's changed:</span>
@@ -839,29 +1287,36 @@ data/raw/          <span style="color:#445F78;font-style:italic"># raw API respo
 <span style="color:#7DD3FC">git</span> diff</pre>
       </div>
     </div>
-  </div>
-
-  <div class="card-block">
-    <div class="block-label">Create a config_example.py — so others can see the structure without your keys</div>
-    <div class="code-block" style="margin:8px 0 0">
-      <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># config_example.py — commit this, NOT config.py</span>
+    <div class="card-block">
+      <div class="block-label">What's gitignored (never commit)</div>
+      <div class="code-block" style="margin:8px 0 0">
+        <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># These are in .gitignore — DO NOT commit:</span>
+config.py        <span style="color:#445F78;font-style:italic"># your real API keys</span>
+*.duckdb         <span style="color:#445F78;font-style:italic"># database file</span>
+data/raw/        <span style="color:#445F78;font-style:italic"># Parquet files (regenerated)</span>
+.env             <span style="color:#445F78;font-style:italic"># Docker API keys</span>
+venv/</pre>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="block-label">config_example.py (commit this, not config.py)</div>
+      <div class="code-block" style="margin:8px 0 0">
+        <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># config_example.py — safe to commit</span>
 LTA_API_KEY = <span style="color:#86EFAC">"your_lta_datamall_api_key_here"</span>
 ONEMAP_EMAIL = <span style="color:#86EFAC">"your_email@example.com"</span>
-ONEMAP_PASSWORD = <span style="color:#86EFAC">"your_onemap_password_here"</span>
-
-<span style="color:#445F78;font-style:italic"># In your actual config.py (which is gitignored), put your real keys:
-# LTA_API_KEY = "abc123real..."</span></pre>
+ONEMAP_PASSWORD = <span style="color:#86EFAC">"your_password_here"</span></pre>
+      </div>
     </div>
   </div>
 
-  <div class="video-tip" style="margin-top:16px">
+  <div class="video-tip">
     <div class="video-tip-label">▶ In your video, say this</div>
-    <p>"I used Git and GitHub throughout the project to version-control my code. Each time I completed a stage — ingestion, schema creation, transformation — I committed it with a meaningful commit message. This means my assessors can see the progression of the project in the commit history."</p>
+    <p>"I used Git and GitHub throughout the project. Each time I completed a stage I committed with a meaningful message — the commit history shows the progression from schema creation through to Docker deployment. My API keys are gitignored and stored separately in config.py, which is never pushed to GitHub."</p>
   </div>
 </section>
 
 <!-- FOOTER -->
 <div class="page-footer">
-  <div class="footer-text">SIT Data Engineering Assessment · Build in order · Station 01 first</div>
-  <div class="footer-badge">7 STATIONS</div>
+  <div class="footer-text">SIT Data Engineering Assessment · Build Phase 1 first · Station 01 → 12</div>
+  <div class="footer-badge">12 STATIONS</div>
 </div>

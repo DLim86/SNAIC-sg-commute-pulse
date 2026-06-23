@@ -1,6 +1,11 @@
 # API keys — never commit
 config.py
 
+# Registration documents and credential files (contain real API keys / tokens)
+LTA/
+OneMap/
+Prompt.txt
+
 # Database
 *.duckdb
 *.duckdb.wal
