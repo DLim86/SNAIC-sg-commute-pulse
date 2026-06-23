@@ -16,10 +16,20 @@ import requests
 
 try:
     from config import LTA_API_KEY, ONEMAP_EMAIL, ONEMAP_PASSWORD
+    try:
+        from config import GOOGLE_CALENDAR_ID
+    except ImportError:
+        GOOGLE_CALENDAR_ID = "primary"
+    try:
+        from config import HOME_ADDRESS
+    except ImportError:
+        HOME_ADDRESS = None
 except ImportError:
     LTA_API_KEY = os.environ["LTA_API_KEY"]
     ONEMAP_EMAIL = os.environ["ONEMAP_EMAIL"]
     ONEMAP_PASSWORD = os.environ["ONEMAP_PASSWORD"]
+    GOOGLE_CALENDAR_ID = os.environ.get("GOOGLE_CALENDAR_ID", "primary")
+    HOME_ADDRESS = os.environ.get("HOME_ADDRESS")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -80,6 +90,25 @@ def log_run(con, source, rows, duration_ms, status, error_msg=None):
     )
 
 
+# ── IP geolocation ───────────────────────────────────────────────────────────
+
+def get_current_location():
+    try:
+        r = requests.get("http://ip-api.com/json/", timeout=5)
+        r.raise_for_status()
+        data = r.json()
+        if data.get("status") != "success":
+            raise ValueError(f"ip-api returned: {data.get('message', 'unknown error')}")
+        lat, lng = data["lat"], data["lon"]
+        if not validate_sg_coords(lat, lng):
+            raise ValueError(f"IP location ({lat}, {lng}) is outside Singapore — VPN or inaccurate fix")
+        log.info("IP geolocation: %s, %s → (%.5f, %.5f)", data.get("city"), data.get("regionName"), lat, lng)
+        return lat, lng
+    except Exception as exc:
+        log.warning("IP geolocation failed: %s — falling back to default origin (Bishan)", exc)
+        return 1.3521, 103.8198
+
+
 # ── OneMap auth ───────────────────────────────────────────────────────────────
 
 def get_onemap_token(max_retries=3):
@@ -118,44 +147,80 @@ def geocode(address, token):
     return lat, lng
 
 
-# ── Calendar event (test seed) ────────────────────────────────────────────────
+# ── Google Calendar ───────────────────────────────────────────────────────────
 
-def seed_calendar_event(con, token):
-    row = con.execute(
-        "SELECT event_id, dest_lat, dest_lng FROM calendar_events LIMIT 1"
-    ).fetchone()
-    if row:
-        log.info("Using existing calendar event: %s", row[0])
-        return row[0], row[1], row[2]
+CREDENTIALS_PATH = Path(__file__).parent.parent / "credentials.json"
+TOKEN_PATH = Path(__file__).parent.parent / "token.json"
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
-    address = "Singapore Management University, 81 Victoria Street"
-    lat, lng = geocode(address, token)
-    event_id = "EVT_TEST_001"
 
-    con.execute(
-        """INSERT OR REPLACE INTO calendar_events
-           (event_id, title, start_time, location_raw, dest_lat, dest_lng)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        [event_id, "Morning Meeting at SMU", "2026-06-24 10:00:00+08:00", address, lat, lng],
-    )
-    log.info("Seeded calendar event → %s (%.5f, %.5f)", address, lat, lng)
-    return event_id, lat, lng
+def _get_calendar_service():
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+
+    creds = None
+    if TOKEN_PATH.exists():
+        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
+            creds = flow.run_local_server(port=0)
+        TOKEN_PATH.write_text(creds.to_json())
+    return build("calendar", "v3", credentials=creds)
+
+
+def fetch_next_calendar_event(con, token):
+    service = _get_calendar_service()
+    now_utc = datetime.now(timezone.utc).isoformat()
+
+    result = service.events().list(
+        calendarId=GOOGLE_CALENDAR_ID,
+        timeMin=now_utc,
+        maxResults=10,
+        singleEvents=True,
+        orderBy="startTime",
+    ).execute()
+
+    for event in result.get("items", []):
+        location = event.get("location", "").strip()
+        start_dt_str = event.get("start", {}).get("dateTime")
+        if not location or not start_dt_str:
+            continue  # skip all-day events and events with no location
+
+        try:
+            lat, lng = geocode(location, token)
+        except ValueError as exc:
+            log.warning("Skipping '%s' — geocode failed: %s", event.get("summary", ""), exc)
+            continue
+
+        event_id = f"GCAL_{event['id']}"
+        title = event.get("summary", "Untitled Event")
+
+        con.execute(
+            """INSERT OR REPLACE INTO calendar_events
+               (event_id, title, start_time, location_raw, dest_lat, dest_lng)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            [event_id, title, start_dt_str, location, lat, lng],
+        )
+        log.info("Calendar event → '%s' at %s (%.5f, %.5f)", title, location, lat, lng)
+        return event_id, lat, lng
+
+    raise ValueError("No upcoming events with a geocodable Singapore location found")
 
 
 # ── OneMap routing ────────────────────────────────────────────────────────────
 
-# Fixed origin — in production this comes from user's home address in config
-ORIGIN_LAT = 1.3521
-ORIGIN_LNG = 103.8198
-
-
-def ingest_routes(con, event_id, dest_lat, dest_lng, token):
+def ingest_routes(con, event_id, dest_lat, dest_lng, token, origin_lat, origin_lng):
     t0 = time.time()
     data = fetch_with_retry(
         "https://www.onemap.gov.sg/api/public/routingsvc/route",
         headers={"Authorization": token},
         params={
-            "start": f"{ORIGIN_LAT},{ORIGIN_LNG}",
+            "start": f"{origin_lat},{origin_lng}",
             "end": f"{dest_lat},{dest_lng}",
             "routeType": "pt",
             "mode": "TRANSIT",
@@ -204,8 +269,12 @@ def ingest_routes(con, event_id, dest_lat, dest_lng, token):
         for j, leg in enumerate(it.get("legs", [])):
             raw_mode = leg.get("mode", "WALK")
             leg_mode = mode_map.get(raw_mode, raw_mode)
-            service_no = (leg.get("routeId") or
-                          leg.get("route", {}).get("shortName") or "")
+            route_field = leg.get("route")
+            service_no = (
+                leg.get("routeId") or
+                (route_field.get("shortName") if isinstance(route_field, dict) else None) or
+                ""
+            )
             from_name = leg.get("from", {}).get("name", "")
             to_name = leg.get("to", {}).get("name", "")
             leg_dur = round(leg.get("duration", 0) / 60)
@@ -429,11 +498,28 @@ def main():
     con = duckdb.connect(str(DB_PATH))
 
     try:
-        event_id, dest_lat, dest_lng = seed_calendar_event(con, token)
+        if HOME_ADDRESS:
+            try:
+                origin_lat, origin_lng = geocode(HOME_ADDRESS, token)
+                log.info("Origin: home address geocoded → (%.5f, %.5f)", origin_lat, origin_lng)
+            except ValueError as exc:
+                log.warning("HOME_ADDRESS geocode failed: %s — falling back to IP geolocation", exc)
+                origin_lat, origin_lng = get_current_location()
+        else:
+            log.info("HOME_ADDRESS not set — using IP geolocation as origin")
+            origin_lat, origin_lng = get_current_location()
+
+        try:
+            event_id, dest_lat, dest_lng = fetch_next_calendar_event(con, token)
+        except ValueError as exc:
+            log.warning("Skipping pipeline run — %s", exc)
+            log.warning("Fix: add a future Google Calendar event with a Singapore address as the location.")
+            log_run(con, "calendar", 0, 0, "skipped", str(exc))
+            return
 
         for name, fn, kwargs in [
             ("weather",      ingest_weather,      {"dest_lat": dest_lat, "dest_lng": dest_lng}),
-            ("routes",       ingest_routes,       {"event_id": event_id, "dest_lat": dest_lat, "dest_lng": dest_lng, "token": token}),
+            ("routes",       ingest_routes,       {"event_id": event_id, "dest_lat": dest_lat, "dest_lng": dest_lng, "token": token, "origin_lat": origin_lat, "origin_lng": origin_lng}),
             ("bus_arrivals", ingest_bus_arrivals,  {"dest_lat": dest_lat, "dest_lng": dest_lng}),
             ("train_alerts", ingest_train_alerts, {}),
         ]:

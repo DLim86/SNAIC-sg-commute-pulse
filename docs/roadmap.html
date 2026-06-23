@@ -146,6 +146,12 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
 .soon .station-dot{font-size:10px !important}
 .soon .route-line::after{opacity:0.08}
 .soon-label{font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);background:var(--surface2);border:1px solid var(--border);padding:3px 8px;border-radius:3px;display:inline-block;margin-bottom:12px}
+
+/* ── DONE stations ── */
+.done .station-card::after{content:'✓ DONE';position:absolute;top:14px;right:16px;font-family:monospace;font-size:10px;letter-spacing:.1em;background:rgba(5,150,105,.15);color:#6EE7B7;border:1px solid rgba(5,150,105,.4);padding:3px 8px;border-radius:3px}
+/* ── CURRENT / NEXT station ── */
+.current .station-card::after{content:'◀ NEXT TO BUILD';position:absolute;top:14px;right:16px;font-family:monospace;font-size:10px;letter-spacing:.1em;background:rgba(220,38,38,.2);color:#FCA5A5;border:1px solid rgba(220,38,38,.5);padding:3px 8px;border-radius:3px;animation:pulse-badge 2s ease-in-out infinite}
+@keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:.55}}
 </style>
 
 <!-- PAGE HEADER -->
@@ -181,10 +187,13 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
     <div class="arch-cell">
       <div class="arch-cell-label">Data Sources</div>
       <div class="arch-cell-items">
-        <div class="arch-item">Calendar event (ICS)</div>
+        <div class="arch-item">Google Calendar API (OAuth2)</div>
         <div class="arch-item">OneMap routing API</div>
         <div class="arch-item">LTA DataMall (bus+MRT)</div>
         <div class="arch-item">data.gov.sg weather</div>
+        <div class="arch-item new">ip-api.com (origin detect)</div>
+        <div class="arch-item new">Garmin Connect (steps)</div>
+        <div class="arch-item new">Whoop API (recovery)</div>
       </div>
     </div>
     <div class="arch-cell">
@@ -200,7 +209,7 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
       <div class="arch-cell-label">Storage</div>
       <div class="arch-cell-items">
         <div class="arch-item">DuckDB (embedded)</div>
-        <div class="arch-item">6 relational tables</div>
+        <div class="arch-item">8 relational tables</div>
         <div class="arch-item">Typed schema</div>
         <div class="arch-item">Upsert (idempotent)</div>
       </div>
@@ -212,6 +221,9 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
         <div class="arch-item">Route + weather JOIN</div>
         <div class="arch-item">Window functions</div>
         <div class="arch-item">Leave-by calc</div>
+        <div class="arch-item new">Walk alt (Zone 1/2)</div>
+        <div class="arch-item new">Fitness API context</div>
+        <div class="arch-item new">Next-event-only output</div>
       </div>
     </div>
     <div class="arch-cell">
@@ -259,7 +271,7 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
   <div class="route-wrapper">
 
     <!-- STATION 01 -->
-    <div class="station s1">
+    <div class="station s1 done">
       <div class="station-rail">
         <div class="station-dot">01</div>
         <div class="route-line"></div>
@@ -299,6 +311,10 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
             <div class="block-label">APIs to Register Now</div>
             <div class="block-content" style="display:flex;flex-direction:column;gap:10px">
               <div>
+                <div style="font-size:11px;color:#C4B5FD;margin-bottom:3px">Google Calendar API</div>
+                <div style="font-size:12px;color:var(--muted)">Free. Enable in Google Cloud Console → create OAuth 2.0 Desktop credential → download credentials.json. First run opens browser for consent.</div>
+              </div>
+              <div>
                 <div style="font-size:11px;color:#C4B5FD;margin-bottom:3px">LTA DataMall</div>
                 <div style="font-size:12px;color:var(--muted)">Free at datamall.lta.gov.sg — approval takes 1–2 days. Gives bus arrivals, train alerts.</div>
               </div>
@@ -315,17 +331,19 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
         </div>
 
         <div class="code-block">
-          <pre><span class="com"># requirements.txt</span>
-<span class="n">requests</span>==2.31.0
-<span class="n">pandas</span>==2.1.0
-<span class="n">duckdb</span>==0.10.0
-<span class="n">streamlit</span>==1.35.0
-<span class="n">icalendar</span>==5.0.11    <span class="com"># .ics calendar files</span>
-<span class="n">shapely</span>==2.0.4       <span class="com"># GPS point-in-polygon</span>
-<span class="n">pytz</span>==2024.1
-<span class="n">fastapi</span>==0.111.0     <span class="com"># Station 09 — add when ready</span>
-<span class="n">uvicorn</span>==0.30.0      <span class="com"># Station 09 — add when ready</span>
-<span class="n">pyarrow</span>==16.1.0      <span class="com"># Station 08 — for Parquet</span></pre>
+          <pre><span class="com"># requirements.txt — use >= for Python 3.14 C-extension compat</span>
+<span class="n">requests</span>>=2.31.0
+<span class="n">pandas</span>>=2.2.2
+<span class="n">duckdb</span>>=1.0.0
+<span class="n">streamlit</span>>=1.35.0
+<span class="n">google-api-python-client</span>>=2.0.0  <span class="com"># Google Calendar API</span>
+<span class="n">google-auth-httplib2</span>>=0.2.0
+<span class="n">google-auth-oauthlib</span>>=1.0.0
+<span class="n">shapely</span>>=2.0.4       <span class="com"># GPS point-in-polygon</span>
+<span class="n">pytz</span>>=2024.1
+<span class="n">fastapi</span>>=0.111.0     <span class="com"># Station 09</span>
+<span class="n">uvicorn</span>>=0.29.0      <span class="com"># Station 09</span>
+<span class="n">pyarrow</span>>=16.0.0      <span class="com"># Station 08 — for Parquet</span></pre>
         </div>
 
         <div class="video-tip">
@@ -336,47 +354,55 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
     </div>
 
     <!-- STATION 02 -->
-    <div class="station s2">
+    <div class="station s2 done">
       <div class="station-rail">
         <div class="station-dot">02</div>
         <div class="route-line"></div>
       </div>
       <div class="station-card">
         <div class="card-eyebrow">Data Sources · Source System 1</div>
-        <div class="card-title">Calendar Input & Geocoding</div>
-        <div class="card-desc">Read the user's next calendar event, extract the event time and destination, then convert the address into GPS coordinates using OneMap's geocoding API. This is your pipeline's entry point — it tells the rest of the system where the user needs to go and when.</div>
+        <div class="card-title">Google Calendar Input & Geocoding</div>
+        <div class="card-desc">Fetch the user's next upcoming calendar event with a location via the Google Calendar API (OAuth2). Geocode the location into GPS coordinates using OneMap. This is the pipeline's entry point — it drives all downstream routing, bus, and weather lookups.</div>
 
         <div class="chip-row">
-          <span class="chip chip-blue">icalendar</span>
+          <span class="chip chip-blue">Google Calendar API</span>
+          <span class="chip chip-blue">OAuth2</span>
           <span class="chip chip-blue">OneMap Search API</span>
-          <span class="chip chip-blue">JSON</span>
-          <span class="chip chip-blue">pandas</span>
+          <span class="chip chip-blue">google-api-python-client</span>
         </div>
 
         <div class="code-block">
-          <pre><span class="com"># scripts/ingest.py — Step 1: Read event + geocode</span>
-<span class="k">import</span> requests, json
+          <pre><span class="com"># scripts/ingest.py — fetch next real event from Google Calendar</span>
+<span class="k">from</span> google.oauth2.credentials <span class="k">import</span> Credentials
+<span class="k">from</span> google_auth_oauthlib.flow <span class="k">import</span> InstalledAppFlow
+<span class="k">from</span> googleapiclient.discovery <span class="k">import</span> build
 
-event = {
-    <span class="s">"event_id"</span>: <span class="s">"E001"</span>,
-    <span class="s">"title"</span>: <span class="s">"Team Meeting"</span>,
-    <span class="s">"start_time"</span>: <span class="s">"2026-07-15T10:00:00+08:00"</span>,
-    <span class="s">"location"</span>: <span class="s">"Marina Bay Sands, Singapore"</span>
-}
+SCOPES = [<span class="s">"https://www.googleapis.com/auth/calendar.readonly"</span>]
 
-<span class="k">def</span> <span class="f">geocode</span>(address, token):
-    r = requests.get(
-        <span class="s">"https://www.onemap.gov.sg/api/common/elastic/search"</span>,
-        params={<span class="s">"searchVal"</span>: address, <span class="s">"returnGeom"</span>: <span class="s">"Y"</span>, <span class="s">"getAddrDetails"</span>: <span class="s">"Y"</span>},
-        headers={<span class="s">"Authorization"</span>: token}
-    )
-    result = r.json()[<span class="s">"results"</span>][0]
-    <span class="k">return</span> float(result[<span class="s">"LATITUDE"</span>]), float(result[<span class="s">"LONGITUDE"</span>])
+<span class="k">def</span> <span class="f">fetch_next_calendar_event</span>(con, token):
+    creds = Credentials.from_authorized_user_file(<span class="s">"token.json"</span>, SCOPES)
+    service = build(<span class="s">"calendar"</span>, <span class="s">"v3"</span>, credentials=creds)
 
-<span class="k">def</span> <span class="f">get_onemap_token</span>(email, password):
-    r = requests.post(<span class="s">"https://www.onemap.gov.sg/api/auth/post/getToken"</span>,
-                      json={<span class="s">"email"</span>: email, <span class="s">"password"</span>: password})
-    <span class="k">return</span> r.json()[<span class="s">"access_token"</span>]</pre>
+    events = service.events().list(
+        calendarId=<span class="s">"primary"</span>,
+        timeMin=datetime.now(timezone.utc).isoformat(),
+        maxResults=<span class="n">10</span>, singleEvents=<span class="k">True</span>, orderBy=<span class="s">"startTime"</span>
+    ).execute().get(<span class="s">"items"</span>, [])
+
+    <span class="k">for</span> event <span class="k">in</span> events:
+        location  = event.get(<span class="s">"location"</span>, <span class="s">""</span>).strip()
+        start_dt  = event.get(<span class="s">"start"</span>, {}).get(<span class="s">"dateTime"</span>)
+        <span class="k">if not</span> location <span class="k">or not</span> start_dt:
+            <span class="k">continue</span>  <span class="com"># skip all-day / locationless events</span>
+        lat, lng = geocode(location, token)
+        event_id = <span class="f">f"GCAL_{event['id']}"</span>
+        con.execute(<span class="s">"""INSERT OR REPLACE INTO calendar_events
+            (event_id, title, start_time, location_raw, dest_lat, dest_lng)
+            VALUES (?, ?, ?, ?, ?, ?)"""</span>,
+            [event_id, event.get(<span class="s">"summary"</span>, <span class="s">"Untitled"</span>), start_dt, location, lat, lng])
+        <span class="k">return</span> event_id, lat, lng
+
+    <span class="k">raise</span> ValueError(<span class="s">"No upcoming events with a Singapore location found"</span>)</pre>
         </div>
 
         <div class="card-block" style="margin-bottom:20px">
@@ -395,13 +421,13 @@ event = {
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"My data source is a calendar event. I extract the destination and convert it to GPS coordinates using Singapore's OneMap geocoding API. This drives the entire pipeline. I also handle OneMap's JWT token — it expires every 3 days, so I refresh it automatically on each run."</p>
+          <p>"My pipeline's entry point is Google Calendar. I use OAuth2 to read the next upcoming event that has a location — skipping all-day events and events without an address. I then geocode that location via OneMap to get GPS coordinates. Both the Google OAuth token and OneMap JWT are refreshed automatically each run — no manual key management."</p>
         </div>
       </div>
     </div>
 
     <!-- STATION 03 -->
-    <div class="station s3">
+    <div class="station s3 done">
       <div class="station-rail">
         <div class="station-dot">03</div>
         <div class="route-line"></div>
@@ -479,7 +505,7 @@ event = {
     </div>
 
     <!-- STATION 04 -->
-    <div class="station s4">
+    <div class="station s4 done">
       <div class="station-rail">
         <div class="station-dot">04</div>
         <div class="route-line"></div>
@@ -581,15 +607,15 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
     </div>
 
     <!-- STATION 05 -->
-    <div class="station s5">
+    <div class="station s5 done">
       <div class="station-rail">
         <div class="station-dot">05</div>
         <div class="route-line"></div>
       </div>
       <div class="station-card">
         <div class="card-eyebrow">Data Transformation</div>
-        <div class="card-title">SQL Cleaning & Recommendation Logic</div>
-        <div class="card-desc">Write SQL views that join your three data streams — routes, weather, and alerts — into a single enriched recommendation. Calculate the leave-by time, flag rainy walks, detect disrupted MRT lines, and rank routes per event using window functions.</div>
+        <div class="card-title">SQL Cleaning, Recommendation Logic & Walk Alternative</div>
+        <div class="card-desc">Join routes, weather, and alerts into a ranked recommendation. Calculate leave-by time, flag rainy walks, detect MRT disruptions, and rank routes using window functions. Transform also checks if walking is viable (&lt;5 km, no rain) and shows Zone 1/2 health stats plus optional Garmin/Whoop fitness context.</div>
 
         <div class="chip-row">
           <span class="chip chip-amber">SQL JOINs</span>
@@ -597,6 +623,8 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
           <span class="chip chip-amber">Window functions</span>
           <span class="chip chip-amber">INTERVAL arithmetic</span>
           <span class="chip chip-amber">CREATE VIEW</span>
+          <span class="chip chip-amber">Garmin API</span>
+          <span class="chip chip-amber">Whoop API</span>
         </div>
 
         <div class="code-block">
@@ -652,7 +680,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
     </div>
 
     <!-- STATION 06 -->
-    <div class="station s6">
+    <div class="station s6 current">
       <div class="station-rail">
         <div class="station-dot">06</div>
         <div class="route-line"></div>
@@ -723,7 +751,7 @@ rec = load_recommendation()
   <div class="route-wrapper">
 
     <!-- STATION 07 — Robust Ingestion -->
-    <div class="station s7">
+    <div class="station s7 done">
       <div class="station-rail">
         <div class="station-dot">07</div>
         <div class="route-line"></div>
@@ -804,7 +832,7 @@ except Exception as e:
     </div>
 
     <!-- STATION 08 — Parquet Raw Layer -->
-    <div class="station s8">
+    <div class="station s8 done">
       <div class="station-rail">
         <div class="station-dot">08</div>
         <div class="route-line"></div>
@@ -1236,7 +1264,7 @@ docker compose down</pre>
           <ul class="resume-bullets">
             <li>
               <strong>Pipeline Design</strong>
-              Built an end-to-end data pipeline ingesting real-time transport data from LTA DataMall, OneMap routing API, and Singapore's weather API — storing structured data in DuckDB with a typed 7-table schema including pipeline monitoring.
+              Built an end-to-end data pipeline driven by Google Calendar (OAuth2) — ingesting real-time transport data from LTA DataMall, OneMap routing API, and Singapore's weather API — storing structured data in DuckDB with a typed 8-table schema including pipeline monitoring.
             </li>
             <li>
               <strong>SQL Transformation</strong>
@@ -1291,7 +1319,9 @@ docker compose down</pre>
       <div class="block-label">What's gitignored (never commit)</div>
       <div class="code-block" style="margin:8px 0 0">
         <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># These are in .gitignore — DO NOT commit:</span>
-config.py        <span style="color:#445F78;font-style:italic"># your real API keys</span>
+config.py        <span style="color:#445F78;font-style:italic"># LTA + OneMap API keys</span>
+credentials.json <span style="color:#445F78;font-style:italic"># Google OAuth2 client secret</span>
+token.json       <span style="color:#445F78;font-style:italic"># Google OAuth2 access token</span>
 *.duckdb         <span style="color:#445F78;font-style:italic"># database file</span>
 data/raw/        <span style="color:#445F78;font-style:italic"># Parquet files (regenerated)</span>
 .env             <span style="color:#445F78;font-style:italic"># Docker API keys</span>
@@ -1304,7 +1334,9 @@ venv/</pre>
         <pre style="font-family:monospace;font-size:12px;line-height:1.75;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># config_example.py — safe to commit</span>
 LTA_API_KEY = <span style="color:#86EFAC">"your_lta_datamall_api_key_here"</span>
 ONEMAP_EMAIL = <span style="color:#86EFAC">"your_email@example.com"</span>
-ONEMAP_PASSWORD = <span style="color:#86EFAC">"your_password_here"</span></pre>
+ONEMAP_PASSWORD = <span style="color:#86EFAC">"your_password_here"</span>
+GOOGLE_CALENDAR_ID = <span style="color:#86EFAC">"primary"</span>  <span style="color:#445F78;font-style:italic"># your main Google Calendar</span>
+<span style="color:#445F78;font-style:italic"># credentials.json + token.json go in project root (gitignored)</span></pre>
       </div>
     </div>
   </div>

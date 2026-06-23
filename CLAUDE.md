@@ -40,7 +40,8 @@ You are both **project mentor** and **project manager** for this SIT Data Engine
 3. `LTA/`, `OneMap/`, `Prompt.txt` are gitignored — contain real credentials
 4. `.env` is gitignored — used for Docker secrets
 5. `data/raw/` is gitignored — regenerated each run
-6. All API keys in documentation must use placeholders: `<LTA_API_KEY>`, `<ONEMAP_TOKEN>`, `<ONEMAP_EMAIL>`, `<ONEMAP_PASSWORD>`
+6. `credentials.json` and `token.json` are gitignored — Google Calendar OAuth2 files, never commit
+7. All API keys in documentation must use placeholders: `<LTA_API_KEY>`, `<ONEMAP_TOKEN>`, `<ONEMAP_EMAIL>`, `<ONEMAP_PASSWORD>`, `<GOOGLE_CALENDAR_ID>`
 
 If a file contains a real key or token, flag it before reading it aloud or including it in output.
 
@@ -69,21 +70,21 @@ Given a next calendar event, the pipeline:
 | File | Status |
 |---|---|
 | `.gitignore` | Complete |
-| `config_example.py` | Complete — template only, no real keys |
-| `config.py` | Exists locally, gitignored — real LTA + OneMap credentials inside |
-| `requirements.txt` | Uses `>=` for C-extension packages (Python 3.14 compat) |
+| `config_example.py` | Complete — template includes HOME_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN |
+| `config.py` | Exists locally, gitignored — real credentials inside |
+| `requirements.txt` | Uses `>=` for C-extension packages; includes `garminconnect>=0.2.0` |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Complete — interactive 12-station roadmap |
 | `docs/AI_HANDOFF.md` | Complete — full handoff context (keep updated) |
-| `docs/video_script.html` | Complete — timed video script, update after each new script |
+| `docs/video_script.html` | Complete — timed video script |
 | `scripts/__init__.py` | Empty — required for Airflow DAG imports |
 | `scripts/schema.py` | **DONE** — 8 tables + `v_enriched_routes` view. Run once. |
-| `scripts/ingest.py` | **DONE** — 4 APIs, retry/backoff, Parquet raw zone, legs, idempotent upsert |
-| `scripts/transform.py` | **DONE** — leave-latest, leave-now, leg steps, rain/delay warnings |
-| `db/commute.duckdb` | Exists locally, gitignored — EVT_TEST_001 seeded |
+| `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + dynamic origin (HOME_ADDRESS → IP geolocation → Bishan fallback) + graceful no-event exit |
+| `scripts/transform.py` | **DONE** — next-event-only (ORDER BY start_time LIMIT 1), LEAVE LATEST + LEAVE NOW always shown, step-by-step legs, "Why chosen" label, walk alternative with Zone 1/2 stats, optional Garmin steps + Whoop recovery |
+| `db/commute.duckdb` | Exists locally, gitignored — populated by real Google Calendar events |
 | `data/raw/bus_stops/bus_stops.parquet` | Cached — 5,205 LTA bus stops |
 | `data/raw/weather/` | Populated — 47 weather areas |
-| `data/raw/onemap_route/` | Populated — 3 route options (legs pending next ingest run) |
+| `data/raw/onemap_route/` | Populated — 3 route options |
 
 ### Still to build (in order)
 | File | Purpose |
@@ -95,17 +96,14 @@ Given a next calendar event, the pipeline:
 
 ---
 
-## Test Data in DB
+## Calendar Data
 
-Event seeded for development:
-```
-event_id  : EVT_TEST_001
-title     : Morning Meeting at SMU
-start_time: 2026-06-24 10:00:00+08:00
-location  : Singapore Management University, 81 Victoria Street
-dest_lat  : 1.29685  lng: 103.85221
-origin    : 1.3521, 103.8198 (hardcoded central SG placeholder)
-```
+Events are read from Google Calendar via OAuth2 (`fetch_next_calendar_event()` in `ingest.py`).
+- Scans next 10 upcoming events, skips all-day events and events with no location
+- Geocodes the first valid location via OneMap
+- `event_id` format: `GCAL_{google_event_id}`
+- First run opens a browser for Google consent; writes `token.json` to project root (gitignored)
+- `GOOGLE_CALENDAR_ID = "primary"` in `config.py` — change to a specific calendar ID if needed
 
 ---
 
@@ -126,11 +124,13 @@ Use `config.py` (gitignored) for all real secrets. Template is in `config_exampl
 
 | API | Auth method | Key location |
 |---|---|---|
+| Google Calendar | OAuth2 — `credentials.json` + `token.json` (both gitignored) | Project root |
 | LTA DataMall | Header: `AccountKey: <LTA_API_KEY>` | `config.py` → `LTA_API_KEY` |
 | OneMap | JWT from POST `/api/auth/post/getToken` | `config.py` → `ONEMAP_EMAIL`, `ONEMAP_PASSWORD` |
 | data.gov.sg | None — open API | — |
 
 OneMap token expires every 3 days — always call `get_onemap_token()` fresh per pipeline run.
+Google Calendar OAuth2 token auto-refreshes via `google-auth` — no manual refresh needed.
 
 ---
 
@@ -216,10 +216,16 @@ git push
 - **`datetime.utcnow()` deprecated in Python 3.12+** — use `datetime.now(timezone.utc).replace(tzinfo=None)` for naive UTC into TIMESTAMP columns
 - **OneMap routing `duration` is in seconds** — divide by 60 for `total_duration_min`
 - **`get_onemap_token()` uses `requests.post`, not `fetch_with_retry`** — has its own retry loop with 30s timeout
-- **OneMap timeout on retry returns non-dict** — always check `isinstance(data, dict)` before calling `.get()` on API responses
+- **OneMap `leg.get("route", {})` can return a string** — always check `isinstance(route_field, dict)` before calling `.get("shortName")` on it (fixed in ingest.py)
 - **`v_enriched_routes` cross-join:** view joins all 47 weather areas per route (141 rows for 3 routes). `route_rank=1` still gives exactly one row per event — safe to use in transform.py
-- **"Leave now" is meaningless for future-day events** — check `hours_until_event > 6` before showing leave-now calculation
+- **transform.py BEST_ROUTE_QUERY must include `ORDER BY start_time LIMIT 1`** — without this, all events in the DB are processed (not just the next one)
 - **`route_legs` table** added in latest schema.py — run `python scripts/schema.py` then `python scripts/ingest.py` to populate legs
+- **Google Calendar no-event case:** pipeline now logs a warning and exits cleanly (records 'skipped' in pipeline_runs) — does NOT raise an exception. Add a location to at least one future calendar event.
+- **Google Calendar first run:** browser opens for OAuth2 consent — must be on a machine with a browser. Writes `token.json` to project root. For Docker/Airflow: pre-generate `token.json` locally and volume-mount it.
+- **IP geolocation (`ip-api.com`):** returns city-level accuracy (~1–5 km), free, no API key. Returns non-SG coords if user is on a VPN — falls back to Bishan (1.3521, 103.8198) with a warning. HTTP not HTTPS on free tier.
+- **Walk suggestion:** only shown when `is_rainy = False` AND Haversine distance from origin to dest < 5 km. Uses `_detect_origin()` in transform.py (IP geolocation — does NOT call OneMap, no token needed there).
+- **Garmin steps:** requires `pip install garminconnect` — already in requirements.txt. Uses unofficial email/password auth. Leave `GARMIN_EMAIL = ""` in config to skip silently.
+- **Whoop recovery:** requires `WHOOP_ACCESS_TOKEN` in config.py — generate from developer.whoop.com. Returns recovery score 0–100. Leave blank to skip.
 
 ---
 

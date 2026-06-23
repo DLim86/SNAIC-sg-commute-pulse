@@ -6,3 +6,15 @@ LTA_API_KEY = "your_lta_datamall_api_key_here"
 
 ONEMAP_EMAIL = "your_onemap_registered_email_here"
 ONEMAP_PASSWORD = "your_onemap_password_here"
+
+# Google Calendar — download credentials.json from Google Cloud Console
+# credentials.json and token.json are gitignored — never commit them
+GOOGLE_CALENDAR_ID = "primary"  # "primary" = your main Google Calendar
+
+# Your home address — geocoded via OneMap at pipeline start as the routing origin
+HOME_ADDRESS = "your home block and street, Singapore"
+
+# Optional fitness integrations — leave blank ("") to skip any you don't have
+GARMIN_EMAIL = ""           # Garmin Connect account email
+GARMIN_PASSWORD = ""        # Garmin Connect account password
+WHOOP_ACCESS_TOKEN = ""     # Whoop personal access token from developer.whoop.com

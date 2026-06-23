@@ -209,14 +209,62 @@ for attempt in range(max_retries):
 
 ---
 
-## D15 — No `.ics` File Parsing in MVP
+## D15 — Google Calendar API via OAuth2
 
-**Decision:** MVP uses a hardcoded test event (`event_id = "EVT_TEST_001"`) rather than parsing a real `.ics` file.
+**Decision:** Use the Google Calendar API (not a static `.ics` file) to fetch the next real upcoming event with a Singapore location.
 
 **Why:**
-- The core value of the project is the pipeline, transformation, and serving — not the calendar parsing
-- `.ics` parsing with `icalendar` is straightforward but adds a dependency on having a real calendar file available
-- A hardcoded test event lets the pipeline be tested immediately with any LTA/OneMap credentials
-- The `icalendar` library is in `requirements.txt` and the `calendar_events` table schema supports it — the upgrade path is clear
+- A live Google Calendar feed makes the demo genuinely useful — the pipeline recommends a commute for an event that actually exists in your calendar
+- The Google Calendar API returns structured JSON: `summary`, `start.dateTime`, `location` — no `.ics` parsing required
+- OAuth2 with `InstalledAppFlow` handles the first-run browser consent and caches a `token.json` for subsequent runs (auto-refreshes before expiry)
+- `credentials.json` and `token.json` are both gitignored — same security model as `config.py`
+- Demonstrates a third-party API OAuth2 integration, which is a stronger DE portfolio piece than a static file
 
-**Upgrade path:** Replace the hardcoded `event` dict in `ingest.py` with `icalendar.Calendar.from_ical(open("calendar.ics").read())` and iterate over `VEVENT` components.
+**Implementation:**
+- `credentials.json` — downloaded from Google Cloud Console (OAuth 2.0 Desktop app credential)
+- `token.json` — written on first run after browser consent, auto-refreshed by `google-auth`
+- `fetch_next_calendar_event()` scans the next 10 upcoming events, skips all-day events (no `dateTime`) and events with no location, geocodes the first valid location via OneMap
+- `GOOGLE_CALENDAR_ID = "primary"` in `config.py` — change to a specific calendar ID if needed
+
+**Trade-off:** First run opens a browser window for Google consent — not fully headless. In Docker/Airflow, `token.json` must be pre-generated on a machine with a browser and volume-mounted into the container.
+
+---
+
+## D16 — IP Geolocation as Routing Origin (ip-api.com)
+
+**Decision:** Detect the user's current location via `http://ip-api.com/json/` when `HOME_ADDRESS` is not set in `config.py`. Use this as the routing origin passed to OneMap.
+
+**Why:**
+- The original code hardcoded `ORIGIN_LAT = 1.3521, ORIGIN_LNG = 103.8198` (Bishan) — wrong for anyone not in Bishan
+- Device GPS is not accessible from a desktop Python script
+- `ip-api.com` is free, requires no API key, and returns city-level coordinates (~1–5 km accuracy)
+- In Singapore's compact geography, city-level accuracy puts you within 1–2 MRT stations of your real location — good enough for route ranking
+- The function validates returned coordinates are within Singapore bounds — rejects VPN-induced foreign IPs gracefully
+
+**Priority order:** `HOME_ADDRESS` in config (geocoded via OneMap, address-level precision) → IP geolocation → Bishan hardcoded fallback
+
+**Trade-off:** IP geolocation accuracy degrades on corporate networks or VPNs. Users who want precision must set `HOME_ADDRESS` in `config.py`.
+
+---
+
+## D17 — Walk Alternative Suggestion with Fitness API Integration
+
+**Decision:** After the primary transit recommendation, check if walking to the destination is viable (< 5 km, no rain) and if so, display a walk alternative with Zone 1/2 heart rate context and optional fitness data.
+
+**Why:**
+- Singapore's urban density means many destinations are walkable — the pipeline would never surface this without an explicit check
+- Walking data enriches the recommendation beyond pure transit: health context (steps toward daily goal, calorie burn, heart rate zone) makes the output genuinely useful
+- Zone 1 and Zone 2 guidance is medically established and easy to explain in the video demo
+- Fitness APIs (Garmin, Whoop) are entirely optional — the walk suggestion appears with or without them, so the feature degrades gracefully
+
+**Fitness API priority:**
+- Garmin Connect (`garminconnect` pip package) — today's step count via email/password (unofficial API, may break)
+- Whoop developer API — recovery score 0–100% via personal access token from `developer.whoop.com`
+- Both optional: `GARMIN_EMAIL = ""` or `WHOOP_ACCESS_TOKEN = ""` in config silently skips that source
+
+**Distance threshold:** 5 km straight-line (Haversine). Reasons:
+- At 5 km/h walking pace, 5 km = 60 min — still practical for a morning commute with buffer time
+- Straight-line is conservative (actual path is longer) — so 5 km straight = roughly 6–7 km walking route
+- Routing distance would require another OneMap API call per run; Haversine is instant
+
+**Trade-off:** Walk suggestion uses `_detect_origin()` (IP geolocation) in transform.py, not the geocoded `HOME_ADDRESS`. This is because transform.py has no OneMap token. Accuracy is city-level — acceptable given the 5 km threshold.

@@ -8,9 +8,9 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    DATA SOURCES                             │
 │                                                             │
-│  📅 Calendar Event    OneMap API      LTA DataMall          │
-│  (ICS / JSON input)  (routing,        (bus arrivals,        │
-│                       geocoding)       train alerts)        │
+│  📅 Google Calendar   OneMap API      LTA DataMall          │
+│  (OAuth2 — real       (routing,        (bus arrivals,        │
+│   upcoming events)    geocoding)       train alerts)        │
 │                                                             │
 │                       data.gov.sg                           │
 │                       (weather forecast)                    │
@@ -80,9 +80,11 @@
 ## Data Flow
 
 ```
-Calendar Event
-  → parse event_id, title, start_time, location_raw
-  → geocode location_raw via OneMap → dest_lat, dest_lng
+Google Calendar API (OAuth2)
+  → fetch_next_calendar_event(): scan next 10 upcoming events
+  → skip all-day events (no dateTime) and events with no location
+  → geocode first valid location via OneMap → dest_lat, dest_lng
+  → event_id = f"GCAL_{google_event_id}"
   → INSERT OR REPLACE INTO calendar_events
 
 For each event:
@@ -185,6 +187,13 @@ pre-built wheels which only exist in newer versions.
 ---
 
 ## Key Technical Constraints
+
+### Google Calendar OAuth2
+- `credentials.json` — downloaded from Google Cloud Console (OAuth 2.0 Desktop app). Gitignored.
+- `token.json` — written on first run after browser consent, auto-refreshed by `google-auth`. Gitignored.
+- First run opens a browser window — must be on a machine with a browser
+- `GOOGLE_CALENDAR_ID = "primary"` in `config.py` — reads your main Google Calendar
+- Skips events with no `location` field and all-day events (no `dateTime`)
 
 ### OneMap JWT Token
 - Expires every **3 days** — must call `get_onemap_token()` at the start of every pipeline run

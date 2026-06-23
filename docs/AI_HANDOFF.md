@@ -41,24 +41,35 @@ Given a user's next calendar event, the pipeline:
 - `docs/roadmap.html` — interactive 12-station roadmap
 - `docs/video_script.html` — 8-section timed video script for the 15-min assessment video
 - `scripts/__init__.py` — empty file (required for Airflow DAG imports)
-- **`scripts/schema.py`** — DONE. Creates 7 DuckDB tables + `v_enriched_routes` view. Run once.
-- **`scripts/ingest.py`** — DONE. All 4 API sources working with retry/backoff, Parquet raw zone, idempotent upsert.
+- **`scripts/schema.py`** — DONE. Creates 8 DuckDB tables + `v_enriched_routes` view. Run once.
+- **`scripts/ingest.py`** — DONE. Full feature set including:
+  - Google Calendar API (real events, graceful no-event exit — logs 'skipped', does not crash)
+  - 4 data APIs (OneMap routing, LTA bus, LTA train alerts, data.gov.sg weather)
+  - Retry/backoff, Parquet raw zone, idempotent upsert, leg steps
+  - Dynamic routing origin: HOME_ADDRESS geocoded via OneMap → IP geolocation via `ip-api.com` → Bishan fallback
+  - Bug fix: `leg.get("route")` may be a string — now guarded with `isinstance(route_field, dict)` before calling `.get("shortName")`
+- **`scripts/transform.py`** — DONE. Full feature set including:
+  - Only processes next upcoming event (`ORDER BY start_time LIMIT 1`)
+  - LEAVE LATEST + LEAVE NOW always shown (LEAVE NOW suppression removed)
+  - Step-by-step legs (walk/bus/MRT with duration and from→to names)
+  - "Why chosen:" label from `recommendation_reason`
+  - Bus wait time shown on BUS legs (from `bus_arrivals` table)
+  - Rain flag on WALK legs > 400m when `is_rainy = True`
+  - **Walk alternative suggestion** (NEW): shown when `is_rainy = False` AND Haversine distance < 5 km — includes Zone 1/2 stats, estimated steps/calories/time
+  - Optional Garmin step count integration (`GARMIN_EMAIL` + `GARMIN_PASSWORD` in config)
+  - Optional Whoop recovery score integration (`WHOOP_ACCESS_TOKEN` in config)
 
 ### Live data in `db/commute.duckdb` (gitignored, local only)
-- Test event EVT_TEST_001: "Morning Meeting at SMU", 2026-06-24 10:00 SGT, dest (1.29685, 103.85221)
+- Calendar events sourced from real Google Calendar via OAuth2 — re-run `ingest.py` to pull latest
 - 47 weather forecast areas loaded
-- 3 route options from OneMap
-- Bus stop 01012 checked (no active services at time of test — handled gracefully)
+- 3 route options from OneMap (SNAIC event at 1 Punggol Coast Road)
+- Bus stop 65721 checked (no active services at time of test — handled gracefully as 404)
 - No active train disruptions at time of test
 
 ### Cached files
-- `data/raw/bus_stops/bus_stops.parquet` — 5,205 LTA bus stops (re-used on each run, not date-partitioned)
+- `data/raw/bus_stops/bus_stops.parquet` — 5,205 LTA bus stops
 - `data/raw/weather/date=2026-06-23/weather_2026-06-23.parquet` — 47 rows
 - `data/raw/onemap_route/date=2026-06-23/onemap_route_2026-06-23.parquet` — 3 rows
-
-### Also done (added during build)
-- `scripts/transform.py` — **DONE**. Reads `v_enriched_routes`, writes recommendations. Shows leave-latest, leave-now (future-event aware), step-by-step legs, rain per walk leg, MRT disruption flag.
-- `route_legs` table added to schema (8th table) — stores individual leg steps from OneMap routing response (mode, service_no, from/to names, duration, distance)
 
 ### Still to build (in order)
 | File | Purpose | Build order |
@@ -69,10 +80,11 @@ Given a user's next calendar event, the pipeline:
 | `dags/commute_pipeline_dag.py` | Airflow DAG orchestration | 3rd |
 | `docker-compose.yml` + `Dockerfile` | Container orchestration | 4th |
 
-### Known bugs / pending
-- `route_legs` empty in DB: OneMap timed out during last ingest run. Re-run `python scripts/ingest.py` — legs will populate once routing succeeds.
-- `weather_forecast` field now included in `BEST_ROUTE_QUERY` in transform.py (was missing, showed "Clear")
-- "Leave now" suppressed when event > 6 hours away (was showing nonsense like "1046 min early")
+### Known issues / things to be aware of
+- `route_legs` may be empty: re-run `python scripts/ingest.py` if OneMap timed out on a previous run — legs populate once routing succeeds
+- Walk suggestion uses `_detect_origin()` in transform.py which calls IP geolocation — if on VPN, coords may be outside SG and it falls back to Bishan. Set `HOME_ADDRESS` in config.py for accurate origin.
+- Garmin integration uses unofficial `garminconnect` library (email/password). If Garmin changes their auth, this may break. Leave `GARMIN_EMAIL = ""` to skip.
+- Google Calendar first run: browser opens for OAuth2 consent, writes `token.json` to project root. `credentials.json` must be present before running.
 
 ---
 

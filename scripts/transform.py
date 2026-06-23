@@ -2,12 +2,27 @@ import logging
 import sys
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
+from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
 
 import duckdb
+import requests
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+try:
+    from config import HOME_ADDRESS
+except ImportError:
+    HOME_ADDRESS = None
+try:
+    from config import GARMIN_EMAIL, GARMIN_PASSWORD
+except ImportError:
+    GARMIN_EMAIL = GARMIN_PASSWORD = ""
+try:
+    from config import WHOOP_ACCESS_TOKEN
+except ImportError:
+    WHOOP_ACCESS_TOKEN = ""
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -26,9 +41,12 @@ BEST_ROUTE_QUERY = """
 SELECT
     event_id, title, start_time, leave_by,
     total_duration_min, walk_distance_m, num_transfers, fare,
-    weather_forecast, is_rainy, alert_msg, recommendation_reason
+    weather_forecast, is_rainy, alert_msg, recommendation_reason,
+    dest_lat, dest_lng
 FROM v_enriched_routes
 WHERE route_rank = 1
+ORDER BY start_time
+LIMIT 1
 """
 
 LEGS_QUERY = """
@@ -54,6 +72,110 @@ WHERE severity = 'HEAVY'
 ORDER BY fetched_at DESC
 LIMIT 3
 """
+
+
+def _haversine_m(lat1, lng1, lat2, lng2):
+    R = 6_371_000
+    d_lat = radians(lat2 - lat1)
+    d_lng = radians(lng2 - lng1)
+    a = sin(d_lat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(d_lng / 2) ** 2
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+
+
+def _detect_origin():
+    """IP geolocation as routing origin — falls back to Bishan if outside SG or call fails."""
+    try:
+        r = requests.get("http://ip-api.com/json/", timeout=5)
+        data = r.json()
+        if data.get("status") == "success":
+            lat, lng = data["lat"], data["lon"]
+            if 1.15 <= lat <= 1.47 and 103.6 <= lng <= 104.1:
+                return lat, lng
+    except Exception:
+        pass
+    return 1.3521, 103.8198
+
+
+def get_garmin_steps():
+    if not (GARMIN_EMAIL and GARMIN_PASSWORD):
+        return None
+    try:
+        from garminconnect import Garmin
+        client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+        client.login()
+        steps_data = client.get_steps_data(date.today().isoformat())
+        return sum(item.get("steps", 0) for item in steps_data if item.get("steps"))
+    except Exception as exc:
+        log.warning("Garmin steps fetch failed: %s", exc)
+        return None
+
+
+def get_whoop_recovery():
+    if not WHOOP_ACCESS_TOKEN:
+        return None
+    try:
+        today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        r = requests.get(
+            "https://api.prod.whoop.com/developer/v1/recovery",
+            headers={"Authorization": f"Bearer {WHOOP_ACCESS_TOKEN}"},
+            params={
+                "start": today_start.isoformat(),
+                "end": (today_start + timedelta(days=1)).isoformat(),
+            },
+            timeout=10,
+        )
+        records = r.json().get("records", [])
+        if records:
+            return records[0].get("score", {}).get("recovery_score")
+    except Exception as exc:
+        log.warning("Whoop recovery fetch failed: %s", exc)
+    return None
+
+
+def print_walk_suggestion(dest_lat, dest_lng, is_rainy):
+    if is_rainy:
+        return
+
+    origin_lat, origin_lng = _detect_origin()
+    distance_m = _haversine_m(origin_lat, origin_lng, dest_lat, dest_lng)
+    distance_km = distance_m / 1000
+
+    if distance_km > 5.0:
+        return
+
+    walk_min = round(distance_km / 5.0 * 60)
+    steps_est = round(distance_m / 0.75)
+    calories_est = round(distance_km * 63)
+
+    garmin_steps = get_garmin_steps()
+    whoop_recovery = get_whoop_recovery()
+
+    log.info("")
+    log.info("─" * 56)
+    log.info("🚶  WALK ALTERNATIVE  (%.1f km · no rain)", distance_km)
+    log.info("    Distance   : %.1f km straight line", distance_km)
+    log.info("    Est. time  : ~%d min at 5 km/h", walk_min)
+    log.info("    Steps      : ~%s steps", f"{steps_est:,}")
+    log.info("    Calories   : ~%d kcal", calories_est)
+    log.info("")
+    log.info("    Zone 1 (easy, 50-60%% max HR) — fat burn, active recovery")
+    log.info("    Zone 2 (brisk, 60-70%% max HR) — aerobic base, best long-term benefit")
+
+    if garmin_steps is not None:
+        projected = garmin_steps + steps_est
+        pct = min(100, round(projected / 10_000 * 100))
+        log.info("")
+        log.info("    [Garmin] Today so far : %s steps", f"{garmin_steps:,}")
+        log.info("             After walk   : %s steps (%d%% of 10,000 goal)", f"{projected:,}", pct)
+
+    if whoop_recovery is not None:
+        if whoop_recovery >= 67:
+            zone_rec = "green — Zone 2 effort, your body is ready"
+        elif whoop_recovery >= 34:
+            zone_rec = "yellow — Zone 1 only, moderate recovery today"
+        else:
+            zone_rec = "red — rest day, skip the walk"
+        log.info("    [Whoop]  Recovery     : %d%% → %s", whoop_recovery, zone_rec)
 
 
 def log_run(con, rows, duration_ms, status, error_msg=None):
@@ -127,7 +249,6 @@ def main():
             start_aware = r["start_time"]
             if start_aware.tzinfo is None:
                 start_aware = start_aware.replace(tzinfo=timezone.utc)
-            hours_until_event = (start_aware - now_utc).total_seconds() / 3600
             mins_early = (start_aware - leave_now_arrival).total_seconds() / 60
 
             # ── Rain impact on walk legs ───────────────────────────────────────
@@ -172,13 +293,7 @@ def main():
             # Leave latest
             log.info("🕐  LEAVE LATEST : %s  (arrive 10 min early)", format_time(r["leave_by"]))
 
-            # Leave now — only meaningful if event is within 6 hours
-            if hours_until_event > 6:
-                log.info(
-                    "🔵  LEAVE NOW    : Event in %.0fh — check back closer to departure",
-                    hours_until_event,
-                )
-            elif mins_early >= 0:
+            if mins_early >= 0:
                 log.info(
                     "🟢  LEAVE NOW    : Arrive %s — %.0f min early ✓",
                     format_time(leave_now_arrival), mins_early,
@@ -192,6 +307,7 @@ def main():
             log.info("─" * 56)
             log.info("    Route: %d min | $%.2f | %d transfer(s)",
                      r["total_duration_min"], r["fare"] or 0, r["num_transfers"])
+            log.info("    Why chosen: %s", r["recommendation_reason"])
             log.info("")
 
             # Step-by-step legs
@@ -231,6 +347,8 @@ def main():
                     log.warning("    🚨 Disruption [%s]: %s", affected_line, msg[:80])
             else:
                 log.info("    ✅  No active MRT/LRT disruptions")
+
+            print_walk_suggestion(r["dest_lat"], r["dest_lng"], r["is_rainy"])
 
             log.info(divider)
 

@@ -404,15 +404,20 @@
       </div>
       <div class="say">
         <div class="say-label">Say This</div>
-        <p>transform.py is the third script in the pipeline. It reads from the <code>v_enriched_routes</code> SQL view and produces one output row per calendar event in the <code>recommendations</code> table.</p>
-        <p>The view has already done the heavy lifting — joining routes, weather, and train alerts, computing the leave-by time using a 10-minute buffer, and ranking routes with a SQL window function. transform.py just picks rank 1 and formats the result.</p>
-        <p>The output has two departure times. "Leave latest" is the latest you can leave and still arrive 10 minutes early — calculated as event start time minus journey time minus the 10-minute buffer. "Leave now" tells you what happens if you left at this exact moment — and it's suppressed if the event is more than 6 hours away, because showing "1046 minutes early" isn't useful.</p>
-        <p>The step-by-step legs come from the <code>route_legs</code> table, which stores each segment of the OneMap route — walk to bus stop, Bus 96 to Jurong East, East West Line to City Hall, walk to SMU. This is the data that tells you exactly which bus to board.</p>
-        <p>Rain and disruption warnings are applied per leg. If it's raining and any walk segment is over 400 metres, that specific walk is flagged. If there's a HEAVY severity MRT alert from the last 30 minutes, it's surfaced with the affected line.</p>
+        <p>transform.py is the third script in the pipeline. It reads from the <code>v_enriched_routes</code> SQL view and produces one output row per calendar event in the <code>recommendations</code> table. It only processes the single next upcoming event — ordered by start time, limit 1 — so you never see stale past events.</p>
+        <p>The view has already done the heavy lifting — joining routes, weather, and train alerts, computing the leave-by time using a 10-minute buffer, and ranking routes with a SQL window function. transform.py picks rank 1 and formats the result.</p>
+        <p>The output has two departure times. "Leave latest" is the latest you can leave and still arrive 10 minutes early. "Leave now" tells you what happens if you left at this exact moment — always shown, so you can see exactly how early or late you'd arrive.</p>
+        <p>The step-by-step legs come from the <code>route_legs</code> table — walk to bus stop, Bus 96, East West Line, walk to destination. Each leg shows the mode icon, duration, and from→to stop names.</p>
+        <p>Rain and disruption warnings are applied per leg. If it's raining and any walk segment is over 400 metres, that specific walk is flagged. If there's a HEAVY MRT alert from the last 30 minutes, it appears with the affected line.</p>
+        <p>There's also a walk alternative section. If the destination is under 5 km from my current location and it's not raining, the pipeline checks whether walking is viable. It shows estimated time, steps, calories, and explains which heart rate zone the walk would target — Zone 1 for light recovery or Zone 2 for aerobic base building. If I've configured Garmin or Whoop credentials, it also shows today's step count progress and my recovery score so I can make a more informed decision.</p>
       </div>
       <div class="note">
-        <div class="note-label">If Asked: Why is walk_distance_m 3,141m?</div>
-        <p>The origin is hardcoded as central Singapore for the test event. In production, it reads from the user's home address in config.py. The destination is SMU in Victoria Street. The 3km walk is the sum of all walk segments across the full route — not a single unbroken walk.</p>
+        <div class="note-label">If Asked: How does it know where you are?</div>
+        <p>The routing origin is detected automatically. If <code>HOME_ADDRESS</code> is set in <code>config.py</code>, it's geocoded via OneMap for address-level precision. Otherwise, the pipeline calls <code>ip-api.com</code> — a free public IP geolocation API — to get your approximate location. In Singapore's compact geography, city-level accuracy is close enough for route ranking. If that fails (e.g. VPN), it falls back to a central Singapore default.</p>
+      </div>
+      <div class="note">
+        <div class="note-label">If Asked: Why Garmin and Whoop specifically?</div>
+        <p>Garmin has a usable Python library (<code>garminconnect</code>). Whoop has a developer API with personal access tokens. Both are optional — the walk suggestion appears without them. Future integrations could include Samsung Health or Apple Health via their respective export APIs.</p>
       </div>
     </div>
   </div>
@@ -434,10 +439,10 @@
       </div>
       <div class="say">
         <div class="say-label">Say This</div>
-        <p>The schema is the foundation. The next script — <code>ingest.py</code> — will call all four APIs, apply exponential backoff retry so transient failures don't crash the pipeline, save raw responses as Parquet files, validate that all GPS coordinates fall within Singapore's bounds before they enter DuckDB, and upsert everything using <code>INSERT OR REPLACE</code>.</p>
-        <p>After that, <code>transform.py</code> queries the view, picks the rank-1 route per event, and writes the final recommendation row. Then <code>serve.py</code> presents it in a Streamlit dashboard, and <code>api.py</code> exposes it as a REST endpoint.</p>
-        <p>The full stack runs as three Docker containers orchestrated by Airflow on a 10-minute schedule — so every 10 minutes, the pipeline re-fetches live data and the dashboard updates automatically.</p>
-        <p>What I've demonstrated so far is: the project design, API registration, security setup, and a working DuckDB schema with 7 tables and a SQL view that contains all the recommendation logic. The database is live and ready for data. Thank you.</p>
+        <p>The core pipeline — schema, ingest, and transform — is fully working. I'm getting real commute recommendations from real Google Calendar events and real API data.</p>
+        <p>The next steps are to build the Streamlit dashboard so the output is visual, then add FastAPI to expose the recommendation as a REST endpoint with Swagger UI, then wire Airflow to schedule everything every 10 minutes, and finally containerise the full stack with Docker Compose.</p>
+        <p>The walk alternative with fitness integration is something I added to make this pipeline genuinely personal — it's not just the fastest route, it's the right route for your health and your schedule together.</p>
+        <p>Thank you.</p>
       </div>
     </div>
   </div>
@@ -452,7 +457,10 @@
     <div class="section-body">
       <div class="chips">
         <span class="chip chip-green">python scripts/schema.py runs clean</span>
-        <span class="chip chip-green">db/commute.duckdb file exists after run</span>
+        <span class="chip chip-green">python scripts/ingest.py runs and shows event + weather + routes</span>
+        <span class="chip chip-green">python scripts/transform.py shows LEAVE LATEST + LEAVE NOW + legs</span>
+        <span class="chip chip-green">Walk alternative appears if destination &lt; 5 km and no rain</span>
+        <span class="chip chip-green">db/commute.duckdb file exists and has data</span>
         <span class="chip chip-green">config.py NOT in git status output</span>
         <span class="chip chip-green">VS Code shows full folder tree</span>
         <span class="chip chip-green">roadmap.html opens in browser</span>
