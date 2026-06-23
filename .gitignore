@@ -1,10 +1,15 @@
 # API keys — never commit
 config.py
 
+# Google Calendar OAuth2 — never commit
+credentials.json
+token.json
+
 # Registration documents and credential files (contain real API keys / tokens)
 LTA/
 OneMap/
 Prompt.txt
+Google Calendar/
 
 # Database
 *.duckdb
