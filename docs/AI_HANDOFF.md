@@ -3,21 +3,23 @@
 This document lets another Claude session (or any developer) continue this project
 from scratch with no prior chat history.
 
+**Last updated: 2026-06-24 (session 3)**
+
 ---
 
 ## What This Project Does
 
-A **calendar-aware Singapore commute recommendation system**.
+A **calendar-aware Singapore commute recommendation system** with ML predictions.
 
-Given a user's next calendar event, the pipeline:
-1. Parses the event to extract destination and start time
-2. Geocodes the destination via OneMap Singapore
-3. Fetches: routing options (OneMap), real-time bus arrivals (LTA), train disruption alerts (LTA), weather forecast (data.gov.sg)
-4. Stores all data in DuckDB (embedded SQL database — single file, no server)
-5. Runs SQL transformation to rank routes, calculate leave-by time, apply weather/disruption penalties
-6. Serves the recommendation via Streamlit dashboard + FastAPI REST endpoint
+Given a user's next Google Calendar event, the pipeline:
+1. Reads the event's location and geocodes it via OneMap Singapore
+2. Fetches routing options (OneMap), real-time bus arrivals (LTA), train alerts (LTA), and weather (data.gov.sg)
+3. Stores everything in DuckDB using a lake-warehouse pattern
+4. Runs SQL transformation to rank routes, calculate leave-by time, apply weather/disruption penalties
+5. Runs an ML model (Random Forest) to predict journey duration and stores prediction vs actual
+6. Serves results via Streamlit dashboard + FastAPI REST endpoint
 
-**Output:** "Leave by 09:23 AM — take Bus 65 then EWL. ⚠ Rain expected, avoid long walks."
+**Output:** "Leave by 09:23 AM — take Bus 65 then EWL. Predicted 38 min. ⚠ Rain — avoid 600m walk."
 
 ---
 
@@ -29,62 +31,256 @@ Given a user's next calendar event, the pipeline:
 | Owner | DLim86 |
 | Local path | `e:\SNAIC\Week 2\Assessment` |
 | Branch | `main` |
-| Assessment deadline | Sept 14 2026 |
-| Target submission | August 2026 |
+| Assessment deadline | 14 September 2026, 11:59 PM |
+| Submit via | xSite → Assessments → Dropbox → Week 02 |
+| Submit: | 1 video file + 1 PDF (3–5 resume bullets) |
 
 ---
 
-## Current State (as of 23 June 2026)
+## Rubric (actual — reviewed 2026-06-24)
+
+| Criterion | Marks | Current Gap |
+|---|---|---|
+| End-to-End Pipeline | 30 | Need: serve.py, api.py, Airflow DAG, Docker |
+| **ML and Real-Time Output** | **30** | **CRITICAL: need model.py — zero ML without it** |
+| Technical Depth & Robustness | 10 | Strong: retry, idempotency, logging, coord validation |
+| Presentation & Explanation | 30 | Needs video practice, reflection answers |
+
+**ML criterion requires:** batch processing ✅ + model training/inference ❌ + live dashboard ✅ (pending) + model evaluation ❌
+
+The rubric example: "Generate predictions for the next two hours and compare earlier predictions with actual data. Evaluate the prediction model every day at 8:00 AM." — This is exactly what model.py + the Airflow evaluate_model task must do.
+
+---
+
+## Build Status (as of 2026-06-24)
 
 ### Done and tested
-- Project folder structure, `.gitignore`, `config_example.py`, `requirements.txt`, `README.md`
-- `docs/roadmap.html` — interactive 12-station roadmap
-- `docs/video_script.html` — 8-section timed video script for the 15-min assessment video
-- `scripts/__init__.py` — empty file (required for Airflow DAG imports)
-- **`scripts/schema.py`** — DONE. Creates 8 DuckDB tables + `v_enriched_routes` view. Run once.
-- **`scripts/ingest.py`** — DONE. Full feature set including:
-  - Google Calendar API (real events, graceful no-event exit — logs 'skipped', does not crash)
-  - 4 data APIs (OneMap routing, LTA bus, LTA train alerts, data.gov.sg weather)
-  - Retry/backoff, Parquet raw zone, idempotent upsert, leg steps
-  - Dynamic routing origin: HOME_ADDRESS geocoded via OneMap → IP geolocation via `ip-api.com` → Bishan fallback
-  - Bug fix: `leg.get("route")` may be a string — now guarded with `isinstance(route_field, dict)` before calling `.get("shortName")`
-- **`scripts/transform.py`** — DONE. Full feature set including:
-  - Only processes next upcoming event (`ORDER BY start_time LIMIT 1`)
-  - LEAVE LATEST + LEAVE NOW always shown (LEAVE NOW suppression removed)
-  - Step-by-step legs (walk/bus/MRT with duration and from→to names)
-  - "Why chosen:" label from `recommendation_reason`
-  - Bus wait time shown on BUS legs (from `bus_arrivals` table)
-  - Rain flag on WALK legs > 400m when `is_rainy = True`
-  - **Walk alternative suggestion** (NEW): shown when `is_rainy = False` AND Haversine distance < 5 km — includes Zone 1/2 stats, estimated steps/calories/time
-  - Optional Garmin step count integration (`GARMIN_EMAIL` + `GARMIN_PASSWORD` in config)
-  - Optional Whoop recovery score integration (`WHOOP_ACCESS_TOKEN` in config)
 
-### Live data in `db/commute.duckdb` (gitignored, local only)
-- Calendar events sourced from real Google Calendar via OAuth2 — re-run `ingest.py` to pull latest
-- 47 weather forecast areas loaded
-- 3 route options from OneMap (SNAIC event at 1 Punggol Coast Road)
-- Bus stop 65721 checked (no active services at time of test — handled gracefully as 404)
-- No active train disruptions at time of test
+| File | Status |
+|---|---|
+| `.gitignore` | Complete |
+| `config_example.py` | Complete — template with HOME_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN, all empty strings |
+| `config.py` | Exists locally, gitignored — real credentials inside |
+| `requirements.txt` | Uses `>=` for C-extension packages (Python 3.14 compat). Includes `garminconnect>=0.2.0`. **Needs `scikit-learn>=1.4.0` and `joblib>=1.3.0` added when building model.py** |
+| `README.md` | Complete |
+| `docs/roadmap.html` | Updated 2026-06-24 — 3 phases: Day1 pipeline, Day2 production, Day3 architecture+ML |
+| `docs/AI_HANDOFF.md` | This file |
+| `docs/video_script.html` | Updated 2026-06-24 — complete 15-min script for full project including ML, reflection |
+| `docs/ARCHITECTURE.md` | Needs ML layer added (model.py, predictions table) |
+| `docs/DECISIONS.md` | Has D01–D17. Needs D18 (batch vs Kafka), D19 (DuckDB vs Spark), D20 (RF model choice) |
+| `scripts/__init__.py` | Done — empty, required for Airflow imports |
+| `scripts/schema.py` | Done — 8 tables + `v_enriched_routes` view. **Needs `predictions` table added before model.py** |
+| `scripts/ingest.py` | Done — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin + **progressive geocoding fallback** + **WORK_ADDRESS event-location fallback** + **`get_smart_default()` time-of-day heuristic** |
+| `scripts/transform.py` | Done — **`AND start_time > NOW()` filter** (prevents stale past-event output), LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, walk alternative (Zone 1/2), optional Garmin/Whoop |
 
-### Cached files
-- `data/raw/bus_stops/bus_stops.parquet` — 5,205 LTA bus stops
-- `data/raw/weather/date=2026-06-23/weather_2026-06-23.parquet` — 47 rows
-- `data/raw/onemap_route/date=2026-06-23/onemap_route_2026-06-23.parquet` — 3 rows
+### Still to build (in this order)
 
-### Still to build (in order)
-| File | Purpose | Build order |
+| File | Purpose | Why this order |
 |---|---|---|
-| `scripts/serve.py` | Streamlit dashboard | **NEXT** |
-| `scripts/api.py` | FastAPI serving layer | 2nd |
-| `dags/__init__.py` | Airflow DAG folder init | with DAG |
-| `dags/commute_pipeline_dag.py` | Airflow DAG orchestration | 3rd |
-| `docker-compose.yml` + `Dockerfile` | Container orchestration | 4th |
+| `scripts/serve.py` | **NEXT** — Streamlit dashboard (read_only=True) | Shows ML predictions live — needed first |
+| `scripts/model.py` | **CRITICAL** — train RF, predict, evaluate, 30-mark rubric criterion | Built after serve.py so there's somewhere to display predictions |
+| `scripts/api.py` | FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`, `/api/v1/prediction/{event_id}` | After model.py so prediction endpoint can be included |
+| `dags/__init__.py` + `dags/commute_pipeline_dag.py` | Airflow DAG — 7 tasks, `schedule="*/10 * * * *"` | After all scripts exist |
+| `docker-compose.yml` + `Dockerfile` | 3 services: pipeline, api, dashboard | Last — wraps everything |
 
-### Known issues / things to be aware of
-- `route_legs` may be empty: re-run `python scripts/ingest.py` if OneMap timed out on a previous run — legs populate once routing succeeds
-- Walk suggestion uses `_detect_origin()` in transform.py which calls IP geolocation — if on VPN, coords may be outside SG and it falls back to Bishan. Set `HOME_ADDRESS` in config.py for accurate origin.
-- Garmin integration uses unofficial `garminconnect` library (email/password). If Garmin changes their auth, this may break. Leave `GARMIN_EMAIL = ""` to skip.
-- Google Calendar first run: browser opens for OAuth2 consent, writes `token.json` to project root. `credentials.json` must be present before running.
+---
+
+## DuckDB Schema — 9 Tables
+
+```
+calendar_events   — event_id PK, title, start_time TIMESTAMPTZ, location_raw, dest_lat, dest_lng, ingested_at
+route_options     — option_id PK, event_id FK, total_duration_min, walk_distance_m, num_transfers, fare, fetched_at
+route_legs        — (option_id, leg_sequence) PK, mode, service_no, from_name, to_name, duration_min, distance_m
+weather_forecast  — (area, valid_start) PK, forecast, is_rainy BOOLEAN, valid_end, fetched_at
+bus_arrivals      — (bus_stop_code, service_no, fetched_at) PK, next_bus_mins, load
+train_alerts      — alert_id PK, affected_line, message, severity, fetched_at
+recommendations   — event_id PK, recommended_mode, total_duration_min, leave_by, estimated_arrival, weather_warning, disruption_warning, reason, created_at
+pipeline_runs     — run_id PK, source, rows_upserted, duration_ms, status, error_msg, ran_at
+predictions       — prediction_id PK, event_id, predicted_min, actual_min (nullable — backfilled), model_version, mae_7day (nullable), predicted_at
+```
+
+**`predictions` table must be added to `scripts/schema.py` before `scripts/model.py` is built.**
+`actual_min` is filled in after the commute window passes by comparing with `route_options.total_duration_min` for the same `event_id`.
+
+View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_forecast + train_alerts. Returns `route_rank` via `ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY rain_penalty, total_duration_min)`.
+
+---
+
+## model.py Design (to build)
+
+**Purpose:** Satisfy the 30-mark "ML and Real-Time Output" rubric criterion.
+
+**Model:** `RandomForestRegressor` (scikit-learn)
+- **Features:** `hour_of_day` (0–23), `day_of_week` (0–6), `is_rainy` (0/1), `walk_distance_m`, `num_transfers`
+- **Target:** `total_duration_min`
+- **Saved to:** `models/commute_predictor.pkl` (models/*.pkl in .gitignore, models/.gitkeep committed)
+
+**Three modes (CLI args):**
+- `python scripts/model.py --train` — trains model, saves .pkl, logs to pipeline_runs
+- `python scripts/model.py --predict` — loads .pkl, scores next calendar event, inserts into predictions table
+- `python scripts/model.py --evaluate` — computes 7-day MAE of predicted_min vs actual_min, logs to pipeline_runs
+
+**Cold start solution:** Bootstrap with ~500 synthetic historical rows using known patterns (rush hour 7–9am/5–7pm: +15%, rain: +8%, weekend: −20%) before training. Mark these with `model_version = "synthetic"` so they can be filtered later.
+
+**Airflow integration:** The main DAG adds `predict_commute` task (runs each cycle after sql_transform). A separate daily DAG or scheduled task runs `evaluate_model` at 8 AM.
+
+**Requirements to add:** `scikit-learn>=1.4.0`, `joblib>=1.3.0`
+
+---
+
+## Airflow DAG — 7 Tasks (to build)
+
+```
+fetch_calendar → geocode_destination → [fetch_weather, fetch_bus_arrivals, fetch_train_alerts] → sql_transform → predict_commute
+```
+
+Schedule: `*/10 * * * *` (every 10 minutes)
+Additionally: `evaluate_model` task at `0 8 * * *` (8 AM daily) — can be a separate DAG or CronJob.
+
+---
+
+## serve.py Design (to build)
+
+Key requirements:
+- `duckdb.connect(str(DB_PATH), read_only=True)` — never write from dashboard
+- `@st.cache_data(ttl=300)` — 5-minute refresh
+- Show: event title, leave_by metric, predicted_min metric, fare metric
+- Show: step-by-step legs table from `route_legs`
+- Show: weather warning (st.warning) if `is_rainy = True`
+- Show: disruption alert (st.error) if `alert_msg` is not None
+- Show: ML prediction vs actual, 7-day MAE from predictions table
+- `st.rerun()` or `time.sleep(300)` loop for auto-refresh
+
+---
+
+## api.py Design (to build)
+
+Endpoints:
+- `GET /health` — returns `{"status": "ok"}`
+- `GET /api/v1/recommendation/{event_id}` — reads v_enriched_routes WHERE route_rank=1
+- `GET /api/v1/pipeline/status` — reads pipeline_runs ORDER BY ran_at DESC LIMIT 10
+- `GET /api/v1/prediction/{event_id}` — reads predictions table for that event
+
+All connections: `duckdb.connect(str(DB_PATH), read_only=True)`
+Run with: `uvicorn scripts.api:app --reload --port 8000`
+
+---
+
+## Data Flow Summary
+
+```
+Google Calendar API (OAuth2)
+  → calendar_events (DuckDB) + data/raw/calendar/ (Parquet)  [DATA LAKE]
+      ↓
+OneMap Routing API
+  → route_options + route_legs (DuckDB) + data/raw/onemap_route/ (Parquet)
+      ↓
+LTA Bus API      → bus_arrivals (DuckDB)   ──┐
+LTA Alerts       → train_alerts (DuckDB)   ──┤  [DATA WAREHOUSE]
+data.gov.sg      → weather_forecast        ──┘
+                            ↓
+                  v_enriched_routes (SQL view — JOIN + CASE WHEN + ROW_NUMBER)
+                            ↓
+                  recommendations (DuckDB)
+                            ↓
+                  predictions (DuckDB)  ← model.py
+                            ↓
+          FastAPI /api/v1/recommendation/{id}   :8000
+          FastAPI /api/v1/prediction/{id}
+          Streamlit dashboard                   :8501
+```
+
+---
+
+## Calendar Data
+
+Events are read from Google Calendar via OAuth2 (`fetch_next_calendar_event()` in ingest.py).
+- Scans next 10 upcoming events, skips all-day events and events with no location
+- Geocodes the first valid location via OneMap
+- `event_id` format: `GCAL_{google_event_id}`
+- First run opens a browser for Google consent; writes `token.json` to project root (gitignored)
+- `GOOGLE_CALENDAR_ID = "primary"` in `config.py`
+
+---
+
+## APIs and Credentials
+
+All credentials in `config.py` (gitignored). Template in `config_example.py`.
+
+| API | Auth | Key location |
+|---|---|---|
+| Google Calendar | OAuth2 — `credentials.json` + `token.json` (both gitignored) | Project root |
+| LTA DataMall | Header: `AccountKey: <LTA_API_KEY>` | `config.py → LTA_API_KEY` |
+| OneMap | JWT from POST `/api/auth/post/getToken` — expires every 3 days | `config.py → ONEMAP_EMAIL, ONEMAP_PASSWORD` |
+| data.gov.sg | None — open API | — |
+| ip-api.com | None — free, no key | — |
+| Garmin Connect | email + password (unofficial library) | `config.py → GARMIN_EMAIL, GARMIN_PASSWORD` (leave blank to skip) |
+| Whoop | Bearer token | `config.py → WHOOP_ACCESS_TOKEN` (leave blank to skip) |
+
+---
+
+## Ports
+
+| Service | Port | URL |
+|---|---|---|
+| Streamlit dashboard | 8501 | `http://localhost:8501` |
+| FastAPI + Swagger | 8000 | `http://localhost:8000/docs` |
+| Airflow UI | 8080 | `http://localhost:8080` |
+
+---
+
+## Known Issues / Gotchas
+
+### Core pipeline
+- **OneMap token TTL:** expires every 3 days — call `get_onemap_token()` on every pipeline run, never cache to disk
+- **LTA BusArrivalv2 404:** returns 404 (not empty) for stops with no active services — catch `HTTPError(404)` and treat as "no data"
+- **OneMap `leg.get("route")` returns string or dict:** always check `isinstance(route_field, dict)` before calling `.get("shortName")` — fixed in ingest.py
+- **`v_enriched_routes` cross-join:** 47 weather areas × 3 routes = 141 rows. `route_rank=1` still gives one row per event — safe
+- **`BEST_ROUTE_QUERY` has `AND start_time > NOW()`** — without this, `ORDER BY start_time LIMIT 1` picks the oldest stored event (yesterday's), not the next upcoming one
+- **DuckDB write lock:** only one write connection at a time — pipeline must close before FastAPI opens
+- **`datetime.utcnow()` deprecated:** use `datetime.now(timezone.utc).replace(tzinfo=None)` for naive UTC
+- **OneMap routing `duration` in seconds:** divide by 60 for `total_duration_min`
+- **`sys.path.insert(0, str(Path(__file__).parent.parent))`** before `from config import ...` in all scripts/
+- **Geocoding progressive fallback:** `geocode()` tries full address → strips ", Singapore" → first comma-token. Postal codes are most reliable. Obscure street names may not exist in OneMap's index.
+- **`WORK_ADDRESS` in config.py:** destination fallback when event location fails geocoding; also 8–10 AM default when no calendar event
+- **`HOME_ADDRESS` in config.py:** used for after-4 PM go-home default and after-6 PM at-home proximity check. NOT the routing origin — origin is always IP geolocation.
+- **`get_smart_default()` windows:** 8–10 AM → WORK; 4–6 PM → HOME (depart ~6:30 PM); after 6 PM → check IP location vs home (3 km threshold), skip if at home; outside windows → skip quietly
+- **`SGT = timezone(timedelta(hours=8))`** — module-level constant in ingest.py for Singapore timezone arithmetic
+
+### Google Calendar
+- **First run opens browser** for OAuth2 consent — must be on machine with browser. Writes `token.json` to project root.
+- **For Docker/Airflow:** pre-generate `token.json` locally and volume-mount it into the container
+- **No-event case:** pipeline logs a warning and exits cleanly, records 'skipped' in pipeline_runs — does NOT crash
+
+### ML (model.py — to build)
+- **Cold start:** bootstrap with ~500 synthetic rows before real data accumulates (rush hour +15%, rain +8%, weekend −20%)
+- **`evaluate_model` cold start:** skip gracefully if fewer than 7 actual_min values exist — log warning, do not crash
+- **`actual_min` backfill:** compare predicted event's `event_id` against `route_options.total_duration_min` after event time passes
+- **`models/*.pkl` gitignored** — commit `models/.gitkeep` so folder exists in repo
+- **`scikit-learn>=1.4.0` and `joblib>=1.3.0`** must be added to `requirements.txt`
+
+### IP Geolocation
+- **ip-api.com** returns city-level accuracy (~1–5 km), free, no API key
+- **VPN:** returns non-SG coords — falls back to Bishan (1.3521, 103.8198) with warning
+- **HTTP only** on free tier — not HTTPS
+
+### Garmin / Whoop (optional)
+- **Garmin/Whoop are fully optional.** Three protection layers: (1) ImportError catch defaults to `""`, (2) early return None if credential is blank, (3) output only shown if result is not None
+- **Garmin uses unofficial email/password auth** — may break if Garmin changes their API
+
+---
+
+## Coding Conventions
+
+- **Retry wrapper:** every `requests.get()` through `fetch_with_retry(url, headers, params, max_retries=3)` — backoff 1s, 2s, 4s
+- **Idempotency:** always `INSERT OR REPLACE INTO table SELECT ...` — never bare `INSERT`
+- **Coordinate validation:** reject GPS outside Singapore bounds (`lat 1.15–1.47`, `lng 103.6–104.1`)
+- **Timestamps:** `TIMESTAMPTZ` for event/schedule columns; `TIMESTAMP` for internal tracking (fetched_at, ran_at)
+- **DuckDB connections:** `read_only=True` in Streamlit/FastAPI; write-capable only in ingestion/transform/model scripts
+- **Comments:** one line max, only when WHY is non-obvious
+- **No print statements:** use `logging.info()` / `logging.warning()`
+- **Parquet naming:** `data/raw/{source}/date={YYYY-MM-DD}/{source}_{YYYY-MM-DD}.parquet`
+- **Path creation:** `Path.mkdir(parents=True, exist_ok=True)` before writing
 
 ---
 
@@ -95,249 +291,51 @@ Given a user's next calendar event, the pipeline:
 git clone https://github.com/DLim86/SNAIC-sg-commute-pulse.git
 cd SNAIC-sg-commute-pulse
 
-# 2. Create virtual environment
+# 2. Virtual environment
 python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Mac/Linux
+venv\Scripts\activate   # Windows
 
-# 3. Install dependencies
+# 3. Install
 pip install -r requirements.txt
 
-# 4. Add your API keys
+# 4. Add credentials
 copy config_example.py config.py
-# Edit config.py with your real keys — NEVER commit config.py
+# Edit config.py with real keys — NEVER commit config.py
 
-# 5. Create the database schema (run once)
+# 5. Schema (run once — or re-run after adding predictions table)
 python scripts/schema.py
 
-# 6. Run the ingestion pipeline
+# 6. Ingest
 python scripts/ingest.py
 
-# 7. Run the transformation
+# 7. Transform
 python scripts/transform.py
 
-# 8. Open the dashboard
-streamlit run scripts/serve.py
-# → http://localhost:8501
+# 8. ML — train then predict
+python scripts/model.py --train
+python scripts/model.py --predict
 
-# 9. (Optional) Start the API server
-uvicorn scripts.api:app --reload --port 8000
-# → http://localhost:8000/docs  (Swagger UI)
+# 9. Dashboard
+streamlit run scripts/serve.py   # → http://localhost:8501
+
+# 10. API
+uvicorn scripts.api:app --reload --port 8000   # → http://localhost:8000/docs
+
+# 11. Airflow
+airflow standalone   # → http://localhost:8080
+
+# 12. Full stack
+docker compose up
 ```
-
----
-
-## Environment Variables
-
-All secrets go in `config.py` (gitignored). Never commit this file.
-
-```python
-# config.py — copy from config_example.py and fill in real values
-LTA_API_KEY = "<LTA_API_KEY>"       # From datamall.lta.gov.sg — free, approval 1-2 days
-ONEMAP_EMAIL = "<ONEMAP_EMAIL>"     # Your onemap.gov.sg account email
-ONEMAP_PASSWORD = "<ONEMAP_PASSWORD>"  # Your onemap.gov.sg password
-```
-
-For Docker, create a `.env` file (also gitignored):
-```
-LTA_API_KEY=<LTA_API_KEY>
-ONEMAP_EMAIL=<ONEMAP_EMAIL>
-ONEMAP_PASSWORD=<ONEMAP_PASSWORD>
-```
-
-**Note:** There is no `.env` file yet. Create it when adding Docker support.
-
----
-
-## APIs
-
-### LTA DataMall
-- **Registration:** https://datamall.lta.gov.sg/content/datamall/en/request-for-api.html
-- **Auth:** HTTP header `AccountKey: <LTA_API_KEY>`
-- **Endpoints used:**
-
-| Endpoint | What it returns |
-|---|---|
-| `GET https://datamall2.mytransport.sg/ltaodataservice/BusArrivalv2?BusStopCode={code}` | Next 3 bus arrivals for a stop: estimated time, load (SEA/SDA/LSD) |
-| `GET https://datamall2.mytransport.sg/ltaodataservice/TrainServiceAlerts` | Active MRT disruptions: affected line, message, severity |
-
-### OneMap Singapore
-- **Registration:** https://www.onemap.gov.sg (requires SingPass, instant)
-- **Auth:** POST token, then use as Authorization header
-- **Token endpoint:** `POST https://www.onemap.gov.sg/api/auth/post/getToken`
-  - Body: `{"email": "<ONEMAP_EMAIL>", "password": "<ONEMAP_PASSWORD>"}`
-  - Returns: `{"access_token": "...", "expiry_timestamp": "..."}`
-  - **Token expires every 3 days** — always refresh at pipeline start
-- **Endpoints used:**
-
-| Endpoint | What it returns |
-|---|---|
-| `GET https://www.onemap.gov.sg/api/common/elastic/search?searchVal={address}&returnGeom=Y&getAddrDetails=Y` | GPS coordinates for a Singapore address |
-| `GET https://www.onemap.gov.sg/api/public/routingsvc/route?start={lat,lng}&end={lat,lng}&routeType=pt&mode=TRANSIT&numItineraries=3` | 3 public transport route options with duration, walk distance, fare, steps |
-
-### data.gov.sg Weather
-- **Registration:** None required — open API
-- **Endpoint:** `GET https://api.data.gov.sg/v1/environment/2-hour-weather-forecast`
-- **Returns:** Per-area weather forecast (e.g. "Ang Mo Kio": "Moderate Rain") for the next 2 hours
-
----
-
-## Database Schema
-
-**File:** `db/commute.duckdb` (gitignored — never commit)
-**Engine:** DuckDB 0.10 (embedded, no server)
-
-```sql
-CREATE TABLE IF NOT EXISTS calendar_events (
-    event_id     VARCHAR PRIMARY KEY,
-    title        VARCHAR,
-    start_time   TIMESTAMPTZ,        -- Singapore time +08:00
-    location_raw VARCHAR,
-    dest_lat     DOUBLE,
-    dest_lng     DOUBLE,
-    ingested_at  TIMESTAMP DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS route_options (
-    option_id          VARCHAR PRIMARY KEY,
-    event_id           VARCHAR REFERENCES calendar_events(event_id),
-    total_duration_min INTEGER,
-    walk_distance_m    INTEGER,
-    num_transfers      INTEGER,
-    fare               DECIMAL(4,2),
-    fetched_at         TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS weather_forecast (
-    area        VARCHAR,
-    forecast    VARCHAR,
-    is_rainy    BOOLEAN,
-    valid_start TIMESTAMPTZ,
-    valid_end   TIMESTAMPTZ,
-    fetched_at  TIMESTAMP,
-    PRIMARY KEY (area, valid_start)
-);
-
-CREATE TABLE IF NOT EXISTS bus_arrivals (
-    bus_stop_code VARCHAR,
-    service_no    VARCHAR,
-    next_bus_mins INTEGER,
-    load          VARCHAR,   -- SEA = seats available, SDA = standing, LSD = limited standing
-    fetched_at    TIMESTAMP,
-    PRIMARY KEY (bus_stop_code, service_no, fetched_at)
-);
-
-CREATE TABLE IF NOT EXISTS train_alerts (
-    alert_id      VARCHAR PRIMARY KEY,
-    affected_line VARCHAR,
-    message       VARCHAR,
-    severity      VARCHAR,   -- 'HEAVY', 'MODERATE', etc.
-    fetched_at    TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS recommendations (
-    event_id           VARCHAR PRIMARY KEY,
-    recommended_mode   VARCHAR,
-    total_duration_min INTEGER,
-    leave_by           TIMESTAMPTZ,
-    estimated_arrival  TIMESTAMPTZ,
-    weather_warning    VARCHAR,
-    disruption_warning VARCHAR,
-    reason             VARCHAR,
-    created_at         TIMESTAMP DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS pipeline_runs (
-    run_id        VARCHAR PRIMARY KEY,
-    source        VARCHAR,       -- 'lta_bus', 'weather', 'onemap_route', etc.
-    rows_upserted INTEGER,
-    duration_ms   INTEGER,
-    status        VARCHAR,       -- 'success' or 'error'
-    error_msg     VARCHAR,
-    ran_at        TIMESTAMP DEFAULT now()
-);
-```
-
----
-
-## Core SQL Transformation
-
-This view is the heart of the recommendation logic. Write it in `scripts/transform.py`.
-
-```sql
-CREATE OR REPLACE VIEW v_enriched_routes AS
-SELECT
-    r.option_id,
-    r.event_id,
-    r.total_duration_min,
-    r.walk_distance_m,
-    r.num_transfers,
-    r.fare,
-    e.start_time,
-    e.title,
-    e.dest_lat,
-    e.dest_lng,
-    -- Leave-by time: event start minus travel time minus 10-minute buffer
-    e.start_time - INTERVAL (r.total_duration_min + 10) MINUTE AS leave_by,
-    w.forecast AS weather_forecast,
-    w.is_rainy,
-    CASE WHEN ta.alert_id IS NOT NULL THEN ta.message ELSE NULL END AS alert_msg,
-    CASE
-        WHEN w.is_rainy AND r.walk_distance_m > 400
-            THEN '⚠ Rainy — take covered transport'
-        WHEN ta.alert_id IS NOT NULL
-            THEN '⚠ MRT disruption — add 20 min buffer'
-        WHEN r.total_duration_min = MIN(r.total_duration_min) OVER (PARTITION BY r.event_id)
-            THEN '✓ Fastest option'
-        ELSE 'Alternative route'
-    END AS recommendation_reason,
-    -- Rank routes per event: 1 = best recommendation
-    ROW_NUMBER() OVER (
-        PARTITION BY r.event_id
-        ORDER BY
-            CASE WHEN w.is_rainy AND r.walk_distance_m > 400 THEN 1 ELSE 0 END,
-            r.total_duration_min
-    ) AS route_rank
-FROM route_options r
-JOIN calendar_events e ON r.event_id = e.event_id
-LEFT JOIN weather_forecast w
-    ON w.fetched_at = (SELECT MAX(fetched_at) FROM weather_forecast)
-LEFT JOIN train_alerts ta
-    ON ta.severity = 'HEAVY'
-   AND ta.fetched_at > NOW() - INTERVAL '30 minutes';
-```
-
----
-
-## Target Stack ("Without Regret" Project)
-
-| Component | Status | Priority |
-|---|---|---|
-| Core pipeline: schema, ingest, transform, serve | Not started | Must have |
-| Retry/backoff on all API calls | Not started | Must have |
-| Idempotency (INSERT OR REPLACE) | Not started | Must have |
-| GPS coordinate validation | Not started | Must have |
-| FastAPI serving layer | Not started | High |
-| Parquet raw data zone | Not started | Medium |
-| Airflow DAG (5 tasks, 10-min schedule) | Not started | High |
-| Docker Compose (3 services) | Not started | High |
-
----
-
-## Ports
-
-| Service | Port | URL |
-|---|---|---|
-| Streamlit dashboard | 8501 | `http://localhost:8501` |
-| FastAPI server | 8000 | `http://localhost:8000/docs` |
-| Airflow UI | 8080 | `http://localhost:8080` |
 
 ---
 
 ## Mentoring Notes
 
-- Student is new to GitHub — give explicit step-by-step `git` commands
-- Student needs to present this in a 15-minute video — frame every technical explanation with "in your video, say this..." guidance
-- Explain WHY before HOW for every new tool (Airflow, Docker, FastAPI)
-- Do not add features beyond what is requested
-- Check whether LTA API key has been received before writing any live API calls
+- Student is new to GitHub — give explicit step-by-step `git add / commit / push` commands
+- Explain WHY before HOW — student presents this in a 15-minute video
+- After every concept, include "In your video, say this..." guidance
+- Do not add features beyond what is asked
+- Ask "do you have your LTA API key?" before any session involving LTA API calls
+- The three rubric criteria visible in the video: pipeline (30) + ML (30) + technical depth (10)
+- Reflection section in video is mandatory — 3 questions pre-drafted in video_script.html

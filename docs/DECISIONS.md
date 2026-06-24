@@ -268,3 +268,111 @@ for attempt in range(max_retries):
 - Routing distance would require another OneMap API call per run; Haversine is instant
 
 **Trade-off:** Walk suggestion uses `_detect_origin()` (IP geolocation) in transform.py, not the geocoded `HOME_ADDRESS`. This is because transform.py has no OneMap token. Accuracy is city-level — acceptable given the 5 km threshold.
+
+---
+
+## D18 — Batch Scheduling (Airflow) Over Streaming (Kafka)
+
+**Decision:** Use Airflow on a 10-minute cron schedule instead of a Kafka event stream.
+
+**Why:**
+- LTA bus arrival data updates every 1–2 minutes. Weather updates every 2 hours. There is no data source in this pipeline that changes faster than once per minute — polling every 10 minutes captures all meaningful updates.
+- Kafka is designed for sub-second event volumes (click streams, payments, IoT sensor bursts). Adding Kafka for data that updates every 2 minutes adds broker setup, consumer group management, partition logic, and offset tracking — all overhead with no benefit for this data velocity.
+- Airflow gives a web UI for visualising task runs, viewing logs, and seeing failures — a cron job or while-loop has no visibility.
+- Airflow is explicitly taught in the course and is a standard DE employer requirement.
+
+**When Kafka would be the right choice:** If we were consuming raw GPS pings from all taxis in real time (thousands per second), or if we needed sub-10-second dashboard updates for a live operations room.
+
+**Trade-off:** The dashboard is stale by up to 10 minutes. For a commute recommendation used to plan departures, this is acceptable. Real-time to the second is not needed here.
+
+---
+
+## D19 — DuckDB Over Spark/PySpark
+
+**Decision:** Use DuckDB as the analytical processing engine instead of Apache Spark.
+
+**Why:**
+- **Data volume:** Our largest table is `weather_forecast` at 47 rows per run. `route_options` has 3 rows per event. `bus_arrivals` accumulates a few thousand rows over days. Total dataset size is measured in megabytes, not gigabytes or terabytes.
+- **Spark's cost:** Spark requires JVM startup, cluster coordination, and shuffle operations even for local mode. The overhead of Spark on a 50-row dataset would dwarf actual processing time.
+- **DuckDB's strengths:** Columnar storage, vectorised execution, full analytical SQL (window functions, INTERVAL arithmetic, TIMESTAMPTZ) — all in a single embedded file with zero infrastructure. For GB-scale analytical workloads on a single machine, DuckDB outperforms Spark.
+- **Parquet compatibility:** DuckDB queries Parquet files directly with `FROM 'data/raw/**/*.parquet'` — no Spark, no schema registry, no separate loading step.
+
+**When Spark would be the right choice:** If this pipeline needed to process millions of historical route records daily, or if data was distributed across a cluster, Spark PySpark would be the correct tool.
+
+**Trade-off:** DuckDB has a single-writer lock — only one process can write at a time. This requires careful sequencing of pipeline tasks and means the API and dashboard must open DuckDB in read-only mode.
+
+---
+
+## D20 — RandomForestRegressor for Commute Time Prediction
+
+**Decision:** Use `sklearn.ensemble.RandomForestRegressor` to predict `total_duration_min`.
+
+**Why:**
+- **Non-linear interactions:** Rush hour combined with rain produces a longer delay than the sum of rush hour alone and rain alone. Linear Regression cannot model interaction effects without explicit feature engineering. Random Forest handles this natively.
+- **Small dataset tolerance:** RF performs well with hundreds of training examples. Linear Regression is also viable but RF provides feature importance scores, which are useful for explaining to assessors which factors matter most.
+- **No hyperparameter tuning required at first:** `n_estimators=100, random_state=42` produces stable results without a grid search — appropriate for a portfolio project.
+- **scikit-learn ecosystem:** Integrates directly with pandas DataFrames from DuckDB `.df()` queries. No additional data conversion needed.
+
+**Features used:**
+- `hour_of_day` (0–23) — captures rush hour patterns
+- `day_of_week` (0=Mon, 6=Sun) — captures weekend reduction in traffic
+- `is_rainy` (0/1) — rain adds walking time and may affect bus frequency
+- `walk_distance_m` — longer walk distance makes total time more variable
+- `num_transfers` — more transfers = more variance in journey time
+
+**Cold start solution:** Pipeline may only have a few days of real data at submission time. Bootstrap with ~500 synthetic historical rows generated from known patterns (rush hour +15%, rain +8%, weekend −20%) to allow training from day 1. Mark these with `model_version = "synthetic"` so they can be identified and excluded once enough real data accumulates.
+
+**Trade-off:** The model is only as good as its training data. With limited real history, predictions will have higher error. The `mae_7day` metric shown in the dashboard makes this honest — users can see how accurate the model actually is.
+
+---
+
+## D22 — Progressive Geocoding Fallback
+
+**Decision:** `geocode()` in `ingest.py` tries three progressively simpler search terms before raising an error: (1) full address string, (2) address with ", Singapore" stripped, (3) first comma-delimited token only.
+
+**Why:**
+- Calendar event location fields are free-text — users type "1 Sentul Walk, Singapore", "Raffles Place MRT", "10 Dover Drive #05-01 SIT", or just a postal code. No single format is reliable.
+- OneMap's elastic search handles postal codes and landmark names well but fails on obscure street names or verbose unit number formats.
+- A single exact-match attempt would silently skip valid events. The fallback gives OneMap three chances with progressively simpler inputs.
+- Postal codes (6 digits) are the most reliable input to OneMap — always set `WORK_ADDRESS` and `HOME_ADDRESS` in `config.py` as "Street Name, Singapore XXXXXX".
+
+**Trade-off:** The fallback may geocode to a slightly less precise location (e.g. street-level rather than building-level). For commute routing this is acceptable — a 50m error in the destination has no impact on route selection.
+
+---
+
+## D23 — Time-of-Day Smart Default Destination (`get_smart_default()`)
+
+**Decision:** When no calendar event is found, the pipeline uses a time-of-day heuristic to infer the most likely destination rather than skipping:
+- **8–10 AM**: route to `WORK_ADDRESS` (morning commute window)
+- **4–6 PM**: route to `HOME_ADDRESS`, depart ~6:30 PM (evening commute window)
+- **After 6 PM**: geocode `HOME_ADDRESS`, compare against IP-geolocated current position — if within 3 km, the user is already home and the pipeline exits cleanly with no recommendation
+- **Other hours (10 AM–4 PM)**: pipeline skips quietly — no sensible default applies mid-day
+
+**Why:**
+- A commute recommender that only works when a Google Calendar event exists is fragile. A student may forget to add a location, or may want a recommendation for a routine commute not in their calendar.
+- The time windows match real Singapore commute patterns: most people leave home 8–9 AM, leave work/school 5–7 PM.
+- The after-6 PM at-home check avoids sending a "route home" recommendation to someone already sitting at home — it uses the same IP geolocation that drives origin detection.
+- Calendar events ALWAYS take priority. `get_smart_default()` only runs when `fetch_next_calendar_event()` raises a `ValueError`.
+
+**3 km threshold for "at home":**
+- IP geolocation accuracy in Singapore is ~1–5 km (city-level). A 3 km threshold correctly identifies "in my neighbourhood" without being so large it triggers false positives across Singapore.
+- If `HOME_ADDRESS` is not set in `config.py`, the after-4 PM and after-6 PM defaults are silently skipped.
+
+**Trade-off:** The smart default uses a fixed 9 AM start time for the work event and 6:30 PM for the home event. These are approximations. Users who want precision should add a Google Calendar event with an exact time.
+
+---
+
+## D21 — Star Schema for DuckDB Tables
+
+**Decision:** Design DuckDB tables as an informal star schema with `route_options` as the fact table.
+
+**Why:**
+- A star schema separates measurable facts from descriptive dimensions, making queries faster and more readable.
+- `route_options` is the natural fact table: each row records one measurable route option (duration, fare, walk distance, transfers) linked to a specific event.
+- `weather_forecast`, `bus_arrivals`, and `train_alerts` are dimension tables: they describe context that routes are joined against.
+- The `v_enriched_routes` view is the "mart" — the final joined, enriched, ranked table that answers business questions directly.
+- Star schema terminology also helps in the video — "my DuckDB schema is a star schema" demonstrates Day 3 data modelling knowledge.
+
+**SCD Type:** All dimension tables use SCD Type 1 (INSERT OR REPLACE overwrites the previous value). The 8am weather reading is replaced by the 10am reading — no history of past forecasts is kept in the DuckDB tables (raw history is preserved in the Parquet raw zone instead).
+
+**Trade-off:** SCD Type 2 (keep full history with valid_from/valid_to dates) would allow historical trend analysis. For this project scope, SCD Type 1 simplicity is the right trade-off. The Parquet raw zone serves as the historical record if needed.

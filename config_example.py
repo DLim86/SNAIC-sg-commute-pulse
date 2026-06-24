@@ -12,7 +12,13 @@ ONEMAP_PASSWORD = "your_onemap_password_here"
 GOOGLE_CALENDAR_ID = "primary"  # "primary" = your main Google Calendar
 
 # Your home address — geocoded via OneMap at pipeline start as the routing origin
+# Use postal code for best results: e.g. "123 Bishan Street 12, Singapore 570123"
 HOME_ADDRESS = "your home block and street, Singapore"
+
+# Your default work or school address — used as fallback destination when the
+# calendar event location cannot be geocoded by OneMap
+# e.g. "10 Dover Drive, Singapore 138683"  (SIT Dover campus)
+WORK_ADDRESS = ""
 
 # Optional fitness integrations — leave blank ("") to skip any you don't have
 GARMIN_EMAIL = ""           # Garmin Connect account email

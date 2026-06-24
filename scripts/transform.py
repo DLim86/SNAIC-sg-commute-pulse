@@ -45,6 +45,7 @@ SELECT
     dest_lat, dest_lng
 FROM v_enriched_routes
 WHERE route_rank = 1
+  AND start_time > NOW()
 ORDER BY start_time
 LIMIT 1
 """

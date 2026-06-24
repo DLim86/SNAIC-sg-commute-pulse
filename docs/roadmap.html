@@ -171,12 +171,20 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
     <span class="pipe-node">Streamlit</span>
   </div>
   <div style="margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--s7)">Phase 2 — Production Grade (Day 2)</div>
-  <div class="pipeline-mini">
+  <div class="pipeline-mini" style="margin-bottom:14px">
     <span class="pipe-node day2">Retry + Backoff</span><span class="pipe-arrow">→</span>
     <span class="pipe-node day2">Parquet Raw Zone</span><span class="pipe-arrow">→</span>
     <span class="pipe-node day2">FastAPI /docs</span><span class="pipe-arrow">→</span>
     <span class="pipe-node day2">Airflow DAG</span><span class="pipe-arrow">→</span>
     <span class="pipe-node day2">Docker Compose</span>
+  </div>
+  <div style="margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#C4B5FD">Phase 3 — Architecture + MLOps (Day 3 · Rubric Criterion 2)</div>
+  <div class="pipeline-mini">
+    <span class="pipe-node" style="background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.4);color:#C4B5FD">Star Schema</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.4);color:#C4B5FD">Lake vs Warehouse</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">ML Train</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Predict</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Evaluate (8 AM daily)</span>
   </div>
 </header>
 
@@ -197,21 +205,21 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
       </div>
     </div>
     <div class="arch-cell">
-      <div class="arch-cell-label">Ingestion</div>
+      <div class="arch-cell-label">Ingestion (Data Lake)</div>
       <div class="arch-cell-items">
         <div class="arch-item">Python requests</div>
         <div class="arch-item">Retry + backoff</div>
         <div class="arch-item">JSON → pandas flatten</div>
-        <div class="arch-item new">Parquet raw save</div>
+        <div class="arch-item new">Parquet raw zone</div>
       </div>
     </div>
     <div class="arch-cell">
-      <div class="arch-cell-label">Storage</div>
+      <div class="arch-cell-label">Storage (Data Warehouse)</div>
       <div class="arch-cell-items">
         <div class="arch-item">DuckDB (embedded)</div>
         <div class="arch-item">8 relational tables</div>
-        <div class="arch-item">Typed schema</div>
-        <div class="arch-item">Upsert (idempotent)</div>
+        <div class="arch-item">Star schema</div>
+        <div class="arch-item">Upsert SCD Type 1</div>
       </div>
     </div>
     <div class="arch-cell">
@@ -421,7 +429,7 @@ SCOPES = [<span class="s">"https://www.googleapis.com/auth/calendar.readonly"</s
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"My pipeline's entry point is Google Calendar. I use OAuth2 to read the next upcoming event that has a location — skipping all-day events and events without an address. I then geocode that location via OneMap to get GPS coordinates. Both the Google OAuth token and OneMap JWT are refreshed automatically each run — no manual key management."</p>
+          <p>"My pipeline's entry point is Google Calendar. I use OAuth2 to read the next upcoming event that has a location — skipping all-day events and events without an address. The geocoder uses a progressive fallback: it tries the full address first, then strips ', Singapore', then just the street name — because users type locations in all kinds of formats. If no calendar event is found at all, a time-of-day heuristic kicks in: 8 to 10 AM routes to my school address, after 4 PM routes home. After 6 PM it checks my current IP location — if I'm already within 3 km of home, the pipeline exits cleanly instead of recommending a journey I don't need."</p>
         </div>
       </div>
     </div>
@@ -1157,28 +1165,247 @@ docker compose down</pre>
   </div><!-- end route-wrapper phase 2 -->
 </div><!-- end route-map phase 2 -->
 
-<!-- COMING SOON DIVIDER -->
+<!-- PHASE 3 DIVIDER -->
 <div class="phase-divider" style="margin-top:12px">
   <div class="phase-divider-line"></div>
-  <div class="phase-divider-badge" style="background:rgba(42,48,64,.4);border:1px solid var(--border);color:var(--dim)">DAY 3 · DAY 4 · DAY 5 · COMING SOON</div>
+  <div class="phase-divider-badge" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.35);color:#C4B5FD">PHASE 3 · DAY 3 · DATA ARCHITECTURE &amp; STREAMING AWARENESS</div>
   <div class="phase-divider-line"></div>
 </div>
-<div class="phase-divider-sub">Locked — content updates after each class. Focus on Phase 1 and Phase 2 first.</div>
+<div class="phase-divider-sub">Day 3 content unlocked. These concepts let you name and explain what you already built — and explain your tool choices in the video.</div>
 
 <div class="route-map">
   <div class="route-wrapper">
 
-    <div class="station soon">
+    <!-- STATION D3 — Data Architecture -->
+    <div class="station s4">
       <div class="station-rail">
-        <div class="station-dot" style="background:var(--locked);font-size:10px">D3</div>
+        <div class="station-dot">D3</div>
         <div class="route-line"></div>
       </div>
       <div class="station-card">
-        <div class="soon-label">🔒 Unlocks after Day 3</div>
-        <div class="card-title">Advanced Ingestion Patterns</div>
-        <div class="card-desc">Content releases after Day 3. Likely covers streaming ingestion, incremental loading (cursor-based, only fetch new records), or cloud storage integration. Placeholder — update after class.</div>
+        <div class="card-eyebrow">Data Architecture · Day 3</div>
+        <div class="card-title">Data Modelling, Lake vs Warehouse &amp; dbt</div>
+        <div class="card-desc">Day 3 covers the conceptual layer beneath your pipeline: how to model data, where to store it, and how industry uses dbt to bring structure to SQL transforms. Your project already implements all of these patterns — this station shows you how to name and explain them confidently in your video.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-purple">Star Schema</span>
+          <span class="chip chip-purple">Data Lake</span>
+          <span class="chip chip-purple">Data Warehouse</span>
+          <span class="chip chip-purple">dbt concepts</span>
+          <span class="chip chip-purple">SCD Type 1</span>
+          <span class="chip chip-purple">Data Lineage</span>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Your project = Data Lake + Data Warehouse</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:8px"><strong style="color:#C4B5FD">Data Lake</strong> — <code>data/raw/</code> Parquet files. Raw API responses, never modified, date-partitioned, replayable. No schema enforced at write time.</div>
+              <div style="margin-bottom:8px"><strong style="color:#C4B5FD">Data Warehouse</strong> — <code>db/commute.duckdb</code>. Cleaned, typed, relational schema. Queried by dashboards and APIs.</div>
+              <div><strong style="color:#C4B5FD">Transactional DB (not us)</strong> — Postgres / MySQL stores live app state row-by-row. DuckDB is columnar-analytical — designed for reads and aggregations, not write-heavy app workloads.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Your DuckDB schema = Star Schema</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#C4B5FD">Fact table</strong> — <code>route_options</code>: each row is one commute option. Has measurable facts: duration_min, fare, walk_distance_m.</div>
+              <div style="margin-bottom:6px"><strong style="color:#C4B5FD">Dimension tables</strong> — <code>weather_forecast</code>, <code>bus_arrivals</code>, <code>train_alerts</code>: descriptive context that joins to routes via time or service_no.</div>
+              <div><strong style="color:#C4B5FD">SCD Type 1</strong> — INSERT OR REPLACE overwrites old rows. The 8am weather reading is replaced by the 10am one. No history kept. Type 1 = latest value only.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">dbt vs our transform.py — same goal, different tool</div>
+          <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.8;color:#A8C4DC">Our approach (transform.py)          dbt equivalent
+────────────────────────────         ──────────────────────────────────────
+Raw Python + raw SQL strings         models/staging/stg_routes.sql
+Manually run as a script             dbt run  (compiles + executes all models)
+No built-in data tests               dbt test (schema.yml: not_null, unique)
+No lineage tracking                  dbt docs generate → visual lineage graph
+One file for all logic               staging → intermediate → mart layers
+INSERT OR REPLACE written by hand    materialization: table / incremental</pre>
+            <div style="font-size:12px;color:var(--muted);margin-top:10px">Both produce the same output: clean joined data ready for serving. dbt adds governance and structure at the cost of a new tool. For a project this size, transform.py is a valid and common production choice.</div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Why NOT Kafka / Flink here</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:8px"><strong style="color:#C4B5FD">Kafka</strong> is for data that changes every second — click streams, payments, IoT sensors. Bus arrival data refreshes every 2 minutes; weather every 2 hours. A 10-minute Airflow batch schedule is perfectly adequate.</div>
+              <div><strong style="color:#C4B5FD">Flink</strong> processes Kafka streams with stateful windowing. No Kafka stream → no Flink. Airflow covers our orchestration needs entirely.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Why NOT Spark / PySpark here</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:8px"><strong style="color:#C4B5FD">Spark</strong> is designed for TB-scale data across a distributed cluster. Our dataset: ~50 route rows per run, ~5,000 bus stops, ~47 weather areas. Spark's startup and shuffle overhead would dwarf actual processing time.</div>
+              <div><strong style="color:#C4B5FD">DuckDB</strong> handles GB-scale analytical queries on a single machine in milliseconds. It is the correct tool choice for a pipeline of this size.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">Data Lineage — end-to-end flow in this project</div>
+          <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.8;color:#A8C4DC">Google Calendar API
+  → calendar_events (DuckDB)  +  data/raw/calendar/ (Parquet)
+      ↓
+OneMap Routing API
+  → route_options (DuckDB)    +  data/raw/onemap_route/ (Parquet)
+      ↓
+LTA Bus API    →  bus_arrivals (DuckDB)  ──┐
+LTA Alerts     →  train_alerts (DuckDB)  ──┤  v_enriched_routes (SQL view)
+data.gov.sg    →  weather_forecast       ──┘         ↓
+                                              recommendations (DuckDB)
+                                                      ↓
+                                   FastAPI  /api/v1/recommendation/{id}
+                                   Streamlit dashboard  (serve.py)</pre>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"My architecture follows the lake-warehouse pattern from Day 3. Raw API responses land in a date-partitioned Parquet zone — that's the data lake layer. Cleaned, typed data lives in DuckDB — that's the data warehouse. My DuckDB schema is a star schema: route_options is the fact table with measurable values like duration and fare, and weather, bus arrivals, and train alerts are dimension tables that join to it. I chose DuckDB over Spark because my dataset is small — tens of rows per run, not terabytes. And I chose Airflow batch scheduling over Kafka streaming because bus data only refreshes every two minutes anyway, so polling every ten minutes is perfectly sufficient."</p>
+        </div>
       </div>
     </div>
+
+    <!-- STATION ML — MLOps Pipeline -->
+    <div class="station s6">
+      <div class="station-rail">
+        <div class="station-dot">ML</div>
+        <div class="route-line"></div>
+      </div>
+      <div class="station-card">
+        <div class="card-eyebrow">MLOps · Rubric Criterion 2 · 30 marks</div>
+        <div class="card-title">Commute Time Predictor &amp; Model Evaluation</div>
+        <div class="card-desc">The rubric awards 30 marks for ML and Real-Time Output: batch processing, model training and inference, and a live refreshed dashboard. Your pipeline already handles batch and the dashboard — this station adds the model. A scikit-learn regression model predicts journey duration, compares each prediction with the actual result, and is evaluated daily via Airflow. Predictions appear live on the Streamlit dashboard.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-red">scikit-learn</span>
+          <span class="chip chip-red">MLOps</span>
+          <span class="chip chip-red">model.pkl</span>
+          <span class="chip chip-red">train → predict → evaluate</span>
+          <span class="chip chip-red">predictions table</span>
+          <span class="chip chip-red">MAE / RMSE</span>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">What the rubric requires (30 marks)</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Batch processing</strong> ✅ Airflow runs every 10 min.</div>
+              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Model training</strong> ❌ → <code>scripts/model.py</code> trains a <code>RandomForestRegressor</code> on historical route data, saves to <code>models/commute_predictor.pkl</code>.</div>
+              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Inference</strong> ❌ → Each pipeline run scores the next event and stores the prediction in DuckDB.</div>
+              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Evaluation / MLOps</strong> ❌ → Daily Airflow task at 8 AM computes 7-day MAE and logs it.</div>
+              <div><strong style="color:#FCA5A5">Live dashboard</strong> ✅ → Streamlit shows predicted vs actual commute time.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">DuckDB table: predictions</div>
+            <div class="block-content">
+<pre style="font-family:monospace;font-size:11px;line-height:1.7;color:#A8C4DC">CREATE TABLE IF NOT EXISTS predictions (
+    prediction_id  VARCHAR PRIMARY KEY,
+    event_id       VARCHAR,
+    predicted_min  INTEGER,
+    actual_min     INTEGER,  -- filled after commute
+    model_version  VARCHAR,
+    mae_7day       DOUBLE,   -- filled by evaluate task
+    predicted_at   TIMESTAMP
+);</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">scripts/model.py — train, predict, evaluate</div>
+          <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.8;color:#A8C4DC"><span style="color:#445F78;font-style:italic"># Features: hour, day_of_week, is_rainy, walk_m, num_transfers</span>
+<span style="color:#445F78;font-style:italic"># Target:   total_duration_min</span>
+
+def train_model(con):
+    df = con.execute("""
+        SELECT
+            EXTRACT(hour FROM e.start_time)  AS hour,
+            EXTRACT(dow  FROM e.start_time)  AS dow,
+            w.is_rainy::INTEGER              AS is_rainy,
+            r.walk_distance_m, r.num_transfers,
+            r.total_duration_min
+        FROM route_options r
+        JOIN calendar_events e ON r.event_id = e.event_id
+        LEFT JOIN weather_forecast w
+            ON w.fetched_at = (SELECT MAX(fetched_at) FROM weather_forecast)
+        WHERE r.total_duration_min IS NOT NULL
+    """).df()
+    X = df[["hour","dow","is_rainy","walk_distance_m","num_transfers"]]
+    y = df["total_duration_min"]
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+    joblib.dump(model, "models/commute_predictor.pkl")
+
+def predict_next(con):
+    model = joblib.load("models/commute_predictor.pkl")
+    # ... score next event, INSERT into predictions table
+
+def evaluate_model(con):
+    # Compare predictions with actuals, compute MAE, log to pipeline_runs</pre>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Data bootstrap — fix for limited history</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:8px">The pipeline may only have a few days of real data at demo time. Generate 500 realistic synthetic historical commutes using known patterns:</div>
+              <div style="margin-bottom:4px">• Rush hour (7–9am, 5–7pm) → +15% duration</div>
+              <div style="margin-bottom:4px">• Rain → +8% duration</div>
+              <div style="margin-bottom:4px">• Weekend → −20% duration</div>
+              <div>Blend synthetic + real data. Once real data grows, synthetic data becomes irrelevant.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Airflow DAG — add 2 new tasks</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:8px"><strong style="color:#6EE7B7">predict_commute</strong> — runs each pipeline cycle (after sql_transform). Scores the next event and stores the prediction.</div>
+              <div style="margin-bottom:8px"><strong style="color:#6EE7B7">evaluate_model</strong> — runs daily at 8 AM (separate DAG or schedule override). Computes 7-day MAE, logs to pipeline_runs.</div>
+              <div>Task graph addition: <code>sql_transform → predict_commute</code></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">What to show live in your video</div>
+          <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+            <div style="margin-bottom:6px">1. Open Streamlit — show "Predicted: 38 min | Actual last run: 41 min | 7-day MAE: 4.2 min"</div>
+            <div style="margin-bottom:6px">2. Open model.py — show the training code and explain the features</div>
+            <div style="margin-bottom:6px">3. Open Airflow — show the evaluate_model task running at 8 AM</div>
+            <div>4. Open DuckDB (or dashboard) — show the predictions table with predicted vs actual columns</div>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"The second rubric criterion requires ML and real-time output. I added a commute time predictor using scikit-learn. The model is trained on historical route data — features are hour of day, day of week, weather conditions, walking distance, and number of transfers. Each pipeline run scores the next calendar event and stores a predicted journey time. A daily Airflow task at 8 AM evaluates the model — comparing predictions to actuals over the last seven days and logging the MAE to the pipeline monitoring table. The Streamlit dashboard shows predicted versus actual time so users can see whether the model is improving."</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end route-wrapper phase 3 -->
+</div><!-- end route-map phase 3 -->
+
+<!-- DAY 4/5 COMING SOON DIVIDER -->
+<div class="phase-divider" style="margin-top:12px">
+  <div class="phase-divider-line"></div>
+  <div class="phase-divider-badge" style="background:rgba(42,48,64,.4);border:1px solid var(--border);color:var(--dim)">DAY 4 · DAY 5 · COMING SOON</div>
+  <div class="phase-divider-line"></div>
+</div>
+<div class="phase-divider-sub">Locked — content updates after each class. Focus on Phases 1–3 first.</div>
+
+<div class="route-map">
+  <div class="route-wrapper">
 
     <div class="station soon">
       <div class="station-rail">
@@ -1230,7 +1457,7 @@ docker compose down</pre>
             </div>
             <div class="vt-row">
               <div class="vt-time">01:00</div>
-              <div class="vt-content"><strong>Architecture (2 min)</strong><p>Show the two-row pipeline diagram: Phase 1 (4 APIs → DuckDB → SQL → Streamlit) and Phase 2 (Retry, Parquet, FastAPI, Airflow, Docker). Walk through each layer in 30 seconds.</p></div>
+              <div class="vt-content"><strong>Architecture (2 min)</strong><p>Show the three-row pipeline diagram. Phase 1: 4 APIs → DuckDB → SQL → Streamlit. Phase 2: Retry, Parquet, FastAPI, Airflow, Docker. Phase 3 concepts: the Parquet zone IS a data lake, DuckDB IS a data warehouse, the schema IS a star schema. Name these explicitly — they show architectural awareness.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">03:00</div>
@@ -1281,6 +1508,10 @@ docker compose down</pre>
             <li>
               <strong>Orchestration & Infrastructure</strong>
               Orchestrated the pipeline with an Apache Airflow DAG (5 tasks, 10-minute schedule, parallel fetch phase); containerised the full stack with Docker Compose — pipeline, API, and dashboard as three services with volume-mounted persistent storage.
+            </li>
+            <li>
+              <strong>Data Architecture</strong>
+              Implemented a lake-warehouse pattern: date-partitioned Parquet raw zone (data lake) feeds a typed DuckDB analytical store (data warehouse). Schema follows star schema design with route_options as fact table and weather, bus arrivals, and train alerts as dimension tables. INSERT OR REPLACE implements SCD Type 1 for all dimensions.
             </li>
           </ul>
         </div>

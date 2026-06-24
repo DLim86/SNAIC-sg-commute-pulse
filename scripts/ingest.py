@@ -3,7 +3,7 @@ import os
 import sys
 import time
 import uuid
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timedelta, timezone
 from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
 
@@ -24,12 +24,17 @@ try:
         from config import HOME_ADDRESS
     except ImportError:
         HOME_ADDRESS = None
+    try:
+        from config import WORK_ADDRESS
+    except ImportError:
+        WORK_ADDRESS = ""
 except ImportError:
     LTA_API_KEY = os.environ["LTA_API_KEY"]
     ONEMAP_EMAIL = os.environ["ONEMAP_EMAIL"]
     ONEMAP_PASSWORD = os.environ["ONEMAP_PASSWORD"]
     GOOGLE_CALENDAR_ID = os.environ.get("GOOGLE_CALENDAR_ID", "primary")
     HOME_ADDRESS = os.environ.get("HOME_ADDRESS")
+    WORK_ADDRESS = os.environ.get("WORK_ADDRESS", "")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -39,6 +44,7 @@ RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
 
 SG_LAT = (1.15, 1.47)
 SG_LNG = (103.6, 104.1)
+SGT = timezone(timedelta(hours=8))
 
 LTA_HEADERS = {"AccountKey": LTA_API_KEY, "accept": "application/json"}
 RAINY_KEYWORDS = {"rain", "shower", "thunder", "drizzle"}
@@ -132,19 +138,36 @@ def get_onemap_token(max_retries=3):
 
 
 def geocode(address, token):
-    data = fetch_with_retry(
-        "https://www.onemap.gov.sg/api/common/elastic/search",
-        headers={"Authorization": token},
-        params={"searchVal": address, "returnGeom": "Y", "getAddrDetails": "Y"},
-    )
-    results = data.get("results", [])
-    if not results:
-        raise ValueError(f"No geocode result for: {address}")
-    lat = float(results[0]["LATITUDE"])
-    lng = float(results[0]["LONGITUDE"])
-    if not validate_sg_coords(lat, lng):
-        raise ValueError(f"Coordinates outside Singapore: {lat}, {lng}")
-    return lat, lng
+    # Try progressively simpler search terms if the full address fails
+    candidates = [address]
+    stripped = address.replace(", Singapore", "").strip()
+    if stripped != address:
+        candidates.append(stripped)
+    # Also try just the first comma-delimited token (e.g. "1 Sentul Walk")
+    first_token = stripped.split(",")[0].strip()
+    if first_token and first_token not in candidates:
+        candidates.append(first_token)
+
+    for search_val in candidates:
+        data = fetch_with_retry(
+            "https://www.onemap.gov.sg/api/common/elastic/search",
+            headers={"Authorization": token},
+            params={"searchVal": search_val, "returnGeom": "Y", "getAddrDetails": "Y"},
+        )
+        results = data.get("results", [])
+        if not results:
+            log.warning("No geocode result for '%s' — trying simpler term", search_val)
+            continue
+        lat = float(results[0]["LATITUDE"])
+        lng = float(results[0]["LONGITUDE"])
+        if not validate_sg_coords(lat, lng):
+            log.warning("Geocode for '%s' returned coords outside SG: %.5f, %.5f", search_val, lat, lng)
+            continue
+        if search_val != address:
+            log.info("Geocoded '%s' using simplified search '%s'", address, search_val)
+        return lat, lng
+
+    raise ValueError(f"No geocode result for: {address}")
 
 
 # ── Google Calendar ───────────────────────────────────────────────────────────
@@ -194,8 +217,18 @@ def fetch_next_calendar_event(con, token):
         try:
             lat, lng = geocode(location, token)
         except ValueError as exc:
-            log.warning("Skipping '%s' — geocode failed: %s", event.get("summary", ""), exc)
-            continue
+            log.warning("Geocode failed for '%s': %s", event.get("summary", ""), exc)
+            if WORK_ADDRESS:
+                try:
+                    lat, lng = geocode(WORK_ADDRESS, token)
+                    location = WORK_ADDRESS
+                    log.info("Using WORK_ADDRESS as fallback destination")
+                except ValueError:
+                    log.warning("WORK_ADDRESS fallback also failed — skipping event")
+                    continue
+            else:
+                log.warning("No WORK_ADDRESS set — skipping event")
+                continue
 
         event_id = f"GCAL_{event['id']}"
         title = event.get("summary", "Untitled Event")
@@ -490,6 +523,71 @@ def ingest_weather(con, dest_lat, dest_lng):
     log.info("Weather areas upserted: %d", len(records))
 
 
+# ── Smart time-based default destination ─────────────────────────────────────
+
+def get_smart_default(con, token):
+    """
+    Returns (event_id, dest_lat, dest_lng) using time-of-day heuristic, or None to skip.
+      8–10 AM  → WORK_ADDRESS  (morning commute)
+      4–6 PM   → HOME_ADDRESS  (evening commute, depart ~6:30 PM)
+      After 6 PM → HOME_ADDRESS unless current location is already within 3 km of home
+      Other hours → None (skip pipeline, no sensible default)
+    Calendar events always take priority — this only runs when there is no calendar event.
+    """
+    now_sgt = datetime.now(SGT)
+    hour = now_sgt.hour
+
+    if 8 <= hour < 10:
+        if not WORK_ADDRESS:
+            log.info("8–10 AM window but WORK_ADDRESS not set in config — skipping")
+            return None
+        try:
+            dest_lat, dest_lng = geocode(WORK_ADDRESS, token)
+        except ValueError as exc:
+            log.warning("WORK_ADDRESS geocode failed: %s", exc)
+            return None
+        start_time = now_sgt.replace(hour=9, minute=0, second=0, microsecond=0)
+        event_id, title, location_raw = "DEFAULT_WORK_COMMUTE", "Work / School (default)", WORK_ADDRESS
+
+    elif hour >= 16:
+        if not HOME_ADDRESS:
+            log.info("Afternoon/evening window but HOME_ADDRESS not set in config — skipping")
+            return None
+        try:
+            dest_lat, dest_lng = geocode(HOME_ADDRESS, token)
+        except ValueError as exc:
+            log.warning("HOME_ADDRESS geocode failed: %s", exc)
+            return None
+
+        if hour >= 18:
+            # Check if already at home — IP geolocation vs home coords, 3 km threshold
+            curr_lat, curr_lng = get_current_location()
+            dist_m = haversine(curr_lat, curr_lng, dest_lat, dest_lng)
+            if dist_m < 3000:
+                log.info("After 6 PM and %.0f m from home — already home, no routing needed", dist_m)
+                return None
+            # Still out: suggest heading home in the next 30 min
+            start_time = now_sgt + timedelta(minutes=30)
+        else:
+            # 4–6 PM: assume leaving work around 6:30 PM
+            start_time = now_sgt.replace(hour=18, minute=30, second=0, microsecond=0)
+
+        event_id, title, location_raw = "DEFAULT_HOME_COMMUTE", "Home (default destination)", HOME_ADDRESS
+
+    else:
+        log.info("No calendar event and outside routing window (8–10 AM, after 4 PM) — skipping")
+        return None
+
+    con.execute(
+        """INSERT OR REPLACE INTO calendar_events
+           (event_id, title, start_time, location_raw, dest_lat, dest_lng)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        [event_id, title, start_time.isoformat(), location_raw, dest_lat, dest_lng],
+    )
+    log.info("Smart default: '%s' → (%.5f, %.5f)", title, dest_lat, dest_lng)
+    return event_id, dest_lat, dest_lng
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -512,10 +610,12 @@ def main():
         try:
             event_id, dest_lat, dest_lng = fetch_next_calendar_event(con, token)
         except ValueError as exc:
-            log.warning("Skipping pipeline run — %s", exc)
-            log.warning("Fix: add a future Google Calendar event with a Singapore address as the location.")
-            log_run(con, "calendar", 0, 0, "skipped", str(exc))
-            return
+            log.warning("No usable calendar event — %s", exc)
+            result = get_smart_default(con, token)
+            if result is None:
+                log_run(con, "calendar", 0, 0, "skipped", str(exc))
+                return
+            event_id, dest_lat, dest_lng = result
 
         for name, fn, kwargs in [
             ("weather",      ingest_weather,      {"dest_lat": dest_lat, "dest_lng": dest_lng}),
