@@ -71,8 +71,8 @@ Given a next calendar event, the pipeline:
 |---|---|
 | `.gitignore` | Complete |
 | `config_example.py` | Complete — template includes HOME_ADDRESS, WORK_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN |
-| `config.py` | Exists locally, gitignored — real credentials inside |
-| `requirements.txt` | Uses `>=` for C-extension packages; includes `garminconnect>=0.2.0` |
+| `config.py` | Exists locally, gitignored — real credentials + GARMIN_EMAIL/PASSWORD/WHOOP_ACCESS_TOKEN added as `""` (optional, skip by leaving blank) |
+| `requirements.txt` | Complete — `>=` pins for C-extension compat; includes `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Complete — interactive 12-station roadmap |
 | `docs/AI_HANDOFF.md` | Complete — full handoff context (keep updated) |
@@ -80,7 +80,7 @@ Given a next calendar event, the pipeline:
 | `scripts/__init__.py` | Empty — required for Airflow DAG imports |
 | `scripts/schema.py` | **DONE** — 8 tables + `v_enriched_routes` view. Run once. |
 | `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin + progressive geocoding fallback (strips ", Singapore", tries first token) + WORK_ADDRESS event-location fallback + `get_smart_default()` time-of-day heuristic (8–10AM→WORK, 4–6PM→HOME, after 6PM→at-home check) |
-| `scripts/transform.py` | **DONE** — next-event-only (`AND start_time > NOW()` filter prevents stale past events), LEAVE LATEST + LEAVE NOW always shown, step-by-step legs, "Why chosen" label, walk alternative with Zone 1/2 stats, optional Garmin steps + Whoop recovery |
+| `scripts/transform.py` | **DONE** — next-event-only (`AND start_time > NOW()` filter prevents stale past events), LEAVE LATEST + LEAVE NOW always shown, step-by-step legs, "Why chosen" label, walk alternative with Zone 1/2 stats, optional Garmin steps + Whoop recovery; `garminconnect` import has `# type: ignore[import-untyped]` to suppress Pylance warning |
 | `db/commute.duckdb` | Exists locally, gitignored — populated by real Google Calendar events |
 | `data/raw/bus_stops/bus_stops.parquet` | Cached — 5,205 LTA bus stops |
 | `data/raw/weather/` | Populated — 47 weather areas |

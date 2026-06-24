@@ -326,6 +326,25 @@ for attempt in range(max_retries):
 
 ---
 
+## D24 — serve.py Before model.py (ML Workflow Order)
+
+**Decision:** Build `scripts/serve.py` (Streamlit dashboard) before `scripts/model.py` (ML training and prediction). Wire predictions into the dashboard after both exist.
+
+**Why:**
+- Fine-tuning is meaningless without a feedback loop. Without a dashboard showing predicted vs actual MAE, you are tuning blind with no way to see if changes helped.
+- The dashboard needs to exist before ML outputs can be displayed — build the screen first, then produce data to fill it.
+- With limited real data at submission time (1–2 events), RandomForest will be dominated by 500 synthetic bootstrap rows. Hyperparameter tuning on synthetic data has negligible value. Get the end-to-end pipeline working first; meaningful fine-tuning happens naturally as real `actual_min` data accumulates over days.
+
+**Workflow:**
+1. `serve.py` — dashboard showing leave-by, route, weather (no ML yet)
+2. `model.py --train` → `--predict` → `--evaluate` — model working end-to-end
+3. Wire predictions into `serve.py` — dashboard now shows predicted duration + 7-day MAE
+4. Fine-tune — adjust features or hyperparameters once MAE is visible and real data exists
+
+**Trade-off:** The dashboard is temporarily incomplete (no ML panel) between steps 1 and 3. This is acceptable — a working pipeline with a partial dashboard is better than no dashboard while waiting for perfect ML.
+
+---
+
 ## D22 — Progressive Geocoding Fallback
 
 **Decision:** `geocode()` in `ingest.py` tries three progressively simpler search terms before raising an error: (1) full address string, (2) address with ", Singapore" stripped, (3) first comma-delimited token only.

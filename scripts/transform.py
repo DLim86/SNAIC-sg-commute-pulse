@@ -101,7 +101,7 @@ def get_garmin_steps():
     if not (GARMIN_EMAIL and GARMIN_PASSWORD):
         return None
     try:
-        from garminconnect import Garmin
+        from garminconnect import Garmin  # type: ignore[import-untyped]
         client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
         client.login()
         steps_data = client.get_steps_data(date.today().isoformat())

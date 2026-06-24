@@ -369,7 +369,7 @@
         <p>The Streamlit dashboard is the live output layer. It uses <code>@st.cache_data</code> with a 5-minute TTL — it auto-refreshes every 5 minutes without the user doing anything. That's the "regularly refreshed dashboard" the rubric asks for.</p>
         <p>The dashboard connects to DuckDB with <code>read_only=True</code> — it never writes, which avoids lock conflicts with the pipeline.</p>
         <p>Three metrics appear prominently: the leave-by time, the ML predicted journey duration, and the fare. Below that, any weather or disruption warnings appear from the SQL layer — the dashboard just displays what the transformation already decided. If I update the weather data to show rain, the warning appears automatically on the next refresh — I don't need to change any dashboard code.</p>
-        <p>The walk alternative section appears when the destination is under 5 km and it's not raining — it shows estimated time, steps, calories, and which heart rate zone the walk targets.</p>
+        <p>The walk alternative section appears when the destination is under 5 km and it's not raining — it shows estimated time, steps, calories, and which heart rate zone the walk targets. Optional Garmin Connect and Whoop integrations can enrich this with today's real step count and recovery score. These are fully optional — the pipeline has three protection layers: credentials default to empty strings in config, functions return None immediately if blank, and output only renders when the result is not None. It never crashes whether or not these services are connected.</p>
       </div>
     </div>
   </div>

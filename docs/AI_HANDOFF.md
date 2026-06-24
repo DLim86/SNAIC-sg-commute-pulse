@@ -59,19 +59,19 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | File | Status |
 |---|---|
 | `.gitignore` | Complete |
-| `config_example.py` | Complete — template with HOME_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN, all empty strings |
-| `config.py` | Exists locally, gitignored — real credentials inside |
-| `requirements.txt` | Uses `>=` for C-extension packages (Python 3.14 compat). Includes `garminconnect>=0.2.0`. **Needs `scikit-learn>=1.4.0` and `joblib>=1.3.0` added when building model.py** |
+| `config_example.py` | Complete — template with HOME_ADDRESS, WORK_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN, all empty strings |
+| `config.py` | Exists locally, gitignored — real credentials + GARMIN_EMAIL/PASSWORD/WHOOP_ACCESS_TOKEN present as `""` (leave blank to skip fitness integrations) |
+| `requirements.txt` | Complete — `>=` pins for Python 3.14 compat; `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` already added |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Updated 2026-06-24 — 3 phases: Day1 pipeline, Day2 production, Day3 architecture+ML |
 | `docs/AI_HANDOFF.md` | This file |
 | `docs/video_script.html` | Updated 2026-06-24 — complete 15-min script for full project including ML, reflection |
-| `docs/ARCHITECTURE.md` | Needs ML layer added (model.py, predictions table) |
-| `docs/DECISIONS.md` | Has D01–D17. Needs D18 (batch vs Kafka), D19 (DuckDB vs Spark), D20 (RF model choice) |
+| `docs/ARCHITECTURE.md` | Updated — includes ML layer, smart default data flow, geocoding fallback |
+| `docs/DECISIONS.md` | Complete — D01–D23 (added D18 batch vs Kafka, D19 DuckDB vs Spark, D20 RF model, D21 star schema, D22 geocoding fallback, D23 smart default routing) |
 | `scripts/__init__.py` | Done — empty, required for Airflow imports |
 | `scripts/schema.py` | Done — 8 tables + `v_enriched_routes` view. **Needs `predictions` table added before model.py** |
 | `scripts/ingest.py` | Done — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin + **progressive geocoding fallback** + **WORK_ADDRESS event-location fallback** + **`get_smart_default()` time-of-day heuristic** |
-| `scripts/transform.py` | Done — **`AND start_time > NOW()` filter** (prevents stale past-event output), LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, walk alternative (Zone 1/2), optional Garmin/Whoop |
+| `scripts/transform.py` | Done — **`AND start_time > NOW()` filter** (prevents stale past-event output), LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, walk alternative (Zone 1/2), optional Garmin/Whoop; `garminconnect` import uses `# type: ignore[import-untyped]` to suppress Pylance static analysis warning |
 
 ### Still to build (in this order)
 
