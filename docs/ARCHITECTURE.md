@@ -143,9 +143,10 @@ For each event (real or smart default):
       → INSERT OR REPLACE INTO weather_forecast
       → save Parquet → data/raw/weather/date=.../
 
-  → LTA BusArrivalv2 (nearest bus stop code via Haversine against 5,205 stops)
+  → LTA v3/BusArrival (5 nearest bus stop codes via Haversine against 5,205 stops, tried in order)
+      → stops tried in order until one returns live data; 404 on a stop = no active services, try next
+      → BusStopCode stripped of float suffix: str(code).split(".")[0]
       → next 3 arrivals: estimated_mins, load (SEA/SDA/LSD)
-      → 404 = no active services for that stop (handle gracefully, not an error)
       → INSERT OR REPLACE INTO bus_arrivals
 
   → LTA TrainServiceAlerts
@@ -423,9 +424,11 @@ Python 3.14 requires pre-built wheels which only exist in newer versions.
 - Token obtained via POST with email/password from `config.py`
 
 ### LTA Bus Stop Lookup
-- `BusArrivalv2` requires a `BusStopCode` (5-digit)
+- `v3/BusArrival` requires a `BusStopCode` (5-digit) — old `BusArrivalv2` endpoint retired August 2024 (LTA DataMall API v6.0)
 - LTA does not return GPS coordinates in this endpoint
-- Solution: cache the bus stop list (`data/raw/bus_stops/bus_stops.parquet`, 5,205 stops), compute Haversine distance from dest_lat/dest_lng to find nearest stop code
+- Solution: cache the bus stop list (`data/raw/bus_stops/bus_stops.parquet`, 5,205 stops), compute Haversine distance from **origin_lat/origin_lng** to find 5 nearest candidates
+- Try candidates in order; stop on the first one that returns live data; skip on 404 (no active services)
+- Always strip float suffix: `str(stop_code).split(".")[0]` — Parquet promotes int to float64 when NaN rows exist
 
 ### DuckDB Write Lock
 - DuckDB allows **only one write connection at a time**

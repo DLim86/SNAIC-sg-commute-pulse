@@ -174,6 +174,11 @@
   <h1>Assessment Video Script</h1>
   <p class="subtitle">SNAIC · SG Commute Pulse · Data Engineering Week 2 · DLim86 · Deadline: 14 Sep 2026</p>
 
+  <div class="note" style="margin-bottom:28px">
+    <div class="note-label">Recording Status — Not Recording Yet</div>
+    <p>The student is <strong>NOT recording yet</strong>. Recording begins only after the SQL project is complete. Do not prompt about video timing or script practice until the student explicitly says they are ready to record. This note is here so a new AI session does not incorrectly assume the video is in progress.</p>
+  </div>
+
   <div class="total-time">
     <div class="big">~14 min 30 sec</div>
     <div class="label">Target runtime — leaves ~30 sec buffer in your 15-minute slot</div>
@@ -342,6 +347,7 @@
         <p>First: leave-by time. <code>start_time MINUS INTERVAL (duration + 10) MINUTES</code>. The 10-minute buffer accounts for walking from home to the bus stop — that's a documented business rule, not a magic number.</p>
         <p>Second: route ranking. I use a window function — <code>ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY penalty, duration)</code>. If it's raining and a route has more than 400 metres of walking, that route gets a penalty and drops in the ranking. The fastest route wins unless rain makes it impractical. The dashboard always shows rank 1.</p>
         <p>The output shows two departure times: leave latest — the last safe departure to arrive 10 minutes early — and leave now — what happens if you left at this exact second. Step-by-step legs show each walk, bus, and MRT segment with duration and stop names.</p>
+        <p>Two additional sections appear after the recommended route. First: a live bus arrivals board — every service currently active at the origin stop, with x₁ (minutes to first bus) and x₂ (minutes to second bus) pulled from the <code>bus_arrivals</code> table, plus crowding level (seated / standing / full). Second: an alt routes section listing the top 3 non-recommended alternatives, each scored by next-bus wait time plus total duration so faster routes with bad bus timing rank below slower routes with a bus arriving now. Each leg in the alt routes shows the number of stops, and any bus more than 10 minutes away gets a warning flag. Note: alt routes query <code>route_options</code> directly — using <code>v_enriched_routes WHERE route_rank &gt; 1</code> would return 47 copies of each alternative because the view cross-joins 47 weather areas.</p>
       </div>
     </div>
   </div>
@@ -483,8 +489,10 @@
       </div>
       <div class="say">
         <div class="say-label">Question 1 — Most Challenging Part</div>
-        <p>The most challenging part was the OneMap routing response. Each route leg has a <code>route</code> field that sometimes returns a dictionary — with a <code>shortName</code> key for the MRT line — and sometimes returns a plain string. Calling <code>.get("shortName")</code> on a string crashes Python. I had to add an <code>isinstance(route_field, dict)</code> guard before every access — a defensive check that only becomes obvious when you see the raw API data vary between requests.</p>
-        <p>The second challenge was the SQL view cross-join. The weather table has 47 areas. The view joins each route against all 47 weather areas, producing 141 rows for 3 routes. I initially thought the route ranking was broken because I was seeing 141 rows instead of 3. The fix was understanding that <code>route_rank = 1</code> still gives exactly one row per event — the window function partitions by event_id, not by weather area.</p>
+        <p>The most challenging part was a silent API deprecation. The LTA DataMall Bus Arrival endpoint changed from <code>BusArrivalv2</code> to <code>v3/BusArrival</code> in August 2024 — but there was no obvious error message. Every bus stop code returned HTTP 404 with "The requested API was not found", which I initially thought meant the stop code was wrong. I tried multiple known-active stops and they all failed. Only when I checked the official LTA DataMall API PDF v6.8 did I see that the URL itself had changed. The fix was a single line. The lesson: always check the latest API documentation, not just the URL you were given originally.</p>
+        <p>The second challenge was the OneMap routing response. Each route leg has a <code>route</code> field that sometimes returns a dictionary — with a <code>shortName</code> key for the MRT line — and sometimes returns a plain string. Calling <code>.get("shortName")</code> on a string crashes Python. I had to add an <code>isinstance(route_field, dict)</code> guard — a defensive check that only becomes obvious when you see the raw API data vary between requests.</p>
+        <p>A third edge case: Parquet promotes integer bus stop code columns to float64 when any NaN rows exist, turning "65721" into "65721.0". LTA's API rejects codes with a decimal point. The fix was stripping the suffix with <code>str(code).split(".")[0]</code>.</p>
+        <p>A fourth challenge: after rescheduling two calendar events, the pipeline kept showing the wrong destination. The root cause was three bugs acting together. First, the routing origin was being geocoded from HOME_ADDRESS — when the event destination was also home, origin equalled destination and OneMap returned a 404 with no route. Fix: origin is always IP geolocation, never HOME_ADDRESS. Second, rescheduling a calendar event does not remove the old version from DuckDB — <code>INSERT OR REPLACE</code> upserts by primary key only, so the old start_time remained in <code>calendar_events</code> and transform picked whichever future event it found first. Fix: <code>_purge_stale_events()</code> deletes all future events that don't match the current active <code>event_id</code> after every ingest. Third, DuckDB's <code>INSERT OR REPLACE</code> on <code>route_options</code> first deletes the existing row, but that delete fails because <code>route_legs</code> still holds a foreign key reference to it. Fix: pre-delete all <code>route_legs</code> for the event before upserting <code>route_options</code>.</p>
       </div>
       <div class="say">
         <div class="say-label">Question 2 — Most Proud Of</div>
@@ -517,7 +525,7 @@
       </div>
       <div class="say">
         <div class="say-label">Resume Bullets — Read These (also submit as PDF)</div>
-        <p><strong>Pipeline Design.</strong> Built an end-to-end data pipeline driven by Google Calendar OAuth2 — ingesting real-time transport data from LTA DataMall, OneMap routing, and data.gov.sg weather APIs into DuckDB using a lake-warehouse pattern: date-partitioned Parquet raw zone feeding a typed 9-table star schema.</p>
+        <p><strong>Pipeline Design.</strong> Built an end-to-end data pipeline driven by Google Calendar OAuth2 — ingesting real-time transport data from LTA DataMall (v3/BusArrival endpoint), OneMap routing, and data.gov.sg weather APIs into DuckDB using a lake-warehouse pattern: date-partitioned Parquet raw zone feeding a typed 9-table star schema.</p>
         <p><strong>ML and Real-Time Output.</strong> Added a scikit-learn Random Forest model that predicts commute duration from route features; predictions are stored per event, compared against actuals, and evaluated daily via Airflow at 8 AM — full MLOps feedback loop. Results are served on a live Streamlit dashboard refreshed every 5 minutes.</p>
         <p><strong>Production Robustness.</strong> Implemented exponential backoff retry on all API calls, idempotent INSERT OR REPLACE, GPS coordinate validation rejecting non-Singapore coordinates, and a pipeline_runs monitoring table — making the pipeline safe to run in production without supervision.</p>
         <p><strong>Data Serving API.</strong> Designed a FastAPI REST layer exposing commute recommendations and ML predictions as queryable endpoints with auto-generated Swagger documentation — decoupling the recommendation engine from any specific frontend.</p>

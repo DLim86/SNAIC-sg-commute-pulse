@@ -78,9 +78,9 @@ Given a next calendar event, the pipeline:
 | `docs/AI_HANDOFF.md` | Complete — full handoff context (keep updated) |
 | `docs/video_script.html` | Complete — timed video script |
 | `scripts/__init__.py` | Empty — required for Airflow DAG imports |
-| `scripts/schema.py` | **DONE** — 8 tables + `v_enriched_routes` view. Run once. |
-| `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin + progressive geocoding fallback (strips ", Singapore", tries first token) + WORK_ADDRESS event-location fallback + `get_smart_default()` time-of-day heuristic (8–10AM→WORK, 4–6PM→HOME, after 6PM→at-home check) |
-| `scripts/transform.py` | **DONE** — next-event-only (`AND start_time > NOW()` filter prevents stale past events), LEAVE LATEST + LEAVE NOW always shown, step-by-step legs, "Why chosen" label, walk alternative with Zone 1/2 stats, optional Garmin steps + Whoop recovery; `garminconnect` import has `# type: ignore[import-untyped]` to suppress Pylance warning |
+| `scripts/schema.py` | **DONE** — 9 tables + `v_enriched_routes` view. `predictions` table added (session 4). Run once. |
+| `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always) + progressive geocoding fallback + WORK_ADDRESS fallback + `get_smart_default()` + `v3/BusArrival` + 5-nearest-stop fallback + float-suffix strip + **`_purge_stale_events()`** (session 5) + **`next_bus2_mins`** (session 5 — NextBus2 ETA stored) + **FK fix in `ingest_routes`** (session 5 — clears route_legs before upserting route_options) |
+| `scripts/transform.py` | **DONE** — next-event-only filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, "Why chosen", **alt routes** (session 5 — top 3 by `duration + first-bus-wait`, compact legs with stop count e.g. `🚌65 8m/4st`, `⚠` if bus > 10 min away), **live bus board** (x₁ and x₂ delta from now), walk alternative with Zone 1/2, optional Garmin/Whoop |
 | `db/commute.duckdb` | Exists locally, gitignored — populated by real Google Calendar events |
 | `data/raw/bus_stops/bus_stops.parquet` | Cached — 5,205 LTA bus stops |
 | `data/raw/weather/` | Populated — 47 weather areas |
@@ -140,11 +140,12 @@ Google Calendar OAuth2 token auto-refreshes via `google-auth` — no manual refr
 
 ## DuckDB Schema — `db/commute.duckdb`
 
-Eight tables (schema.py creates all of these — run once, or re-run after adding `predictions`):
+Nine tables (schema.py creates all of these — run once):
 
 ```
 calendar_events   — event_id PK, title, start_time TIMESTAMPTZ, dest_lat, dest_lng
 route_options     — option_id PK, event_id FK, total_duration_min, walk_distance_m, fare
+route_legs        — (option_id, leg_sequence) PK, mode, service_no, from_name, to_name
 weather_forecast  — (area, valid_start) PK, forecast, is_rainy BOOLEAN, fetched_at
 bus_arrivals      — (bus_stop_code, service_no, fetched_at) PK, next_bus_mins, load
 train_alerts      — alert_id PK, affected_line, message, severity, fetched_at
@@ -153,7 +154,7 @@ pipeline_runs     — run_id PK, source, rows_upserted, status, error_msg, ran_a
 predictions       — prediction_id PK, event_id, predicted_min, actual_min, model_version, mae_7day, predicted_at
 ```
 
-The `predictions` table is required for the ML rubric criterion (30 marks). Add it to `scripts/schema.py` before building `scripts/model.py`.
+`predictions` table is already in `scripts/schema.py` — no changes needed before building `scripts/model.py`.
 
 Full `CREATE TABLE` statements are in `docs/ARCHITECTURE.md`.
 
@@ -223,8 +224,10 @@ git push
 ## Known Issues / Gotchas
 
 - **OneMap token TTL:** expires every 3 days — call `get_onemap_token()` on every pipeline run, never cache it to disk
-- **LTA bus stops vs GPS:** LTA bus stop codes don't have GPS coordinates in the BusArrivalv2 endpoint — use Haversine distance against a bus stop list to find the nearest stop. Bus stop list is cached at `data/raw/bus_stops/bus_stops.parquet`
-- **LTA BusArrivalv2 returns 404 (not empty array) for stops with no active services** — handle gracefully, treat as "no data" not an error
+- **LTA Bus Arrival endpoint URL:** correct URL is `https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival` — the old `BusArrivalv2` path was retired in LTA DataMall API v6.0 (August 2024) and returns "The requested API was not found" (404) for ALL stop codes. This was fixed in `ingest.py` session 4.
+- **LTA bus stops vs GPS:** LTA bus stop codes don't have GPS coordinates in the v3/BusArrival endpoint — use Haversine distance against a bus stop list to find the nearest stop. Bus stop list is cached at `data/raw/bus_stops/bus_stops.parquet`. Try 5 nearest candidates in order — some stops in the 65xxx Punggol/Sengkang range exist in the BusStops list but are not in the real-time system. Skip those and try the next.
+- **LTA BusStopCode float suffix:** if the Parquet bus stop file has any NaN rows, pandas promotes the BusStopCode column from int to float64 (e.g. "65721" becomes "65721.0"). LTA rejects codes with a decimal point. Fix: always use `str(code).split(".")[0]` when formatting the stop code for the API request.
+- **LTA v3/BusArrival returns 404 (not empty array) for stops with no active services** — for 404 on a valid stop, handle gracefully (treat as "no data" not an error). Distinguish from the endpoint-not-found 404 by checking the response body for "The requested API was not found".
 - **data.gov.sg weather areas:** `area_metadata` in the API response includes `label_location` with lat/lng for each area — no separate lookup needed
 - **DuckDB write lock:** only one connection can write at a time; the pipeline must close its connection before FastAPI opens one
 - **`scripts/` imports `config.py` from project root** — all scripts must add `sys.path.insert(0, str(Path(__file__).parent.parent))` before `from config import ...`
@@ -233,7 +236,7 @@ git push
 - **OneMap routing `duration` is in seconds** — divide by 60 for `total_duration_min`
 - **`get_onemap_token()` uses `requests.post`, not `fetch_with_retry`** — has its own retry loop with 30s timeout
 - **OneMap `leg.get("route", {})` can return a string** — always check `isinstance(route_field, dict)` before calling `.get("shortName")` on it (fixed in ingest.py)
-- **`v_enriched_routes` cross-join:** view joins all 47 weather areas per route (141 rows for 3 routes). `route_rank=1` still gives exactly one row per event — safe to use in transform.py
+- **`v_enriched_routes` cross-join:** view joins all 47 weather areas per route (141 rows for 3 routes). `route_rank=1` still gives exactly one row per event — safe to use in transform.py. Do NOT query `route_rank > 1` from the view to get alternative routes — you will get N×47 duplicates. Query `route_options` directly instead (skips weather join, which is not needed for alt routes).
 - **transform.py BEST_ROUTE_QUERY requires `AND start_time > NOW()`** — without this filter, the query picks the oldest stored event (even yesterday's), not the next upcoming one. The fix is in BEST_ROUTE_QUERY in transform.py.
 - **`route_legs` table** added in latest schema.py — run `python scripts/schema.py` then `python scripts/ingest.py` to populate legs
 - **Geocoding progressive fallback:** `geocode()` in ingest.py tries three search terms in order: (1) full address, (2) address with ", Singapore" stripped, (3) first comma-delimited token. Use postal codes for most reliable results. Obscure street names like "Sentul Walk" may not be in OneMap's index.
@@ -251,6 +254,12 @@ git push
 - **model.py — `models/` folder must be gitignored** — `.pkl` files are binary artifacts, not source code. Add `models/*.pkl` to `.gitignore` (but commit `models/.gitkeep` so the folder exists in the repo).
 - **evaluate_model task** — only makes sense once `predictions` has at least 7 rows with non-null `actual_min`. Handle the cold start gracefully: if fewer than 7 actuals exist, log a warning and skip evaluation rather than crashing.
 - **`actual_min` backfill** — after the commute time passes, a separate pipeline task should compare `predicted_min` to the route that was actually taken (`total_duration_min` from `route_options` for the same `event_id`) and fill in `actual_min`.
+- **Stale event cleanup (`_purge_stale_events`)** — ingest.py accumulates future calendar events across runs. If you reschedule a calendar event, the old entry (with old start_time) stays in the DB and transform picks it (both appear in `start_time > NOW()`). Fixed in session 5: after fetching the active event, `_purge_stale_events(con, event_id)` deletes all other future `calendar_events` + their `route_options` + `route_legs`. Called for both calendar and smart-default paths.
+- **DuckDB FK constraint on `INSERT OR REPLACE` into `route_options`** — `route_legs` has a FK referencing `route_options(option_id)`. DuckDB's `INSERT OR REPLACE` deletes then re-inserts, but the delete fails if `route_legs` still references that `option_id`. Fix: `ingest_routes()` deletes all `route_legs` for the event before upserting `route_options`. Added in session 5.
+- **HOME_ADDRESS must NOT be routing origin** — a previous session incorrectly geocoded HOME_ADDRESS as the routing origin. If the calendar event destination is also home (e.g. an event called "Home"), origin = destination → OneMap returns 404. Reverted in session 5: origin is always IP geolocation only. HOME_ADDRESS is used only as a *destination* (go-home default, at-home proximity check).
+- **Destination bus stop not stored** — `ingest_bus_arrivals` finds the nearest bus stop to the *origin* and fetches live arrival times. The nearest bus stop to the *destination* is never looked up or stored. OneMap route_legs already has `to_name` (the stop name where you alight), but not the LTA bus stop code for that stop. Future enhancement: after `ingest_routes()`, call `nearest_bus_stops(dest_lat, dest_lng, stops_df, n=1)` and store the result as `dest_bus_stop_code` in `calendar_events` (requires schema change). Would let serve.py show "Board stop 65141 → Alight stop 65019 (3 min walk to destination)".
+- **`route_legs.num_stops`** — OneMap `intermediateStops` array gives stops between boarding and alighting. `num_stops = len(intermediateStops) + 1` (the +1 counts the alighting stop). WALK legs store `NULL`. Added in session 5 via `ALTER TABLE route_legs ADD COLUMN IF NOT EXISTS num_stops INTEGER` migration in schema.py.
+- **Alt routes cross-join gotcha** — `v_enriched_routes` cross-joins 47 weather areas per route (47 × N rows). Using `route_rank > 1` returns 47×(N-1) duplicates, not N-1 distinct alternatives. **Always query `route_options` directly for alt routes** — the view is only safe with `route_rank = 1 LIMIT 1`.
 
 ---
 

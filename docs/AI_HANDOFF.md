@@ -3,7 +3,7 @@
 This document lets another Claude session (or any developer) continue this project
 from scratch with no prior chat history.
 
-**Last updated: 2026-06-24 (session 3)**
+**Last updated: 2026-06-24 (session 5)**
 
 ---
 
@@ -67,11 +67,11 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `docs/AI_HANDOFF.md` | This file |
 | `docs/video_script.html` | Updated 2026-06-24 — complete 15-min script for full project including ML, reflection |
 | `docs/ARCHITECTURE.md` | Updated — includes ML layer, smart default data flow, geocoding fallback |
-| `docs/DECISIONS.md` | Complete — D01–D23 (added D18 batch vs Kafka, D19 DuckDB vs Spark, D20 RF model, D21 star schema, D22 geocoding fallback, D23 smart default routing) |
+| `docs/DECISIONS.md` | Complete — D01–D26 (session 5 added: D24 serve.py-before-model.py order, D25 LTA v3 migration, D26 stale event cleanup) |
 | `scripts/__init__.py` | Done — empty, required for Airflow imports |
-| `scripts/schema.py` | Done — 8 tables + `v_enriched_routes` view. **Needs `predictions` table added before model.py** |
-| `scripts/ingest.py` | Done — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin + **progressive geocoding fallback** + **WORK_ADDRESS event-location fallback** + **`get_smart_default()` time-of-day heuristic** |
-| `scripts/transform.py` | Done — **`AND start_time > NOW()` filter** (prevents stale past-event output), LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, walk alternative (Zone 1/2), optional Garmin/Whoop; `garminconnect` import uses `# type: ignore[import-untyped]` to suppress Pylance static analysis warning |
+| `scripts/schema.py` | Done — **9 tables** + `v_enriched_routes` view. `predictions` table added session 4. Ready for model.py. |
+| `scripts/ingest.py` | Done — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always — HOME_ADDRESS is destination-only, not origin) + progressive geocoding fallback + WORK_ADDRESS event-location fallback + `get_smart_default()` time-of-day heuristic + `v3/BusArrival` endpoint + 5-nearest-stop fallback + float-suffix strip on BusStopCode + **`_purge_stale_events()` (session 5)** — deletes stale future events+routes after calendar reschedule |
+| `scripts/transform.py` | Done — `AND start_time > NOW()` filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, **live bus arrivals board** (session 5 — all services at origin stop, x₁ and x₂ mins from now, load status), **alt routes section** (session 5 — top 3 non-recommended options scored by next-bus arrival + duration, stop counts per leg, delay flag for buses >10 min away; queries `route_options` directly — NOT `v_enriched_routes` which would return 47× duplicates from weather cross-join), walk alternative (Zone 1/2), optional Garmin/Whoop |
 
 ### Still to build (in this order)
 
@@ -90,9 +90,9 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 ```
 calendar_events   — event_id PK, title, start_time TIMESTAMPTZ, location_raw, dest_lat, dest_lng, ingested_at
 route_options     — option_id PK, event_id FK, total_duration_min, walk_distance_m, num_transfers, fare, fetched_at
-route_legs        — (option_id, leg_sequence) PK, mode, service_no, from_name, to_name, duration_min, distance_m
+route_legs        — (option_id, leg_sequence) PK, mode, service_no, from_name, to_name, duration_min, distance_m, num_stops
 weather_forecast  — (area, valid_start) PK, forecast, is_rainy BOOLEAN, valid_end, fetched_at
-bus_arrivals      — (bus_stop_code, service_no, fetched_at) PK, next_bus_mins, load
+bus_arrivals      — (bus_stop_code, service_no, fetched_at) PK, next_bus_mins, next_bus2_mins, load
 train_alerts      — alert_id PK, affected_line, message, severity, fetched_at
 recommendations   — event_id PK, recommended_mode, total_duration_min, leave_by, estimated_arrival, weather_warning, disruption_warning, reason, created_at
 pipeline_runs     — run_id PK, source, rows_upserted, duration_ms, status, error_msg, ran_at
@@ -233,7 +233,10 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 
 ### Core pipeline
 - **OneMap token TTL:** expires every 3 days — call `get_onemap_token()` on every pipeline run, never cache to disk
-- **LTA BusArrivalv2 404:** returns 404 (not empty) for stops with no active services — catch `HTTPError(404)` and treat as "no data"
+- **LTA Bus Arrival URL changed:** correct endpoint is `https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival` — the old `BusArrivalv2` path was retired in LTA DataMall API v6.0 (August 2024). Calling `BusArrivalv2` returns 404 "The requested API was not found" for ALL stop codes regardless of whether buses exist. Fixed in `ingest.py` session 4.
+- **5-nearest-stop bus fallback:** `ingest_bus_arrivals` tries the 5 nearest bus stops (Haversine from origin) in order, using a single request per stop with no retry on 404. Many 65xxx Punggol/Sengkang stops are in the BusStops database but not in the real-time v3/BusArrival system.
+- **BusStopCode float suffix:** Parquet promotes integer BusStopCode to float64 if any NaN rows exist → "65721.0" is rejected by LTA. Fix: `str(code).split(".")[0]` strips the suffix.
+- **v3/BusArrival still returns 404 for stops with genuinely no active services** — distinct from the endpoint-not-found 404. Log a warning and continue to the next candidate.
 - **OneMap `leg.get("route")` returns string or dict:** always check `isinstance(route_field, dict)` before calling `.get("shortName")` — fixed in ingest.py
 - **`v_enriched_routes` cross-join:** 47 weather areas × 3 routes = 141 rows. `route_rank=1` still gives one row per event — safe
 - **`BEST_ROUTE_QUERY` has `AND start_time > NOW()`** — without this, `ORDER BY start_time LIMIT 1` picks the oldest stored event (yesterday's), not the next upcoming one
@@ -243,7 +246,11 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 - **`sys.path.insert(0, str(Path(__file__).parent.parent))`** before `from config import ...` in all scripts/
 - **Geocoding progressive fallback:** `geocode()` tries full address → strips ", Singapore" → first comma-token. Postal codes are most reliable. Obscure street names may not exist in OneMap's index.
 - **`WORK_ADDRESS` in config.py:** destination fallback when event location fails geocoding; also 8–10 AM default when no calendar event
-- **`HOME_ADDRESS` in config.py:** used for after-4 PM go-home default and after-6 PM at-home proximity check. NOT the routing origin — origin is always IP geolocation.
+- **`HOME_ADDRESS` in config.py:** used for after-4 PM go-home default and after-6 PM at-home proximity check. NOT the routing origin — origin is always IP geolocation. A previous session incorrectly geocoded HOME_ADDRESS as origin; this caused OneMap 404 when the calendar event destination was also home (origin = destination). Reverted in session 5.
+- **Stale calendar event cleanup:** `_purge_stale_events(con, keep_event_id)` in ingest.py deletes all future `calendar_events` + their `route_options` + `route_legs` that don't match the active event_id. Called after every successful fetch. Without this, rescheduling a calendar event leaves the old entry (with old start_time) in the DB; since both old and new start_time are `> NOW()`, transform would pick whichever it encountered first.
+- **Destination bus stop not stored:** origin-side live arrivals are fetched from the nearest stop to the *user's location*. The nearest bus stop to the *destination* is not looked up. OneMap `route_legs.to_name` has the stop name where you alight, but not the LTA stop code. Future: store `dest_bus_stop_code` in `calendar_events` (schema change needed) for display in serve.py.
+- **DuckDB FK constraint on `INSERT OR REPLACE` into `route_options`** — `route_legs` FKs `route_options(option_id)`. DuckDB's replace deletes the old row first, but that delete fails when route_legs still holds a reference. Fixed in session 5: `ingest_routes()` deletes all route_legs for the event before upserting route_options.
+- **`bus_arrivals` now stores `next_bus2_mins`** — session 5 added this column. `schema.py` applies `ALTER TABLE bus_arrivals ADD COLUMN IF NOT EXISTS next_bus2_mins INTEGER` as a migration on existing DBs. Always run `python scripts/schema.py` after pulling to pick up migrations.
 - **`get_smart_default()` windows:** 8–10 AM → WORK; 4–6 PM → HOME (depart ~6:30 PM); after 6 PM → check IP location vs home (3 km threshold), skip if at home; outside windows → skip quietly
 - **`SGT = timezone(timedelta(hours=8))`** — module-level constant in ingest.py for Singapore timezone arithmetic
 

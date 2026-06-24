@@ -271,6 +271,14 @@ def ingest_routes(con, event_id, dest_lat, dest_lng, token, origin_lat, origin_l
         log_run(con, "onemap_route", 0, int((time.time() - t0) * 1000), "error", "no itineraries")
         return
 
+    # Clear existing legs first — INSERT OR REPLACE on route_options fails if route_legs still
+    # holds a FK reference to the same option_id (DuckDB doesn't cascade on replace).
+    con.execute("""
+        DELETE FROM route_legs WHERE option_id IN (
+            SELECT option_id FROM route_options WHERE event_id = ?
+        )
+    """, [event_id])
+
     records = []
     fetched_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -312,14 +320,17 @@ def ingest_routes(con, event_id, dest_lat, dest_lng, token, origin_lat, origin_l
             to_name = leg.get("to", {}).get("name", "")
             leg_dur = round(leg.get("duration", 0) / 60)
             leg_dist = round(leg.get("distance", 0))
+            # intermediateStops are stops between boarding and alighting (not counting either end)
+            intermediate = leg.get("intermediateStops") or []
+            num_stops = len(intermediate) + 1 if leg_mode != "WALK" else None
             leg_id = f"{option_id}_LEG_{j + 1}"
             con.execute(
                 """INSERT OR REPLACE INTO route_legs
                    (leg_id, option_id, leg_sequence, mode, service_no,
-                    from_name, to_name, duration_min, distance_m, fetched_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    from_name, to_name, duration_min, distance_m, num_stops, fetched_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 [leg_id, option_id, j + 1, leg_mode, service_no,
-                 from_name, to_name, leg_dur, leg_dist, fetched_at],
+                 from_name, to_name, leg_dur, leg_dist, num_stops, fetched_at],
             )
 
     save_parquet(records, "onemap_route")
@@ -357,7 +368,8 @@ def fetch_all_bus_stops():
     return df
 
 
-def nearest_bus_stop(lat, lng, stops_df):
+def nearest_bus_stops(lat, lng, stops_df, n=5):
+    """Return the n nearest bus stops as a list of (stop_code_str, dist_m) tuples."""
     df = stops_df.dropna(subset=["Latitude", "Longitude"]).copy()
     df["Latitude"] = df["Latitude"].astype(float)
     df["Longitude"] = df["Longitude"].astype(float)
@@ -365,58 +377,78 @@ def nearest_bus_stop(lat, lng, stops_df):
     distances = df.apply(
         lambda r: haversine(lat, lng, r["Latitude"], r["Longitude"]), axis=1
     )
-    idx = distances.idxmin()
-    return df.loc[idx, "BusStopCode"], float(distances[idx])
+    top = distances.nsmallest(n)
+    # str().split(".")[0] strips float suffix if parquet stored codes as float64
+    return [(str(df.loc[i, "BusStopCode"]).split(".")[0], float(d)) for i, d in top.items()]
 
 
 # ── Bus arrivals ──────────────────────────────────────────────────────────────
 
-def ingest_bus_arrivals(con, dest_lat, dest_lng):
+def ingest_bus_arrivals(con, origin_lat, origin_lng):
     t0 = time.time()
     stops_df = fetch_all_bus_stops()
-    stop_code, dist_m = nearest_bus_stop(dest_lat, dest_lng, stops_df)
-    log.info("Nearest bus stop: %s (%.0f m away)", stop_code, dist_m)
+    candidates = nearest_bus_stops(origin_lat, origin_lng, stops_df, n=5)
 
-    try:
-        data = fetch_with_retry(
-            "https://datamall2.mytransport.sg/ltaodataservice/BusArrivalv2",
-            headers=LTA_HEADERS,
-            params={"BusStopCode": stop_code},
-        )
-    except requests.exceptions.HTTPError as exc:
-        if exc.response is not None and exc.response.status_code == 404:
-            # LTA returns 404 when a stop has no active services at this moment
-            log.warning("No active bus services at stop %s (404)", stop_code)
-            log_run(con, "lta_bus", 0, int((time.time() - t0) * 1000), "success", f"no services at {stop_code}")
-            return
-        raise
+    # Try each candidate stop; some stops exist in BusStops but not in BusArrivalv2
+    data = None
+    stop_code = None
+    for code, dist_m in candidates:
+        log.info("Trying bus stop %s (%.0f m from origin)", code, dist_m)
+        try:
+            r = requests.get(
+                "https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival",
+                headers=LTA_HEADERS,
+                params={"BusStopCode": code},
+                timeout=10,
+            )
+            r.raise_for_status()
+            data = r.json()
+            stop_code = code
+            log.info("Bus stop %s has live data — using this stop", code)
+            break
+        except requests.exceptions.HTTPError as exc:
+            if exc.response is not None and exc.response.status_code == 404:
+                log.warning("Stop %s not in BusArrivalv2 — trying next nearest", code)
+                continue
+            raise
+
+    if data is None:
+        log.warning("None of the 5 nearest stops returned BusArrivalv2 data")
+        log_run(con, "lta_bus", 0, int((time.time() - t0) * 1000), "success", "no BusArrivalv2 stops nearby")
+        return
 
     fetched_at = datetime.now(timezone.utc).replace(tzinfo=None)
     records = []
 
+    def _eta_mins(bus_dict):
+        eta_str = bus_dict.get("EstimatedArrival", "")
+        if not eta_str:
+            return None
+        try:
+            eta_dt = datetime.fromisoformat(eta_str)
+            return max(0, round((eta_dt - datetime.now(eta_dt.tzinfo)).total_seconds() / 60))
+        except (ValueError, TypeError):
+            return None
+
     for svc in data.get("Services", []):
         service_no = svc.get("ServiceNo", "")
         next_bus = svc.get("NextBus", {})
-        eta_str = next_bus.get("EstimatedArrival", "")
         load = next_bus.get("Load", "")
-        if not eta_str:
+        next_bus_mins = _eta_mins(next_bus)
+        if next_bus_mins is None:
             continue
-        try:
-            eta_dt = datetime.fromisoformat(eta_str)
-            now_aware = datetime.now(eta_dt.tzinfo)
-            next_bus_mins = max(0, round((eta_dt - now_aware).total_seconds() / 60))
-        except (ValueError, TypeError):
-            next_bus_mins = 0
+        next_bus2_mins = _eta_mins(svc.get("NextBus2", {}))
 
         con.execute(
             """INSERT OR REPLACE INTO bus_arrivals
-               (bus_stop_code, service_no, next_bus_mins, load, fetched_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            [stop_code, service_no, next_bus_mins, load, fetched_at],
+               (bus_stop_code, service_no, next_bus_mins, next_bus2_mins, load, fetched_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            [stop_code, service_no, next_bus_mins, next_bus2_mins, load, fetched_at],
         )
         records.append({
             "bus_stop_code": stop_code, "service_no": service_no,
-            "next_bus_mins": next_bus_mins, "load": load, "fetched_at": fetched_at.isoformat(),
+            "next_bus_mins": next_bus_mins, "next_bus2_mins": next_bus2_mins,
+            "load": load, "fetched_at": fetched_at.isoformat(),
         })
 
     if records:
@@ -590,25 +622,38 @@ def get_smart_default(con, token):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def _purge_stale_events(con, keep_event_id):
+    """Delete future calendar events and their routes that are not the active event."""
+    con.execute("""
+        DELETE FROM route_legs WHERE option_id IN (
+            SELECT option_id FROM route_options WHERE event_id IN (
+                SELECT event_id FROM calendar_events
+                WHERE event_id != ? AND start_time > NOW()
+            )
+        )
+    """, [keep_event_id])
+    con.execute("""
+        DELETE FROM route_options WHERE event_id IN (
+            SELECT event_id FROM calendar_events
+            WHERE event_id != ? AND start_time > NOW()
+        )
+    """, [keep_event_id])
+    con.execute("DELETE FROM calendar_events WHERE event_id != ? AND start_time > NOW()", [keep_event_id])
+
+
 def main():
     log.info("=== Ingest pipeline starting ===")
     token = get_onemap_token()
     con = duckdb.connect(str(DB_PATH))
 
     try:
-        if HOME_ADDRESS:
-            try:
-                origin_lat, origin_lng = geocode(HOME_ADDRESS, token)
-                log.info("Origin: home address geocoded → (%.5f, %.5f)", origin_lat, origin_lng)
-            except ValueError as exc:
-                log.warning("HOME_ADDRESS geocode failed: %s — falling back to IP geolocation", exc)
-                origin_lat, origin_lng = get_current_location()
-        else:
-            log.info("HOME_ADDRESS not set — using IP geolocation as origin")
-            origin_lat, origin_lng = get_current_location()
+        # Origin is always the user's current IP-geolocated position, not HOME_ADDRESS.
+        # HOME_ADDRESS is used only as a *destination* (go-home default, at-home detection).
+        origin_lat, origin_lng = get_current_location()
 
         try:
             event_id, dest_lat, dest_lng = fetch_next_calendar_event(con, token)
+            _purge_stale_events(con, event_id)
         except ValueError as exc:
             log.warning("No usable calendar event — %s", exc)
             result = get_smart_default(con, token)
@@ -616,11 +661,12 @@ def main():
                 log_run(con, "calendar", 0, 0, "skipped", str(exc))
                 return
             event_id, dest_lat, dest_lng = result
+            _purge_stale_events(con, event_id)
 
         for name, fn, kwargs in [
             ("weather",      ingest_weather,      {"dest_lat": dest_lat, "dest_lng": dest_lng}),
             ("routes",       ingest_routes,       {"event_id": event_id, "dest_lat": dest_lat, "dest_lng": dest_lng, "token": token, "origin_lat": origin_lat, "origin_lng": origin_lng}),
-            ("bus_arrivals", ingest_bus_arrivals,  {"dest_lat": dest_lat, "dest_lng": dest_lng}),
+            ("bus_arrivals", ingest_bus_arrivals,  {"origin_lat": origin_lat, "origin_lng": origin_lng}),
             ("train_alerts", ingest_train_alerts, {}),
         ]:
             try:

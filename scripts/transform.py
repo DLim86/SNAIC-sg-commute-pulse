@@ -51,7 +51,7 @@ LIMIT 1
 """
 
 LEGS_QUERY = """
-SELECT leg_sequence, mode, service_no, from_name, to_name, duration_min, distance_m
+SELECT leg_sequence, mode, service_no, from_name, to_name, duration_min, distance_m, num_stops
 FROM route_legs
 WHERE option_id = ?
 ORDER BY leg_sequence
@@ -63,6 +63,28 @@ FROM bus_arrivals
 WHERE service_no = ?
 ORDER BY fetched_at DESC
 LIMIT 1
+"""
+
+BUS_BOARD_QUERY = """
+SELECT service_no, next_bus_mins, next_bus2_mins, load
+FROM bus_arrivals
+WHERE fetched_at = (SELECT MAX(fetched_at) FROM bus_arrivals)
+ORDER BY COALESCE(next_bus_mins, 999)
+"""
+
+BUS_STOP_QUERY = """
+SELECT bus_stop_code
+FROM bus_arrivals
+ORDER BY fetched_at DESC
+LIMIT 1
+"""
+
+ALT_ROUTES_QUERY = """
+SELECT option_id, total_duration_min, fare, num_transfers
+FROM route_options
+WHERE event_id = ?
+  AND option_id != ?
+ORDER BY total_duration_min
 """
 
 ACTIVE_ALERTS_QUERY = """
@@ -209,6 +231,7 @@ def main():
             log_run(con, 0, int((time.time() - t0) * 1000), "error", "no view rows")
             return
 
+        SGT = timezone(timedelta(hours=8))
         now_utc = datetime.now(timezone.utc)
         written = 0
 
@@ -219,7 +242,7 @@ def main():
             # ── Legs ──────────────────────────────────────────────────────────
             legs = con.execute(LEGS_QUERY, [option_id]).fetchall()
             leg_cols = ["leg_sequence", "mode", "service_no", "from_name",
-                        "to_name", "duration_min", "distance_m"]
+                        "to_name", "duration_min", "distance_m", "num_stops"]
             legs = [dict(zip(leg_cols, l)) for l in legs]
 
             # ── Bus waiting time (first BUS leg) ───────────────────────────────
@@ -246,7 +269,7 @@ def main():
 
             # leave-now arrival = now + journey time + any extra bus wait
             adjusted_min = r["total_duration_min"] + bus_wait_min
-            leave_now_arrival = now_utc + timedelta(minutes=adjusted_min)
+            leave_now_arrival = (now_utc + timedelta(minutes=adjusted_min)).astimezone(SGT)
             start_aware = r["start_time"]
             if start_aware.tzinfo is None:
                 start_aware = start_aware.replace(tzinfo=timezone.utc)
@@ -335,6 +358,56 @@ def main():
 
             log.info("")
 
+            # ── Alt routes (compact) ───────────────────────────────────────────
+            alt_rows = con.execute(ALT_ROUTES_QUERY, [r["event_id"], option_id]).fetchall()
+            if alt_rows:
+                _lcols = ["leg_sequence", "mode", "service_no", "from_name",
+                          "to_name", "duration_min", "distance_m", "num_stops"]
+
+                # Score each alt: duration + first-bus wait (soonest arrival wins)
+                scored = []
+                for alt_oid, alt_dur, alt_fare, _ in alt_rows:
+                    alt_legs = [dict(zip(_lcols, l))
+                                for l in con.execute(LEGS_QUERY, [alt_oid]).fetchall()]
+                    first_transit_wait = 0
+                    bus_notes = []
+                    for leg in alt_legs:
+                        svc = leg["service_no"] or ""
+                        if leg["mode"] == "BUS" and svc:
+                            bw = con.execute(BUS_WAIT_QUERY, [svc]).fetchone()
+                            if bw and bw[0] is not None:
+                                first_transit_wait = bw[0]
+                                flag = " ⚠" if bw[0] > 10 else ""
+                                bus_notes.append(f"Bus {svc} ~{bw[0]}m{flag}")
+                            break
+                    scored.append((alt_dur + first_transit_wait, alt_oid, alt_dur, alt_fare, alt_legs, bus_notes))
+
+                scored.sort(key=lambda x: x[0])
+
+                log.info("─" * 56)
+                log.info("🔄  Alt routes  (top 3 by arrival time)")
+                for display_rank, (_, alt_oid, alt_dur, alt_fare, alt_legs, bus_notes) in enumerate(scored[:3], 2):
+                    parts = []
+                    for leg in alt_legs:
+                        mode, dur, svc = leg["mode"], leg["duration_min"], leg["service_no"] or ""
+                        stops = leg["num_stops"]
+                        st = f"/{stops}stop" if stops else ""
+                        if mode == "WALK":
+                            parts.append(f"🚶{dur}min")
+                        elif mode == "BUS":
+                            parts.append(f"🚌{svc} {dur}min{st}")
+                        elif mode == "MRT":
+                            parts.append(f"🚇{svc or 'MRT'} {dur}min{st}")
+                        elif mode == "LRT":
+                            parts.append(f"🚈{svc or 'LRT'} {dur}min{st}")
+                    leg_str = " → ".join(parts) if parts else "(no legs)"
+                    note_str = f"   [{', '.join(bus_notes)}]" if bus_notes else ""
+                    log.info(
+                        "    [%d]  %d min  $%.2f    %s%s",
+                        display_rank, alt_dur, alt_fare or 0, leg_str, note_str,
+                    )
+                log.info("")
+
             # Warnings
             if rainy_walk_warnings:
                 for w in rainy_walk_warnings:
@@ -348,6 +421,21 @@ def main():
                     log.warning("    🚨 Disruption [%s]: %s", affected_line, msg[:80])
             else:
                 log.info("    ✅  No active MRT/LRT disruptions")
+
+            # ── Live bus board ─────────────────────────────────────────────────
+            bus_board = con.execute(BUS_BOARD_QUERY).fetchall()
+            if bus_board:
+                stop_row = con.execute(BUS_STOP_QUERY).fetchone()
+                stop_code_str = stop_row[0] if stop_row else "?"
+                load_label = {"SEA": "seats", "SDA": "stndg", "LSD": "full "}
+                log.info("")
+                log.info("─" * 56)
+                log.info("🚌  Live arrivals — Stop %s", stop_code_str)
+                log.info("─" * 56)
+                for svc_no, x1, x2, load in bus_board:
+                    x2_str = f"  |  {x2:2d} min" if x2 is not None else "          "
+                    ll = load_label.get(load or "", "     ")
+                    log.info("    Bus %-6s   in %2d min%s   %s", svc_no or "?", x1 or 0, x2_str, ll)
 
             print_walk_suggestion(r["dest_lat"], r["dest_lng"], r["is_rainy"])
 

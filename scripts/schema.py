@@ -43,11 +43,12 @@ TABLES = [
     """,
     """
     CREATE TABLE IF NOT EXISTS bus_arrivals (
-        bus_stop_code VARCHAR,
-        service_no    VARCHAR,
-        next_bus_mins INTEGER,
-        load          VARCHAR,
-        fetched_at    TIMESTAMP,
+        bus_stop_code  VARCHAR,
+        service_no     VARCHAR,
+        next_bus_mins  INTEGER,
+        next_bus2_mins INTEGER,
+        load           VARCHAR,
+        fetched_at     TIMESTAMP,
         PRIMARY KEY (bus_stop_code, service_no, fetched_at)
     )
     """,
@@ -95,7 +96,19 @@ TABLES = [
         to_name      VARCHAR,
         duration_min INTEGER,
         distance_m   INTEGER,
+        num_stops    INTEGER,
         fetched_at   TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS predictions (
+        prediction_id VARCHAR PRIMARY KEY,
+        event_id      VARCHAR,
+        predicted_min INTEGER,
+        actual_min    INTEGER,
+        model_version VARCHAR,
+        mae_7day      DOUBLE,
+        predicted_at  TIMESTAMP DEFAULT now()
     )
     """,
 ]
@@ -142,15 +155,24 @@ LEFT JOIN train_alerts ta
 """
 
 
+MIGRATIONS = [
+    "ALTER TABLE bus_arrivals ADD COLUMN IF NOT EXISTS next_bus2_mins INTEGER",
+    "ALTER TABLE route_legs ADD COLUMN IF NOT EXISTS num_stops INTEGER",
+]
+
+
 def main():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(DB_PATH))
     try:
         for sql in TABLES:
             con.execute(sql)
-        log.info("8 tables created")
+        log.info("9 tables created")
         con.execute(VIEW)
         log.info("v_enriched_routes view created")
+        for sql in MIGRATIONS:
+            con.execute(sql)
+        log.info("migrations applied")
     finally:
         con.close()
     log.info("Schema ready — %s", DB_PATH)

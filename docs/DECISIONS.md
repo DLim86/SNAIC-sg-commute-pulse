@@ -232,7 +232,7 @@ for attempt in range(max_retries):
 
 ## D16 — IP Geolocation as Routing Origin (ip-api.com)
 
-**Decision:** Detect the user's current location via `http://ip-api.com/json/` when `HOME_ADDRESS` is not set in `config.py`. Use this as the routing origin passed to OneMap.
+**Decision:** Always use `http://ip-api.com/json/` as the routing origin. `HOME_ADDRESS` is never used as origin — it is a destination-only value (go-home default, at-home proximity check).
 
 **Why:**
 - The original code hardcoded `ORIGIN_LAT = 1.3521, ORIGIN_LNG = 103.8198` (Bishan) — wrong for anyone not in Bishan
@@ -240,10 +240,11 @@ for attempt in range(max_retries):
 - `ip-api.com` is free, requires no API key, and returns city-level coordinates (~1–5 km accuracy)
 - In Singapore's compact geography, city-level accuracy puts you within 1–2 MRT stations of your real location — good enough for route ranking
 - The function validates returned coordinates are within Singapore bounds — rejects VPN-induced foreign IPs gracefully
+- **Why HOME_ADDRESS is excluded from origin:** if a calendar event's destination is the home address (e.g. an event called "Home" with location = HOME_ADDRESS postal code), using HOME_ADDRESS as origin produces origin = destination. OneMap routing returns HTTP 404 for zero-distance routes. IP geolocation is always the user's *current* position, which is never the same as the destination.
 
-**Priority order:** `HOME_ADDRESS` in config (geocoded via OneMap, address-level precision) → IP geolocation → Bishan hardcoded fallback
+**Priority order:** IP geolocation (`ip-api.com`) → Bishan hardcoded fallback (1.3521, 103.8198) if outside SG or call fails
 
-**Trade-off:** IP geolocation accuracy degrades on corporate networks or VPNs. Users who want precision must set `HOME_ADDRESS` in `config.py`.
+**Trade-off:** IP geolocation accuracy degrades on corporate networks or VPNs (~1–5 km error). For route ranking in Singapore this is acceptable — a 3 km error shifts you by 1–2 MRT stations, not a different part of the island.
 
 ---
 
@@ -326,6 +327,23 @@ for attempt in range(max_retries):
 
 ---
 
+## D25 — LTA Bus Arrival API v3 Migration
+
+**Decision:** Use `https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival` as the bus arrival endpoint, not the legacy `BusArrivalv2` path.
+
+**Why:**
+- LTA DataMall released API documentation v6.0 in August 2024, which introduced the `v3/BusArrival` endpoint and deprecated `BusArrivalv2`.
+- The old `BusArrivalv2` URL now returns HTTP 404 with body "The requested API was not found" for **all** stop codes — not because the stop is wrong, but because the endpoint itself no longer exists on the server.
+- This was discovered when every stop (including confirmed active stops like 54719) returned 404. The user provided the official LTA DataMall API PDF v6.8 (April 2026) which confirmed the URL change.
+
+**Related fix — 5-nearest-stop fallback:** Rather than trying a single stop, `ingest_bus_arrivals()` now fetches the 5 nearest stops by Haversine distance from the routing origin and tries each in order. Stops in the 65xxx Punggol/Sengkang range appear in the BusStops database but are absent from the real-time system — the fallback ensures a live stop is found.
+
+**Related fix — float-suffix strip:** Parquet promotes integer BusStopCode columns to float64 when any NaN rows exist, turning "65721" into "65721.0". The LTA API rejects codes with a decimal point. Fix: `str(code).split(".")[0]` on every code before sending to the API.
+
+**Trade-off:** Single-attempt per candidate (no exponential backoff). This is intentional — a 404 on a valid endpoint is a server-side "no data" signal, not a transient error. Retrying would add 3–12 seconds of delay per dead stop (3 attempts × up to 5 stops).
+
+---
+
 ## D24 — serve.py Before model.py (ML Workflow Order)
 
 **Decision:** Build `scripts/serve.py` (Streamlit dashboard) before `scripts/model.py` (ML training and prediction). Wire predictions into the dashboard after both exist.
@@ -378,6 +396,22 @@ for attempt in range(max_retries):
 - If `HOME_ADDRESS` is not set in `config.py`, the after-4 PM and after-6 PM defaults are silently skipped.
 
 **Trade-off:** The smart default uses a fixed 9 AM start time for the work event and 6:30 PM for the home event. These are approximations. Users who want precision should add a Google Calendar event with an exact time.
+
+---
+
+## D26 — Stale Event Cleanup on Every Ingest Run
+
+**Decision:** After storing the active calendar event, call `_purge_stale_events(con, keep_event_id)` to delete all other future `calendar_events` + their `route_options` + `route_legs` rows from DuckDB.
+
+**Why:**
+- `ingest.py` runs every 10 minutes and processes one event per run (the next upcoming event). Over time, DuckDB accumulates one row per unique `event_id` in `calendar_events`.
+- If a user reschedules a calendar event, the old entry (with the old `start_time`) stays in the database. Both old and new `start_time` values can be `> NOW()`, so `BEST_ROUTE_QUERY` in transform.py (`ORDER BY start_time LIMIT 1`) may pick the stale entry rather than the freshly-ingested one.
+- This was discovered when "Collect Aye Sim card" was moved from 5 PM to 7 PM, while "Home" was moved to 5 PM. The old "Collect Aye Sim card" at 5 PM persisted in the DB. The new "Home" event failed routing (origin = destination bug), so had no route_options. Transform returned the old stale event.
+- The purge runs AFTER the new event and its routes are successfully stored, so there is no window where the DB is empty.
+
+**Scope of purge:** only future events (`start_time > NOW()`). Past events are preserved — `recommendations` and `predictions` reference them by `event_id` and must remain consistent.
+
+**Trade-off:** The database can only hold one active future event at a time. If a future feature needs to pre-load several upcoming events (e.g. "show me tomorrow's commute too"), this purge would need to be relaxed to keep multiple future events.
 
 ---
 

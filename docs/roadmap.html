@@ -217,7 +217,7 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
       <div class="arch-cell-label">Storage (Data Warehouse)</div>
       <div class="arch-cell-items">
         <div class="arch-item">DuckDB (embedded)</div>
-        <div class="arch-item">8 relational tables</div>
+        <div class="arch-item">9 relational tables</div>
         <div class="arch-item">Star schema</div>
         <div class="arch-item">Upsert SCD Type 1</div>
       </div>
@@ -232,6 +232,8 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
         <div class="arch-item new">Walk alt (Zone 1/2)</div>
         <div class="arch-item new">Fitness API context</div>
         <div class="arch-item new">Next-event-only output</div>
+        <div class="arch-item new">Live bus board (x₁/x₂)</div>
+        <div class="arch-item new">Alt routes (top 3)</div>
       </div>
     </div>
     <div class="arch-cell">
@@ -464,8 +466,8 @@ SCOPES = [<span class="s">"https://www.googleapis.com/auth/calendar.readonly"</s
           <div class="card-block">
             <div class="block-label">API B — LTA Bus Arrival</div>
             <div class="block-content">
-              <div style="font-family:monospace;font-size:11px;color:#86EFAC;margin-bottom:8px">GET /BusArrivalv2?BusStopCode=</div>
-              <div style="font-size:12px;color:var(--muted)">Next 3 arrivals per service, estimated time, load (SEA/SDA/LSD). Header: AccountKey: {LTA_KEY}</div>
+              <div style="font-family:monospace;font-size:11px;color:#86EFAC;margin-bottom:8px">GET /v3/BusArrival?BusStopCode=</div>
+              <div style="font-size:12px;color:var(--muted)">Next 3 arrivals per service, estimated time, load (SEA/SDA/LSD). Header: AccountKey: {LTA_KEY}. Note: old BusArrivalv2 path retired Aug 2024 — use v3/BusArrival.</div>
             </div>
           </div>
           <div class="card-block">
@@ -609,7 +611,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I chose DuckDB as my storage layer because it's embedded — no server to set up — and supports the full SQL feature set I need. I designed seven tables: six for domain data and a pipeline_runs table for monitoring. I used TIMESTAMPTZ for all time columns so timezone handling is correct for Singapore."</p>
+          <p>"I chose DuckDB as my storage layer because it's embedded — no server to set up — and supports the full SQL feature set I need. I designed nine tables: route_options as the fact table, dimension tables for weather, bus arrivals, and train alerts, plus calendar events, route legs, recommendations, pipeline monitoring, and ML predictions. I used TIMESTAMPTZ for all event time columns so timezone handling is correct for Singapore."</p>
         </div>
       </div>
     </div>
@@ -623,7 +625,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
       <div class="station-card">
         <div class="card-eyebrow">Data Transformation</div>
         <div class="card-title">SQL Cleaning, Recommendation Logic & Walk Alternative</div>
-        <div class="card-desc">Join routes, weather, and alerts into a ranked recommendation. Calculate leave-by time, flag rainy walks, detect MRT disruptions, and rank routes using window functions. Transform also checks if walking is viable (&lt;5 km, no rain) and shows Zone 1/2 health stats plus optional Garmin/Whoop fitness context.</div>
+        <div class="card-desc">Join routes, weather, and alerts into a ranked recommendation. Calculate leave-by time, flag rainy walks, detect MRT disruptions, and rank routes using window functions. Output includes: a live bus arrivals board (all services at origin stop, x₁ and x₂ minutes from now, crowding level), an alt routes section (top 3 non-recommended options scored by next-bus wait + duration, with stop counts per leg and delay flag), and a walk alternative with Zone 1/2 health stats plus optional Garmin/Whoop fitness context. Note: alt routes query <code>route_options</code> directly — querying <code>v_enriched_routes WHERE route_rank &gt; 1</code> returns 47× duplicates because the view cross-joins 47 weather areas.</div>
 
         <div class="chip-row">
           <span class="chip chip-amber">SQL JOINs</span>
@@ -633,6 +635,8 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
           <span class="chip chip-amber">CREATE VIEW</span>
           <span class="chip chip-amber">Garmin API</span>
           <span class="chip chip-amber">Whoop API</span>
+          <span class="chip chip-amber">live bus board</span>
+          <span class="chip chip-amber">alt routes</span>
         </div>
 
         <div class="code-block">
@@ -682,7 +686,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The transformation layer joins three data streams. The key logic: calculate leave-by time from event start minus travel duration, apply business rules — if it's raining and walking distance exceeds 400m, penalise that route — then use a window function to rank routes per event. The dashboard always shows rank 1: the best option given current conditions."</p>
+          <p>"The transformation layer joins three data streams. Leave-by time is start_time minus total duration minus a 10-minute buffer — a documented business rule, not a magic number. A window function ranks routes per event: if raining and walking more than 400m, that route is penalised and drops to a lower rank. Two extra sections follow the recommended route. First: a live bus arrivals board — every service at the origin stop, showing x₁ (minutes to first bus) and x₂ (minutes to second bus) and crowding level. Second: an alt routes section listing the top 3 alternatives, scored by next-bus wait time plus total duration, with number of stops per leg and a warning flag on any bus that is more than 10 minutes away."</p>
         </div>
       </div>
     </div>
@@ -1477,7 +1481,7 @@ def evaluate_model(con):
             </div>
             <div class="vt-row">
               <div class="vt-time">11:00</div>
-              <div class="vt-content"><strong>Challenges (2 min)</strong><p>OneMap JWT expires every 3 days — built auto-refresh. LTA bus stop codes don't match GPS — used Haversine distance. Timestamps needed TIMESTAMPTZ for correct +08:00 handling. API occasionally returns (0,0) — added coord validation.</p></div>
+              <div class="vt-content"><strong>Challenges (2 min)</strong><p>LTA DataMall retired BusArrivalv2 in August 2024 — all stops returned 404 until the URL was updated to v3/BusArrival (confirmed from official API v6.8 docs). OneMap JWT expires every 3 days — built auto-refresh. LTA bus stop codes don't match GPS — used Haversine distance to 5 nearest candidates; some stops in the 65xxx range exist in the database but not the real-time system. Timestamps needed TIMESTAMPTZ for correct +08:00 handling. API occasionally returns (0,0) — added coord validation.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">13:00</div>
@@ -1491,7 +1495,7 @@ def evaluate_model(con):
           <ul class="resume-bullets">
             <li>
               <strong>Pipeline Design</strong>
-              Built an end-to-end data pipeline driven by Google Calendar (OAuth2) — ingesting real-time transport data from LTA DataMall, OneMap routing API, and Singapore's weather API — storing structured data in DuckDB with a typed 8-table schema including pipeline monitoring.
+              Built an end-to-end data pipeline driven by Google Calendar (OAuth2) — ingesting real-time transport data from LTA DataMall (v3/BusArrival), OneMap routing API, and Singapore's weather API — storing structured data in DuckDB with a typed 9-table star schema including ML predictions and pipeline monitoring.
             </li>
             <li>
               <strong>SQL Transformation</strong>
