@@ -32,6 +32,9 @@ build/
 # Raw API data (regenerated each pipeline run)
 data/raw/
 
+# Project documents (may contain course content — keep local only)
+project_instructions.pdf
+
 # OS
 .DS_Store
 Thumbs.db
