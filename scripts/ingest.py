@@ -221,6 +221,10 @@ def fetch_next_calendar_event(con, token):
         if not location or not start_dt_str:
             continue  # skip all-day events and events with no location
 
+        # timeMin filters by end time, not start — skip events that have already started
+        if datetime.fromisoformat(start_dt_str).astimezone(timezone.utc) <= datetime.now(timezone.utc):
+            continue
+
         try:
             lat, lng = geocode(location, token)
         except ValueError as exc:
