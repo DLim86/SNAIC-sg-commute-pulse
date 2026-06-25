@@ -13,6 +13,8 @@ DB_PATH = str(Path(__file__).parent.parent / "db" / "commute.duckdb")
 SGT = timezone(timedelta(hours=8))
 
 MODE_ICON = {"WALK": "🚶", "BUS": "🚌", "MRT": "🚇", "LRT": "🚈"}
+CROWD_ICON = {"SEA": "🟢", "SDA": "🟡", "LSD": "🔴"}
+CROWD_LABEL = {"SEA": "Seats available", "SDA": "Standing", "LSD": "Very full"}
 
 MRT_LINE_NAMES = {
     "EW": "East West Line",  "NS": "North South Line", "NE": "Northeast Line",
@@ -70,8 +72,7 @@ PREDICTION_QUERY = """
 SELECT predicted_min, actual_min, predicted_crowd, actual_crowd,
        model_version, mae_7day, predicted_at
 FROM predictions
-WHERE event_id = ?
-ORDER BY predicted_at DESC
+WHERE prediction_id = ?
 LIMIT 1
 """
 
@@ -347,16 +348,19 @@ if alt_rows:
                 svc_display = MRT_LINE_NAMES.get(svc, svc or "") if mode in ("MRT", "LRT") else (svc or "")
                 stops_str = f" ({stops} stops)" if stops else ""
                 st.write(f"{icon} **{svc_display or 'Walk'}** · {from_n} → {to_n} · {dur}m{stops_str}")
+            alt_pred = con.execute(PREDICTION_QUERY, [f"{alt_id}_pred"]).fetchone()
+            if alt_pred and alt_pred[0] is not None:
+                alt_crowd = alt_pred[2]
+                crd_icon = CROWD_ICON.get(alt_crowd or "", "")
+                crd_lbl = CROWD_LABEL.get(alt_crowd or "", "")
+                st.caption(f"🤖 ML: ~{alt_pred[0]} min  ·  crowd: {crd_icon} {crd_lbl}")
 
 st.divider()
 
 # --- ML prediction panel ---
 st.subheader("🤖 ML Prediction")
 
-pred = con.execute(PREDICTION_QUERY, [event_id]).fetchone()
-
-CROWD_ICON = {"SEA": "🟢", "SDA": "🟡", "LSD": "🔴"}
-CROWD_LABEL = {"SEA": "Seats available", "SDA": "Standing", "LSD": "Very full"}
+pred = con.execute(PREDICTION_QUERY, [f"{option_id}_pred"]).fetchone()
 
 if pred is None:
     st.info("Model not yet trained — run `python scripts/model.py --train` then `python scripts/model.py --predict`")

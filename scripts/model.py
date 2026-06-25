@@ -1,7 +1,6 @@
 import argparse
 import logging
 import sys
-import uuid
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -18,6 +17,7 @@ log = logging.getLogger(__name__)
 DB_PATH = Path(__file__).parent.parent / "db" / "commute.duckdb"
 MODEL_PATH_DUR = Path(__file__).parent.parent / "models" / "commute_predictor.pkl"
 MODEL_PATH_CRD = Path(__file__).parent.parent / "models" / "crowd_predictor.pkl"
+BUS_STOPS_PATH = Path(__file__).parent.parent / "data" / "raw" / "bus_stops" / "bus_stops.parquet"
 SGT = timezone(timedelta(hours=8))
 
 FEATURE_COLS_DUR = [
@@ -48,6 +48,23 @@ def _build_duration_row(base_duration, next_bus_mins, walk_m, transfers,
 
 def _build_crowd_row(leave_hour, dow, is_rainy, rush_hour_flag):
     return [leave_hour, dow, int(bool(is_rainy)), rush_hour_flag]
+
+
+def _match_stop_name(to_name: str, stops_df: pd.DataFrame):
+    """Return BusStopCode string matching the given stop name, or None if no match."""
+    if not to_name or stops_df.empty:
+        return None
+    norm = to_name.lower().strip()
+    desc_lower = stops_df["Description"].str.lower().str.strip()
+    mask = desc_lower == norm
+    if mask.any():
+        return str(stops_df.loc[mask.idxmax(), "BusStopCode"]).split(".")[0]
+    prefix = norm[:15]
+    if len(prefix) >= 5:
+        mask2 = desc_lower.str.contains(prefix, na=False, regex=False)
+        if mask2.any():
+            return str(stops_df.loc[mask2.idxmax(), "BusStopCode"]).split(".")[0]
+    return None
 
 
 def _bootstrap_synthetic_duration(n=500, seed=42):
@@ -147,8 +164,6 @@ def train(con):
 
     if n_real_dur > 0:
         real_dur_rows["bus_crowd_score"] = real_dur_rows["load"].map(CROWD_MAP).fillna(0)
-        real_X = real_dur_rows[FEATURE_COLS_DUR].rename(columns={"total_duration_min": "base_duration"})
-        # FEATURE_COLS_DUR uses "base_duration" but real query returns "total_duration_min"
         real_dur_rows = real_dur_rows.rename(columns={"total_duration_min": "base_duration"})
         real_dur_rows["rain_exposure"] = real_dur_rows.get("is_rainy", 0).astype(int) * real_dur_rows["walk_distance_m"] / 1000
         real_dur_rows["rush_hour"] = real_dur_rows.apply(lambda r: _rush_hour(r["hour_of_day"], r["day_of_week"]), axis=1)
@@ -208,74 +223,120 @@ def predict(con):
     dur_model = joblib.load(MODEL_PATH_DUR)
     crd_model = joblib.load(MODEL_PATH_CRD)
 
-    row = con.execute("""
-        SELECT r.event_id, r.total_duration_min, r.walk_distance_m, r.num_transfers,
-               b.next_bus_mins, b.load,
+    stops_df = pd.DataFrame()
+    if BUS_STOPS_PATH.exists():
+        stops_df = pd.read_parquet(BUS_STOPS_PATH).dropna(subset=["BusStopCode", "Description"])
+
+    rows = con.execute("""
+        SELECT r.option_id, r.event_id, r.total_duration_min, r.walk_distance_m, r.num_transfers,
                CAST(EXTRACT(HOUR FROM e.start_time AT TIME ZONE 'Asia/Singapore') AS INTEGER) AS hour_of_day,
                CAST(EXTRACT(DOW FROM e.start_time AT TIME ZONE 'Asia/Singapore') AS INTEGER) AS day_of_week,
-               w.is_rainy,
+               COALESCE((SELECT is_rainy FROM weather_forecast
+                         ORDER BY fetched_at DESC LIMIT 1), FALSE) AS is_rainy,
                rec.leave_by
         FROM route_options r
         JOIN calendar_events e ON r.event_id = e.event_id
-        LEFT JOIN bus_arrivals b ON b.fetched_at = (SELECT MAX(fetched_at) FROM bus_arrivals)
-        LEFT JOIN weather_forecast w ON w.fetched_at = (SELECT MAX(fetched_at) FROM weather_forecast)
         LEFT JOIN recommendations rec ON rec.event_id = r.event_id
         WHERE e.start_time > NOW()
         ORDER BY e.start_time, r.total_duration_min
-        LIMIT 1
-    """).fetchone()
+    """).fetchall()
 
-    if row is None:
+    if not rows:
         log.warning("No upcoming event found — run ingest.py first")
         return
 
-    (event_id, base_dur, walk_m, transfers, next_bus, load,
-     hour, dow, is_rainy, leave_by) = row
-
-    next_bus = next_bus or 5
-    crowd_score = CROWD_MAP.get(load or "SEA", 0)
-    is_rainy_int = int(bool(is_rainy))
-
-    dur_vals = _build_duration_row(
-        base_dur, next_bus, walk_m or 0, transfers or 0,
-        is_rainy_int, hour, dow, crowd_score
-    )
-    X_dur = pd.DataFrame([dur_vals], columns=FEATURE_COLS_DUR)
-    predicted_min = int(round(dur_model.predict(X_dur)[0]))
-
-    leave_hour = hour
-    if leave_by is not None:
+    # Crowd prediction is the same for all routes (same departure time context)
+    first = rows[0]
+    hour0, dow0, is_rainy0, leave_by0 = first[5], first[6], first[7], first[8]
+    is_rainy_int0 = int(bool(is_rainy0))
+    leave_hour0 = hour0
+    if leave_by0 is not None:
         try:
-            lb = leave_by.astimezone(SGT) if hasattr(leave_by, "astimezone") else leave_by
-            leave_hour = lb.hour
+            lb = leave_by0.astimezone(SGT) if hasattr(leave_by0, "astimezone") else leave_by0
+            leave_hour0 = lb.hour
         except Exception:
             pass
-    rush = _rush_hour(leave_hour, dow)
-    X_crd = pd.DataFrame([_build_crowd_row(leave_hour, dow, is_rainy_int, rush)],
-                          columns=FEATURE_COLS_CRD)
+    rush0 = _rush_hour(leave_hour0, dow0)
+    X_crd = pd.DataFrame([_build_crowd_row(leave_hour0, dow0, is_rainy_int0, rush0)], columns=FEATURE_COLS_CRD)
     predicted_crowd = CROWD_INV[int(crd_model.predict(X_crd)[0])]
 
-    prediction_id = f"{event_id}_pred"
-    con.execute("""
-        INSERT INTO predictions (prediction_id, event_id, predicted_min, predicted_crowd,
-                                  model_version, predicted_at)
-        VALUES (?, ?, ?, ?, 'rf_v1', CURRENT_TIMESTAMP)
-        ON CONFLICT (prediction_id) DO UPDATE SET
-            predicted_min = excluded.predicted_min,
-            predicted_crowd = excluded.predicted_crowd,
-            model_version = excluded.model_version,
-            predicted_at = excluded.predicted_at
-    """, [prediction_id, event_id, predicted_min, predicted_crowd])
+    for row in rows:
+        (option_id, event_id, base_dur, walk_m, transfers,
+         hour, dow, is_rainy, leave_by) = row
 
-    log.info("Prediction for %s: %d min | crowd: %s", event_id, predicted_min, predicted_crowd)
+        is_rainy_int = int(bool(is_rainy))
+        next_bus_mins = 5
+        crowd_score = 0
+        boarding_stop_code = None
+        transit_service_no = None
+        alighting_stop_code = None
+
+        leg = con.execute("""
+            SELECT mode, service_no, from_name, to_name FROM route_legs
+            WHERE option_id = ? AND mode IN ('BUS', 'MRT', 'LRT')
+            ORDER BY leg_sequence LIMIT 1
+        """, [option_id]).fetchone()
+
+        if leg:
+            transit_mode, transit_service_no, from_name, to_name = leg
+            if transit_mode == "BUS":
+                ba = con.execute("""
+                    SELECT next_bus_mins, load, bus_stop_code FROM bus_arrivals
+                    WHERE service_no = ?
+                    ORDER BY fetched_at DESC LIMIT 1
+                """, [transit_service_no]).fetchone()
+                if ba:
+                    next_bus_mins = ba[0] or 5
+                    crowd_score = CROWD_MAP.get(ba[1] or "SEA", 0)
+                    boarding_stop_code = ba[2]
+                alighting_stop_code = _match_stop_name(to_name, stops_df)
+
+        dur_vals = _build_duration_row(
+            base_dur, next_bus_mins, walk_m or 0, transfers or 0,
+            is_rainy_int, hour, dow, crowd_score
+        )
+        X_dur = pd.DataFrame([dur_vals], columns=FEATURE_COLS_DUR)
+        predicted_min = int(round(dur_model.predict(X_dur)[0]))
+
+        prediction_id = f"{option_id}_pred"
+        con.execute("""
+            INSERT INTO predictions (prediction_id, event_id, option_id, predicted_min, predicted_crowd,
+                                      boarding_stop_code, alighting_stop_code, transit_service_no,
+                                      model_version, predicted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'rf_v1', CURRENT_TIMESTAMP)
+            ON CONFLICT (prediction_id) DO UPDATE SET
+                predicted_min = excluded.predicted_min,
+                predicted_crowd = excluded.predicted_crowd,
+                boarding_stop_code = excluded.boarding_stop_code,
+                alighting_stop_code = excluded.alighting_stop_code,
+                transit_service_no = excluded.transit_service_no,
+                model_version = excluded.model_version,
+                predicted_at = excluded.predicted_at
+        """, [prediction_id, event_id, option_id, predicted_min, predicted_crowd,
+               boarding_stop_code, alighting_stop_code, transit_service_no])
+
+        log.info("Prediction [%s]: %d min | crowd: %s | alighting_stop: %s",
+                 option_id, predicted_min, predicted_crowd, alighting_stop_code or "—")
 
 
 def backfill(con):
+    import requests
+
+    try:
+        from config import LTA_API_KEY
+        LTA_HEADERS = {"AccountKey": LTA_API_KEY, "accept": "application/json"}
+        lta_available = True
+    except (ImportError, AttributeError):
+        lta_available = False
+        LTA_HEADERS = {}
+
     past = con.execute("""
-        SELECT p.prediction_id, p.event_id, p.actual_min, p.actual_crowd,
-               e.start_time
+        SELECT p.prediction_id, p.event_id, p.option_id, p.actual_min, p.actual_crowd,
+               p.alighting_stop_code, p.boarding_stop_code, p.transit_service_no,
+               e.start_time, r.total_duration_min
         FROM predictions p
         JOIN calendar_events e ON p.event_id = e.event_id
+        LEFT JOIN route_options r ON r.option_id = p.option_id
         WHERE e.start_time < NOW()
           AND (p.actual_min IS NULL OR p.actual_crowd IS NULL)
     """).fetchall()
@@ -284,48 +345,137 @@ def backfill(con):
         log.info("No past events needing backfill")
         return
 
-    for prediction_id, event_id, actual_min, actual_crowd, start_time in past:
-        if actual_min is None:
-            row = con.execute("""
-                SELECT r.total_duration_min, b.next_bus_mins
-                FROM route_options r
-                LEFT JOIN bus_arrivals b ON b.fetched_at = (
-                    SELECT MAX(fetched_at) FROM bus_arrivals ba
-                    WHERE ba.fetched_at <= ?
-                )
-                WHERE r.event_id = ?
-                ORDER BY r.total_duration_min
-                LIMIT 1
-            """, [start_time, event_id]).fetchone()
-            if row:
-                dur, wait = row
-                computed = (dur or 0) + (wait or 0)
-                con.execute("UPDATE predictions SET actual_min = ? WHERE prediction_id = ?",
-                            [computed, prediction_id])
-                log.info("Backfilled actual_min=%d for %s", computed, event_id)
+    now = datetime.now(timezone.utc)
 
-        if actual_crowd is None:
-            row = con.execute("""
-                SELECT rl.service_no
-                FROM route_legs rl
-                JOIN route_options r ON rl.option_id = r.option_id
-                WHERE r.event_id = ?
-                  AND rl.mode IN ('BUS', 'MRT', 'LRT')
-                ORDER BY rl.leg_sequence
+    for (prediction_id, event_id, option_id, actual_min, actual_crowd,
+         alighting_stop_code, boarding_stop_code, transit_service_no,
+         start_time, total_dur) in past:
+
+        if start_time is not None:
+            if hasattr(start_time, "tzinfo") and start_time.tzinfo is None:
+                start_dt = start_time.replace(tzinfo=timezone.utc)
+            elif hasattr(start_time, "astimezone"):
+                start_dt = start_time.astimezone(timezone.utc)
+            else:
+                start_dt = None
+        else:
+            start_dt = None
+
+        if actual_min is None:
+            dominant_mode = "WALK"
+            if option_id:
+                mode_row = con.execute("""
+                    SELECT mode FROM route_legs
+                    WHERE option_id = ? AND mode IN ('BUS', 'MRT', 'LRT')
+                    ORDER BY leg_sequence LIMIT 1
+                """, [option_id]).fetchone()
+                dominant_mode = mode_row[0] if mode_row else "WALK"
+
+            computed_actual = None
+
+            if dominant_mode == "BUS":
+                if alighting_stop_code and transit_service_no and lta_available and start_dt:
+                    age_hours = (now - start_dt).total_seconds() / 3600
+                    if age_hours <= 3:
+                        try:
+                            resp = requests.get(
+                                "https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival",
+                                headers=LTA_HEADERS,
+                                params={"BusStopCode": alighting_stop_code,
+                                        "ServiceNo": transit_service_no},
+                                timeout=10,
+                            )
+                            if resp.status_code == 200:
+                                services = resp.json().get("Services", [])
+                                if services:
+                                    eta_str = services[0].get("NextBus", {}).get("EstimatedArrival", "")
+                                    if eta_str:
+                                        eta = datetime.fromisoformat(eta_str.replace("Z", "+00:00"))
+                                        alighting_mins = max(0, int((eta - now).total_seconds() / 60))
+                                        wait_row = con.execute("""
+                                            SELECT next_bus_mins FROM bus_arrivals
+                                            WHERE bus_stop_code = ? AND service_no = ?
+                                            ORDER BY ABS(DATEDIFF('minute', fetched_at, ?))
+                                            LIMIT 1
+                                        """, [boarding_stop_code or "", transit_service_no, start_time]).fetchone()
+                                        boarding_wait = wait_row[0] if wait_row else 5
+                                        walk_row = con.execute("""
+                                            SELECT COALESCE(SUM(duration_min), 0) FROM route_legs
+                                            WHERE option_id = ? AND mode = 'WALK'
+                                        """, [option_id]).fetchone()
+                                        walk_sum = walk_row[0] if walk_row else 0
+                                        computed_actual = boarding_wait + alighting_mins + walk_sum
+                                        log.info("Backfill [%s] BUS actual from LTA stop %s: %d min",
+                                                 prediction_id, alighting_stop_code, computed_actual)
+                        except Exception as exc:
+                            log.warning("LTA alighting call failed for %s: %s", prediction_id, exc)
+
+                if computed_actual is None:
+                    # Proxy: OneMap duration + boarding wait from bus_arrivals
+                    if option_id and boarding_stop_code and transit_service_no:
+                        wait_row = con.execute("""
+                            SELECT next_bus_mins FROM bus_arrivals
+                            WHERE bus_stop_code = ? AND service_no = ?
+                            ORDER BY ABS(DATEDIFF('minute', fetched_at, ?))
+                            LIMIT 1
+                        """, [boarding_stop_code, transit_service_no, start_time]).fetchone()
+                        boarding_wait = wait_row[0] if wait_row else 0
+                        computed_actual = (total_dur or 0) + boarding_wait
+                    else:
+                        # Old prediction without option_id — route_options proxy
+                        proxy = con.execute("""
+                            SELECT r.total_duration_min, b.next_bus_mins
+                            FROM route_options r
+                            LEFT JOIN bus_arrivals b ON b.fetched_at = (
+                                SELECT MAX(fetched_at) FROM bus_arrivals ba WHERE ba.fetched_at <= ?
+                            )
+                            WHERE r.event_id = ?
+                            ORDER BY r.total_duration_min LIMIT 1
+                        """, [start_time, event_id]).fetchone()
+                        computed_actual = ((proxy[0] or 0) + (proxy[1] or 0)) if proxy else 0
+                    log.info("Backfill [%s] BUS proxy: %d min", prediction_id, computed_actual)
+
+            elif dominant_mode in ("MRT", "LRT"):
+                headway = 4 if dominant_mode == "MRT" else 7
+                disruption_count = 0
+                if transit_service_no and start_dt:
+                    window_start = start_dt - timedelta(minutes=30)
+                    window_end = start_dt + timedelta(minutes=total_dur or 30)
+                    dis_row = con.execute("""
+                        SELECT COUNT(*) FROM train_alerts
+                        WHERE affected_line = ? AND severity = 'HEAVY'
+                          AND fetched_at BETWEEN ? AND ?
+                    """, [transit_service_no, window_start, window_end]).fetchone()
+                    disruption_count = dis_row[0] if dis_row else 0
+
+                if disruption_count > 0:
+                    computed_actual = (total_dur or 0) + 20
+                    log.info("Backfill [%s] %s disruption actual: %d min",
+                             prediction_id, dominant_mode, computed_actual)
+                else:
+                    computed_actual = (total_dur or 0) + headway
+                    log.info("Backfill [%s] %s headway actual: %d min",
+                             prediction_id, dominant_mode, computed_actual)
+
+            else:
+                computed_actual = total_dur or 0
+                log.info("Backfill [%s] WALK actual: %d min", prediction_id, computed_actual)
+
+            if computed_actual is not None:
+                con.execute("UPDATE predictions SET actual_min = ? WHERE prediction_id = ?",
+                            [computed_actual, prediction_id])
+
+        if actual_crowd is None and transit_service_no:
+            crd = con.execute("""
+                SELECT load FROM bus_arrivals
+                WHERE service_no = ?
+                ORDER BY ABS(DATEDIFF('minute', fetched_at, ?))
                 LIMIT 1
-            """, [event_id]).fetchone()
-            if row:
-                svc = row[0]
-                crd = con.execute("""
-                    SELECT load FROM bus_arrivals
-                    WHERE service_no = ?
-                    ORDER BY ABS(DATEDIFF('minute', fetched_at, ?))
-                    LIMIT 1
-                """, [svc, start_time]).fetchone()
-                if crd:
-                    con.execute("UPDATE predictions SET actual_crowd = ? WHERE prediction_id = ?",
-                                [crd[0], prediction_id])
-                    log.info("Backfilled actual_crowd=%s for %s", crd[0], event_id)
+            """, [transit_service_no, start_time]).fetchone()
+            if crd:
+                con.execute("UPDATE predictions SET actual_crowd = ? WHERE prediction_id = ?",
+                            [crd[0], prediction_id])
+                log.info("Backfilled actual_crowd=%s for %s", crd[0], prediction_id)
 
 
 def evaluate(con):
@@ -363,7 +513,7 @@ def evaluate(con):
 def main():
     parser = argparse.ArgumentParser(description="Commute ML pipeline")
     parser.add_argument("--train", action="store_true", help="Train both models")
-    parser.add_argument("--predict", action="store_true", help="Predict next event")
+    parser.add_argument("--predict", action="store_true", help="Predict next event (all routes)")
     parser.add_argument("--backfill", action="store_true", help="Fill actuals for past events")
     parser.add_argument("--evaluate", action="store_true", help="Compute 7-day MAE + accuracy")
     args = parser.parse_args()

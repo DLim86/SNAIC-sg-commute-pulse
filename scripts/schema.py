@@ -175,6 +175,10 @@ MIGRATIONS = [
     "ALTER TABLE route_legs ADD COLUMN IF NOT EXISTS num_stops INTEGER",
     "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS predicted_crowd VARCHAR",
     "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS actual_crowd VARCHAR",
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS option_id VARCHAR",
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS boarding_stop_code VARCHAR",
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS alighting_stop_code VARCHAR",
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS transit_service_no VARCHAR",
 ]
 
 
