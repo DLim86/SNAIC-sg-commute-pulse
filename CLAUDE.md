@@ -64,7 +64,7 @@ Given a next calendar event, the pipeline:
 
 ---
 
-## Current State (as of 25 June 2026)
+## Current State (as of 25 June 2026, session 7)
 
 ### Done — tested and working
 | File | Status |
@@ -79,8 +79,9 @@ Given a next calendar event, the pipeline:
 | `docs/video_script.html` | Complete — timed video script |
 | `scripts/__init__.py` | Empty — required for Airflow DAG imports |
 | `scripts/schema.py` | **DONE** — 9 tables + `v_enriched_routes` view. `predictions` table added (session 4). **session 6 — `recommendation_reason` CASE expanded to 9 dynamic labels using `MIN() OVER (PARTITION BY event_id)` window functions.** Run once (or re-run to refresh view). |
-| `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always) + progressive geocoding fallback + WORK_ADDRESS fallback + `get_smart_default()` + `v3/BusArrival` + 5-nearest-stop fallback + float-suffix strip + **`_purge_stale_events()`** (session 5) + **`next_bus2_mins`** (session 5 — NextBus2 ETA stored) + **FK fix in `ingest_routes`** (session 5 — clears route_legs before upserting route_options) |
-| `scripts/transform.py` | **DONE** — next-event-only filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, "Why chosen", **alt routes** (session 5 — top 3 by `duration + first-bus-wait`, compact legs with stop count e.g. `🚌65 8m/4st`, `⚠` if bus > 10 min away), walk alternative with Zone 1/2, optional Garmin/Whoop + **session 6:** `recommended_mode` derived dynamically from actual leg modes (Bus/MRT/LRT combinations); weather+disruption moved under "Why chosen:"; disruption label filtered to actual rail modes in route; alt routes heading "Other route options (sorted by arrival time)" with [2]/[3] labels; MRT+LRT consecutive legs grouped in compact alt display; **inline first-transit live arrival** after recommended legs (X1+X2 for bus, headway for MRT/LRT) — replaces separate bus board; per-alt X1 live arrival in notes; `MRT_LINE_NAMES` dict updated with "NE" (Northeast Line), "CR", "JR" |
+| `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always) + progressive geocoding fallback + WORK_ADDRESS fallback + `get_smart_default()` + `v3/BusArrival` + 5-nearest-stop fallback + float-suffix strip + **`_purge_stale_events()`** (session 5) + **`next_bus2_mins`** (session 5 — NextBus2 ETA stored) + **FK fix in `ingest_routes`** (session 5 — clears route_legs before upserting route_options) + **postal code extraction in `geocode()`** (session 7 — `re.findall(r'\b\d{6}\b', address)` prepended as first candidate) + **location-change detection log** (session 7 — logs `📍 Destination updated (NNN m shift)` when dest coords shift >50m between runs) |
+| `scripts/transform.py` | **DONE** — next-event-only filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, "Why chosen", **alt routes** (session 5 — top 3 by `duration + first-bus-wait`, compact legs with stop count e.g. `🚌65 8m/4st`, `⚠` if bus > 10 min away), walk alternative with Zone 1/2, optional Garmin/Whoop + **session 6:** `recommended_mode` derived dynamically from actual leg modes (Bus/MRT/LRT combinations); weather+disruption moved under "Why chosen:"; disruption label filtered to actual rail modes in route; alt routes heading "Other route options (sorted by arrival time)" with [2]/[3] labels; MRT+LRT consecutive legs grouped in compact alt display; **inline first-transit live arrival** after recommended legs (X1+X2 for bus, headway for MRT/LRT) — replaces separate bus board; per-alt X1 live arrival in notes; `MRT_LINE_NAMES` dict updated with "NE" (Northeast Line), "CR", "JR" + **session 7:** live arrivals show actual **HH:MM SGT clock times** (not relative "~X min"); **walk-only inline display** — `_walk_metrics()` helper extracted, `is_walk_only` flag added, walk metrics fold into recommended route section when all legs are WALK (no 5km/rain guard) |
+| `scripts/serve.py` | **DONE** — Streamlit dashboard, `read_only=True` DuckDB, **60s auto-refresh** via `time.sleep(60); st.rerun()`, event card, 3-column leave-by/duration/fare metrics, "Why chosen" info block, conditional weather/disruption warnings, step-by-step legs with mode icons, inline live arrivals with clock times (X1+X2 bus, estimated MRT/LRT), alt route expanders [2]/[3] with compact tokens, **ML prediction panel** (placeholder until model.py trained). Run: `streamlit run scripts/serve.py` |
 | `db/commute.duckdb` | Exists locally, gitignored — populated by real Google Calendar events |
 | `data/raw/bus_stops/bus_stops.parquet` | Cached — 5,205 LTA bus stops |
 | `data/raw/weather/` | Populated — 47 weather areas |
@@ -89,8 +90,7 @@ Given a next calendar event, the pipeline:
 ### Still to build (in order)
 | File | Purpose | Rubric criterion |
 |---|---|---|
-| `scripts/serve.py` | Streamlit dashboard — **NEXT** | Pipeline (30) + ML output (30) |
-| `scripts/model.py` | ML pipeline: train → predict → evaluate — **CRITICAL, 30 marks at risk without this** | ML and Real-Time Output (30) |
+| `scripts/model.py` | ML pipeline: train → predict → evaluate — **NEXT — CRITICAL, 30 marks at risk without this** | ML and Real-Time Output (30) |
 | `scripts/api.py` | FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status` | Pipeline (30) |
 | `dags/__init__.py` + `dags/commute_pipeline_dag.py` | Airflow DAG, 7 tasks (5 existing + `predict_commute` + `evaluate_model`) | Technical Depth (10) |
 | `docker-compose.yml` + `Dockerfile` | 3 services: pipeline, api, dashboard | Technical Depth (10) |
@@ -110,13 +110,12 @@ Events are read from Google Calendar via OAuth2 (`fetch_next_calendar_event()` i
 
 ## Next Tasks — Build in This Order
 
-> **RUBRIC ALERT:** "ML and Real-Time Output" is worth 30 marks. The project currently scores 0 on this criterion. `scripts/model.py` is the fix and must be built after `serve.py`.
+> **RUBRIC ALERT:** "ML and Real-Time Output" is worth 30 marks. The project currently scores 0 on this criterion. `scripts/model.py` is the fix and is the immediate next build target.
 
-1. **`scripts/serve.py`** — Streamlit dashboard (read_only=True DuckDB connection). Shows leave-by, prediction, and MAE.
-2. **`scripts/model.py`** — ML pipeline: train `RandomForestRegressor`, save to `models/commute_predictor.pkl`, score next event, store in `predictions` table, evaluate 7-day MAE. Bootstrap with synthetic historical data so training works from day 1.
-3. **`scripts/api.py`** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`, `/api/v1/prediction/{event_id}`
-4. **`dags/commute_pipeline_dag.py`** — Airflow DAG with 7 tasks: original 5 + `predict_commute` (each run) + `evaluate_model` (daily 8 AM)
-5. **`docker-compose.yml` + `Dockerfile`** — 3 services: pipeline, api, dashboard
+1. **`scripts/model.py`** — ML pipeline: train `RandomForestRegressor`, save to `models/commute_predictor.pkl`, score next event, store in `predictions` table, evaluate 7-day MAE. Bootstrap with synthetic historical data so training works from day 1.
+2. **`scripts/api.py`** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`, `/api/v1/prediction/{event_id}`
+3. **`dags/commute_pipeline_dag.py`** — Airflow DAG with 7 tasks: original 5 + `predict_commute` (each run) + `evaluate_model` (daily 8 AM)
+4. **`docker-compose.yml` + `Dockerfile`** — 3 services: pipeline, api, dashboard
 
 ---
 
@@ -239,14 +238,15 @@ git push
 - **`v_enriched_routes` cross-join:** view joins all 47 weather areas per route (141 rows for 3 routes). `route_rank=1` still gives exactly one row per event — safe to use in transform.py. Do NOT query `route_rank > 1` from the view to get alternative routes — you will get N×47 duplicates. Query `route_options` directly instead (skips weather join, which is not needed for alt routes).
 - **transform.py BEST_ROUTE_QUERY requires `AND start_time > NOW()`** — without this filter, the query picks the oldest stored event (even yesterday's), not the next upcoming one. The fix is in BEST_ROUTE_QUERY in transform.py.
 - **`route_legs` table** added in latest schema.py — run `python scripts/schema.py` then `python scripts/ingest.py` to populate legs
-- **Geocoding progressive fallback:** `geocode()` in ingest.py tries three search terms in order: (1) full address, (2) address with ", Singapore" stripped, (3) first comma-delimited token. Use postal codes for most reliable results. Obscure street names like "Sentul Walk" may not be in OneMap's index.
+- **Geocoding progressive fallback:** `geocode()` in ingest.py tries candidates in order: (0) 6-digit postal code extracted via `re.findall(r'\b\d{6}\b', address)` if present — most reliable (session 7); (1) full address; (2) address with ", Singapore" stripped; (3) first comma-delimited token. Postal codes geocode with near-perfect accuracy on OneMap. Obscure street names like "Sentul Walk" may not be in OneMap's index.
 - **WORK_ADDRESS in config.py:** set this to your school/work postal code. Used as destination fallback when event geocoding fails AND as smart default destination 8–10 AM (no calendar event).
 - **HOME_ADDRESS in config.py:** set this for the go-home smart default (after 4 PM) and for the after-6 PM at-home detection. NOT used as routing origin — origin is always IP geolocation.
 - **`get_smart_default()` time windows:** 8–10 AM → WORK_ADDRESS; 4–6 PM → HOME_ADDRESS (depart 6:30 PM); after 6 PM → geocode HOME_ADDRESS, compare IP location, if within 3 km return None (skip, already home). Outside these windows → skip pipeline quietly.
 - **Google Calendar no-event case:** pipeline now calls `get_smart_default()` before skipping. Only truly skips if WORK_ADDRESS/HOME_ADDRESS are not set OR it's outside the routing windows OR user is already home.
 - **Google Calendar first run:** browser opens for OAuth2 consent — must be on a machine with a browser. Writes `token.json` to project root. For Docker/Airflow: pre-generate `token.json` locally and volume-mount it.
 - **IP geolocation (`ip-api.com`):** returns city-level accuracy (~1–5 km), free, no API key. Returns non-SG coords if user is on a VPN — falls back to Bishan (1.3521, 103.8198) with a warning. HTTP not HTTPS on free tier.
-- **Walk suggestion:** only shown when `is_rainy = False` AND Haversine distance from origin to dest < 5 km. Uses `_detect_origin()` in transform.py (IP geolocation — does NOT call OneMap, no token needed there).
+- **Walk suggestion (transit route):** only shown when `is_rainy = False` AND Haversine distance from origin to dest < 5 km. Uses `_detect_origin()` in transform.py (IP geolocation — does NOT call OneMap, no token needed there).
+- **Walk-only route inline display (session 7):** when `is_walk_only = bool(legs) and all(l["mode"] == "WALK" for l in legs)`, `_walk_metrics()` is called inline after the step-by-step legs — regardless of distance or weather. The 5km and `is_rainy` guards do NOT apply. `print_walk_suggestion()` is skipped for walk-only routes. `_walk_metrics(origin_lat, origin_lng, dest_lat, dest_lng)` is a helper extracted from `print_walk_suggestion()` and shared by both code paths.
 - **Garmin steps:** requires `pip install garminconnect` — already in requirements.txt. Uses unofficial email/password auth. Leave `GARMIN_EMAIL = ""` in config to skip silently.
 - **Whoop recovery:** requires `WHOOP_ACCESS_TOKEN` in config.py — generate from developer.whoop.com. Returns recovery score 0–100. Leave blank to skip.
 - **model.py — cold start problem:** pipeline may only have a few days of real data. Bootstrap `predictions` with 500 synthetic historical rows using known patterns (rush hour +15%, rain +8%, weekend −20%) before fitting the model. Synthetic rows can be marked with `model_version = "synthetic"` so they can be filtered out later.
@@ -268,6 +268,11 @@ git push
 - **Inline first-transit live arrival (session 6)** — the separate "Live arrivals — Stop XXXXX" bus board section has been removed. A single first-transit arrival now appears inline after the step-by-step legs: X1 and X2 (minutes) for bus, or headway estimate for MRT/LRT. Per-alt route notes show X1 only. See D33 in DECISIONS.md.
 - **`MRT_LINE_NAMES` dict** — "NE" (Northeast Line) was missing from the dict, causing `NE` to appear as the display name instead of "Northeast Line". Fixed in session 6. Dict now includes: EW, NS, NE, CC, DT, TE, CR, JR (mainline MRT), BP, SE, PE (LRT).
 - **Alt routes show per-route disruption (session 6)** — each alt route in the "Other route options" section includes its own first-transit X1 live arrival and a disruption/delay note filtered to that alt's specific rail lines and bus services.
+- **Live arrival clock times (session 7)** — `transform.py` now shows actual HH:MM SGT clock times instead of abstract relative minutes. Computed as `(now_sgt + timedelta(minutes=x)).strftime("%H:%M")` where `now_sgt = datetime.now(timezone.utc).astimezone(SGT)`. MRT headway midpoints: x1=4 min, x2=8 min. LRT: x1=7 min, x2=14 min.
+- **`serve.py` auto-refresh** — uses `time.sleep(60); st.rerun()` at the bottom of the script. The page shows a "Running…" spinner for 60 seconds before refreshing. This does NOT trigger ingest or transform — it only re-queries DuckDB. To update the data, run `python scripts/ingest.py` then `python scripts/transform.py` in a separate terminal; `serve.py` picks up new data on its next 60s refresh.
+- **`serve.py` ML panel** — shows placeholder "Model not yet trained — run `python scripts/model.py --train` then `--predict`" until the `predictions` table has at least one row for the current `event_id`. The panel renders automatically once model.py has been run.
+- **`geocode()` postal code extraction (session 7)** — `re.findall(r'\b\d{6}\b', address)` extracts the first 6-digit sequence and prepends it to the candidates list. Word boundary `\b` prevents matching 7-digit strings (phone numbers, IDs). Case-insensitive "singapore" keyword check via `address.lower()`. Both detection paths (with/without "singapore") result in the same action.
+- **Location-change detection log (session 7)** — before the ingest loop in `main()`, stored `dest_lat`/`dest_lng` is queried and compared against the newly geocoded values. If Haversine shift > 50m, logs `📍 Destination updated (NNN m shift) — will re-fetch routes`. Purely diagnostic — routes are always re-fetched regardless.
 
 ---
 

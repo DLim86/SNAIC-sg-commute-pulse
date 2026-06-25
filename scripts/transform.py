@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 DB_PATH = Path(__file__).parent.parent / "db" / "commute.duckdb"
 
-MODE_ICON = {"WALK": "🚶", "BUS": "🚌", "MRT": "🚇", "LRT": "🚈"}
+MODE_ICON = {"WALK": "🚶 ", "BUS": "🚌 ", "MRT": "🚇 ", "LRT": "🚈 "}
 
 MRT_LINE_NAMES = {
     "EW": "East West Line",  "NS": "North South Line", "NE": "Northeast Line",
@@ -150,27 +150,14 @@ def get_whoop_recovery():
     return None
 
 
-def print_walk_suggestion(dest_lat, dest_lng, is_rainy):
-    if is_rainy:
-        return
-
-    origin_lat, origin_lng = _detect_origin()
+def _walk_metrics(origin_lat, origin_lng, dest_lat, dest_lng):
     distance_m = _haversine_m(origin_lat, origin_lng, dest_lat, dest_lng)
     distance_km = distance_m / 1000
-
-    if distance_km > 5.0:
-        return
-
     walk_min = round(distance_km / 5.0 * 60)
     steps_est = round(distance_m / 0.75)
     calories_est = round(distance_km * 63)
-
     garmin_steps = get_garmin_steps()
     whoop_recovery = get_whoop_recovery()
-
-    log.info("")
-    log.info("─" * 56)
-    log.info("🚶  WALK ALTERNATIVE  (%.1f km · no rain)", distance_km)
     log.info("    Distance   : %.1f km straight line", distance_km)
     log.info("    Est. time  : ~%d min at 5 km/h", walk_min)
     log.info("    Steps      : ~%s steps", f"{steps_est:,}")
@@ -178,14 +165,12 @@ def print_walk_suggestion(dest_lat, dest_lng, is_rainy):
     log.info("")
     log.info("    Zone 1 (easy, 50-60%% max HR) — fat burn, active recovery")
     log.info("    Zone 2 (brisk, 60-70%% max HR) — aerobic base, best long-term benefit")
-
     if garmin_steps is not None:
         projected = garmin_steps + steps_est
         pct = min(100, round(projected / 10_000 * 100))
         log.info("")
         log.info("    [Garmin] Today so far : %s steps", f"{garmin_steps:,}")
         log.info("             After walk   : %s steps (%d%% of 10,000 goal)", f"{projected:,}", pct)
-
     if whoop_recovery is not None:
         if whoop_recovery >= 67:
             zone_rec = "green — Zone 2 effort, your body is ready"
@@ -194,6 +179,20 @@ def print_walk_suggestion(dest_lat, dest_lng, is_rainy):
         else:
             zone_rec = "red — rest day, skip the walk"
         log.info("    [Whoop]  Recovery     : %d%% → %s", whoop_recovery, zone_rec)
+
+
+def print_walk_suggestion(dest_lat, dest_lng, is_rainy):
+    if is_rainy:
+        return
+    origin_lat, origin_lng = _detect_origin()
+    distance_m = _haversine_m(origin_lat, origin_lng, dest_lat, dest_lng)
+    distance_km = distance_m / 1000
+    if distance_km > 5.0:
+        return
+    log.info("")
+    log.info("─" * 56)
+    log.info("🚶  WALK ALTERNATIVE  (%.1f km · no rain)", distance_km)
+    _walk_metrics(origin_lat, origin_lng, dest_lat, dest_lng)
 
 
 def log_run(con, rows, duration_ms, status, error_msg=None):
@@ -228,6 +227,7 @@ def main():
 
         SGT = timezone(timedelta(hours=8))
         now_utc = datetime.now(timezone.utc)
+        now_sgt = now_utc.astimezone(SGT)
         written = 0
 
         for row in results:
@@ -239,6 +239,7 @@ def main():
             leg_cols = ["leg_sequence", "mode", "service_no", "from_name",
                         "to_name", "duration_min", "distance_m", "num_stops"]
             legs = [dict(zip(leg_cols, l)) for l in legs]
+            is_walk_only = bool(legs) and all(l["mode"] == "WALK" for l in legs)
 
             modes_in_legs = {l["mode"] for l in legs}
             _mrt = "MRT" in modes_in_legs
@@ -400,17 +401,34 @@ def main():
                     if bw and bw[0] is not None:
                         x1, x2, load = bw
                         load_desc = {"SEA": "seats", "SDA": "standing", "LSD": "full"}.get(load or "", "")
-                        x2_str = f"  |  then {x2} min" if x2 is not None else ""
-                        log.info("    %s  Bus %-6s : next %d min%s  %s",
-                                 ft_icon, ft_svc, x1, x2_str, load_desc)
+                        x1_time = (now_sgt + timedelta(minutes=x1)).strftime("%H:%M")
+                        x2_str = ""
+                        if x2 is not None:
+                            x2_time = (now_sgt + timedelta(minutes=x2)).strftime("%H:%M")
+                            x2_str = f" | if missed → {x2_time} (~{x2} min from now)"
+                        log.info("    %s  Bus %-6s : next at %s (~%d min from now)%s  %s",
+                                 ft_icon, ft_svc, x1_time, x1, x2_str, load_desc)
                     else:
                         log.info("    %s  Bus %-6s : no live data at origin stop", ft_icon, ft_svc)
                 elif ft_mode == "MRT":
                     ft_name = MRT_LINE_NAMES.get(ft_svc, ft_svc or "MRT")
-                    log.info("    %s  %-22s : ~3-5 min headway", ft_icon, ft_name)
+                    x1_min, x2_min = 4, 8
+                    x1_time = (now_sgt + timedelta(minutes=x1_min)).strftime("%H:%M")
+                    x2_time = (now_sgt + timedelta(minutes=x2_min)).strftime("%H:%M")
+                    log.info("    %s  %-22s : next at %s (~%d min from now) | if missed → %s (~%d min from now)",
+                             ft_icon, ft_name, x1_time, x1_min, x2_time, x2_min)
                 elif ft_mode == "LRT":
-                    log.info("    %s  %-22s : ~5-10 min headway", ft_icon, ft_svc or "LRT")
+                    ft_name = ft_svc or "LRT"
+                    x1_min, x2_min = 7, 14
+                    x1_time = (now_sgt + timedelta(minutes=x1_min)).strftime("%H:%M")
+                    x2_time = (now_sgt + timedelta(minutes=x2_min)).strftime("%H:%M")
+                    log.info("    %s  %-22s : next at %s (~%d min from now) | if missed → %s (~%d min from now)",
+                             ft_icon, ft_name, x1_time, x1_min, x2_time, x2_min)
             log.info("")
+
+            if is_walk_only:
+                origin_lat, origin_lng = _detect_origin()
+                _walk_metrics(origin_lat, origin_lng, r["dest_lat"], r["dest_lng"])
 
             # ── Alt routes (compact) ───────────────────────────────────────────
             alt_rows = con.execute(ALT_ROUTES_QUERY, [r["event_id"], option_id]).fetchall()
@@ -457,10 +475,10 @@ def main():
                         stops = leg["num_stops"]
                         st = f"/{stops}st" if stops else ""
                         if mode == "WALK":
-                            parts.append(f"🚶{dur}m")
+                            parts.append(f"🚶 {dur}m")
                             ai += 1
                         elif mode == "BUS":
-                            parts.append(f"🚌{svc} {dur}m{st}")
+                            parts.append(f"🚌 {svc} {dur}m{st}")
                             ai += 1
                         elif mode in ("MRT", "LRT"):
                             rail = []
@@ -471,11 +489,11 @@ def main():
                             r_lrt = any(l["mode"] == "LRT" for l in rail)
                             r_dur = sum(l["duration_min"] for l in rail)
                             if r_mrt and r_lrt:
-                                parts.append(f"🚇🚈MRT+LRT {r_dur}m")
+                                parts.append(f"🚇🚈 MRT+LRT {r_dur}m")
                             elif r_mrt:
-                                parts.append(f"🚇{rail[0]['service_no'] or 'MRT'} {r_dur}m")
+                                parts.append(f"🚇 {rail[0]['service_no'] or 'MRT'} {r_dur}m")
                             else:
-                                parts.append(f"🚈{rail[0]['service_no'] or 'LRT'} {r_dur}m")
+                                parts.append(f"🚈 {rail[0]['service_no'] or 'LRT'} {r_dur}m")
                         else:
                             ai += 1
                     leg_str = " → ".join(parts) if parts else "(no legs)"
@@ -489,15 +507,18 @@ def main():
                         at_svc = ft_leg["service_no"] or ""
                         if ft_leg["mode"] == "BUS" and at_svc:
                             if ft_x1 is not None:
+                                x1_time = (now_sgt + timedelta(minutes=ft_x1)).strftime("%H:%M")
                                 flag = " ⚠" if ft_x1 > 10 else ""
-                                notes.append(f"{at_icon}Bus {at_svc}: {ft_x1}m{flag}")
+                                notes.append(f"{at_icon}Bus {at_svc}: {x1_time} (~{ft_x1}m){flag}")
                             else:
                                 notes.append(f"{at_icon}Bus {at_svc}: no live data")
                         elif ft_leg["mode"] == "MRT":
                             ft_name = MRT_LINE_NAMES.get(at_svc, at_svc or "MRT")
-                            notes.append(f"{at_icon}{ft_name}: ~3-5m")
+                            x1_time = (now_sgt + timedelta(minutes=4)).strftime("%H:%M")
+                            notes.append(f"{at_icon}{ft_name}: ~{x1_time} (~4m)")
                         elif ft_leg["mode"] == "LRT":
-                            notes.append(f"{at_icon}{at_svc or 'LRT'}: ~5-10m")
+                            x1_time = (now_sgt + timedelta(minutes=7)).strftime("%H:%M")
+                            notes.append(f"{at_icon}{at_svc or 'LRT'}: ~{x1_time} (~7m)")
                     alt_rail_modes = {l["mode"] for l in alt_legs if l["mode"] in ("MRT", "LRT")}
                     alt_rail_lines = {l["service_no"] for l in alt_legs
                                       if l["mode"] in ("MRT", "LRT") and l["service_no"]}
@@ -517,7 +538,8 @@ def main():
                         log.info("         %s", " | ".join(notes))
                 log.info("")
 
-            print_walk_suggestion(r["dest_lat"], r["dest_lng"], r["is_rainy"])
+            if not is_walk_only:
+                print_walk_suggestion(r["dest_lat"], r["dest_lng"], r["is_rainy"])
 
             log.info(divider)
 

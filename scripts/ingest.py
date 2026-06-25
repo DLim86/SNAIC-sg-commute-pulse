@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import sys
 import time
 import uuid
@@ -147,6 +148,12 @@ def geocode(address, token):
     first_token = stripped.split(",")[0].strip()
     if first_token and first_token not in candidates:
         candidates.append(first_token)
+
+    six_digits = re.findall(r'\b\d{6}\b', address)
+    if six_digits:
+        postal = six_digits[0]
+        if postal not in candidates:
+            candidates.insert(0, postal)
 
     for search_val in candidates:
         data = fetch_with_retry(
@@ -662,6 +669,14 @@ def main():
                 return
             event_id, dest_lat, dest_lng = result
             _purge_stale_events(con, event_id)
+
+        stored = con.execute(
+            "SELECT dest_lat, dest_lng FROM calendar_events WHERE event_id = ?", [event_id]
+        ).fetchone()
+        if stored and stored[0] is not None:
+            shift_m = haversine(stored[0], stored[1], dest_lat, dest_lng)
+            if shift_m > 50:
+                log.info("📍 Destination updated (%.0f m shift) — will re-fetch routes", shift_m)
 
         for name, fn, kwargs in [
             ("weather",      ingest_weather,      {"dest_lat": dest_lat, "dest_lng": dest_lng}),

@@ -517,7 +517,7 @@ SCOPES = [<span class="s">"https://www.googleapis.com/auth/calendar.readonly"</s
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I collect from four sources — OneMap for routing, LTA DataMall for live bus arrivals and train alerts, and data.gov.sg for the 2-hour weather forecast. Each API returns nested JSON, so I flatten them into tabular rows before loading to DuckDB. I record a fetched_at timestamp so I always know how fresh each reading is."</p>
+          <p>"I collect from four sources — OneMap for routing, LTA DataMall for live bus arrivals and train alerts, and data.gov.sg for the 2-hour weather forecast. Each API returns nested JSON, so I flatten them into tabular rows before loading to DuckDB. The geocoder also scans the calendar location string for a 6-digit Singapore postal code using a regex — if found, it tries the postal code first, because postal codes geocode with near-perfect accuracy on OneMap. And if the destination coordinates shift by more than 50 metres between runs — meaning the user corrected a wrong location in their calendar — the system logs a notification and re-fetches routes automatically."</p>
         </div>
       </div>
     </div>
@@ -696,13 +696,13 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The transformation layer joins three data streams. Leave-by time is start_time minus total duration minus a 10-minute buffer — a documented business rule, not a magic number. A window function ranks routes per event: if it's raining and a route has more than 400 metres of walking, that route is penalised and drops in the ranking. The recommendation reason is dynamic — the SQL view produces 9 distinct labels using MIN() OVER (PARTITION BY event_id) window functions, so the label reflects what actually makes each route best: fastest and direct, fewest transfers, least walking, or a rain warning. Weather and disruption notes appear directly under 'Why chosen:' for the recommended route, and disruption is filtered to only the rail lines that route actually uses. After the step-by-step legs, one line shows the next vehicle to board — X1 and X2 for bus with crowding level, or a headway estimate for MRT and LRT because Singapore has no public real-time MRT arrival API. Below that, two alternative routes are listed, sorted by arrival time and labelled [2] and [3] — always exactly two because OneMap caps routing at 3 total itineraries. Each alternative shows compact legs with stop counts, its own first-transit X1 live arrival, and any disruption or delay note for that specific route."</p>
+          <p>"The transformation layer joins three data streams. Leave-by time is start_time minus total duration minus a 10-minute buffer — a documented business rule, not a magic number. A window function ranks routes per event: if it's raining and a route has more than 400 metres of walking, that route is penalised and drops in the ranking. The recommendation reason is dynamic — the SQL view produces 9 distinct labels using MIN() OVER (PARTITION BY event_id) window functions, so the label reflects what actually makes each route best: fastest and direct, fewest transfers, least walking, or a rain warning. Weather and disruption notes appear directly under 'Why chosen:' for the recommended route, and disruption is filtered to only the rail lines that route actually uses. After the step-by-step legs, live arrivals show actual clock times — for example, '09:34 (~4 min from now) | if missed → 09:39 (~9 min from now)' — so the user knows exactly when to board, not just a vague wait time. If the recommended route is entirely on foot — for example the destination is just across the street — walk metrics appear inline in the recommendation section: distance, estimated time, step count, calories, and heart-rate zone guidance. The walk alternative section below is only shown when there is an actual transit route above it and the walk is a genuine alternative. Below the recommended route, two alternative routes are listed, sorted by arrival time and labelled [2] and [3] — always exactly two because OneMap caps routing at 3 total itineraries. Each alternative shows compact legs with stop counts, its own first-transit X1 live arrival, and any disruption or delay note for that specific route."</p>
         </div>
       </div>
     </div>
 
     <!-- STATION 06 -->
-    <div class="station s6 current">
+    <div class="station s6 done">
       <div class="station-rail">
         <div class="station-dot">06</div>
         <div class="route-line"></div>
@@ -710,50 +710,47 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
       <div class="station-card">
         <div class="card-eyebrow">Data Serving</div>
         <div class="card-title">Streamlit Dashboard</div>
-        <div class="card-desc">Build a Streamlit dashboard that reads from DuckDB and shows the top commute recommendation for the next calendar event. Self-refreshing every 5 minutes, shows leave-by time prominently, and warns when weather or train disruptions affect the recommendation.</div>
+        <div class="card-desc">A read-only Streamlit dashboard that queries DuckDB and shows the top commute recommendation for the next calendar event. The dashboard auto-refreshes every 60 seconds using <code>time.sleep(60); st.rerun()</code>. It shows: an event card with a countdown to leave-by time; a 3-column metrics panel (leave by / journey time / fare); a "Why chosen" info block; conditional weather and train disruption warnings; step-by-step legs with mode icons; inline live bus arrivals with actual HH:MM clock times and X2 miss-it arrival; estimated MRT/LRT headways with a caveat that no public real-time MRT API exists; alt route expanders [2] and [3] with compact leg tokens and first-transit X1 clock times; and an ML prediction panel that shows a placeholder until <code>scripts/model.py</code> has been trained. The DB connection uses <code>duckdb.connect(DB_PATH, read_only=True)</code> and is cached via <code>@st.cache_resource</code>.</div>
 
         <div class="chip-row">
           <span class="chip chip-red">Streamlit</span>
-          <span class="chip chip-red">DuckDB Python API</span>
-          <span class="chip chip-red">pandas</span>
+          <span class="chip chip-red">DuckDB read_only</span>
+          <span class="chip chip-red">@st.cache_resource</span>
           <span class="chip chip-red">st.metric</span>
-          <span class="chip chip-red">@st.cache_data</span>
+          <span class="chip chip-red">st.expander</span>
+          <span class="chip chip-red">60s auto-refresh</span>
+          <span class="chip chip-red">clock-time arrivals</span>
+          <span class="chip chip-red">ML placeholder panel</span>
         </div>
 
         <div class="code-block">
           <pre><span class="com"># scripts/serve.py — streamlit run scripts/serve.py</span>
+<span class="k">import</span> sys, time
+<span class="k">from</span> datetime <span class="k">import</span> datetime, timezone, timedelta
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">import</span> duckdb
 <span class="k">import</span> streamlit <span class="k">as</span> st
-<span class="k">import</span> duckdb, pandas <span class="k">as</span> pd
 
-st.set_page_config(page_title=<span class="s">"SG Commute Recommender"</span>, page_icon=<span class="s">"🚇"</span>, layout=<span class="s">"wide"</span>)
+DB_PATH = str(Path(__file__).parent.parent / <span class="s">"db"</span> / <span class="s">"commute.duckdb"</span>)
+SGT = timezone(timedelta(hours=<span class="n">8</span>))
 
-<span class="o">@st.cache_data</span>(ttl=<span class="n">300</span>)  <span class="com"># refresh every 5 minutes</span>
-<span class="k">def</span> <span class="f">load_recommendation</span>():
-    con = duckdb.connect(<span class="s">"db/commute.duckdb"</span>, read_only=<span class="k">True</span>)
-    <span class="k">return</span> con.execute(<span class="s">"""
-        SELECT * FROM v_enriched_routes
-        WHERE route_rank = 1
-        ORDER BY start_time LIMIT 1
-    """</span>).df()
+<span class="o">@st.cache_resource</span>
+<span class="k">def</span> <span class="f">get_connection</span>():
+    <span class="k">return</span> duckdb.connect(DB_PATH, read_only=<span class="k">True</span>)
 
-st.title(<span class="s">"🚇 SG Commute Recommender"</span>)
-rec = load_recommendation()
+con = get_connection()
+now_sgt = datetime.now(timezone.utc).astimezone(SGT)
 
-<span class="k">if not</span> rec.empty:
-    r = rec.iloc[<span class="n">0</span>]
-    st.subheader(<span class="f">f"</span><span class="s">Next: {r['title']}"</span>)
-    col1, col2, col3 = st.columns(<span class="n">3</span>)
-    col1.metric(<span class="s">"Leave by"</span>, r[<span class="s">"leave_by"</span>].strftime(<span class="s">"%H:%M"</span>))
-    col2.metric(<span class="s">"Travel time"</span>, <span class="f">f"</span><span class="s">{r['total_duration_min']} min"</span>)
-    col3.metric(<span class="s">"Fare"</span>, <span class="f">f"</span><span class="s">S${r['fare']:.2f}"</span>)
-    <span class="k">if</span> r[<span class="s">"is_rainy"</span>]: st.warning(<span class="s">"🌧 Rain forecast — avoid long walks."</span>)
-    <span class="k">if</span> r[<span class="s">"alert_msg"</span>]: st.error(<span class="f">f"</span><span class="s">🚨 {r['alert_msg']}"</span>)
-    st.caption(r[<span class="s">"recommendation_reason"</span>])</pre>
+<span class="com"># ... event card, legs, live arrivals, alt routes, ML panel ...</span>
+
+<span class="com"># 60-second auto-refresh (does NOT re-run ingest or transform)</span>
+time.sleep(<span class="n">60</span>)
+st.rerun()</pre>
         </div>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The Streamlit dashboard reads from DuckDB. The key metric is the leave-by time — shown prominently so the user sees it immediately. I used @st.cache_data with a 5-minute TTL so it auto-refreshes without hammering the APIs. Weather warnings and train disruption alerts appear automatically from the SQL layer — the dashboard just displays what the transformation logic already decided."</p>
+          <p>"The Streamlit dashboard connects to DuckDB in read-only mode — it never writes. The connection is cached with @st.cache_resource so it persists across rerenders without reopening the file. The page auto-refreshes every 60 seconds using time.sleep and st.rerun — no extra dependencies needed, and it does not re-trigger any API calls. Bus arrival times show as actual clock times — 09:34 and 09:39 — not vague 'X minutes' estimates, so the user knows exactly when to leave. The ML prediction panel at the bottom shows the model's predicted journey time and the 7-day MAE once model.py has been trained — it shows a placeholder until then."</p>
         </div>
       </div>
     </div>
@@ -1293,7 +1290,7 @@ data.gov.sg    →  weather_forecast       ──┘         ↓
     </div>
 
     <!-- STATION ML — MLOps Pipeline -->
-    <div class="station s6">
+    <div class="station s6 current">
       <div class="station-rail">
         <div class="station-dot">ML</div>
         <div class="route-line"></div>

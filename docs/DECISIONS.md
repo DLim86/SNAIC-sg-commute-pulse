@@ -570,13 +570,16 @@ model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
 - Two arrivals (X1+X2) for the recommended route let users decide whether to rush out the door for the first bus or wait for the next one 8 minutes later
 - Alt routes show X1 only (collapsed) in the notes line — enough to compare without clutter
 
-**Display format:**
-- Recommended route (bus): `🚌  Bus 65     : next 3 min  |  then 11 min  seats`
-- Recommended route (MRT): `🚇  Northeast Line        : ~3-5 min headway`
-- Alt routes (bus): `🚌Bus 48: 4m` or `🚌Bus 14: 12m ⚠`
-- Alt routes (MRT): `🚇Northeast Line: ~3-5m`
+**Display format (updated session 7 — actual clock times instead of relative minutes):**
+- Recommended route (bus): `🚌  Bus 65     : next at 09:34 (~4 min from now) | if missed → 09:39 (~9 min from now)  seats`
+- Recommended route (MRT): `🚇  Northeast Line        : next at 09:34 (~4 min from now) | if missed → 09:38 (~8 min from now)`
+- Recommended route (LRT): `🚈  Sengkang LRT         : next at 09:37 (~7 min from now) | if missed → 09:44 (~14 min from now)`
+- Alt routes (bus): `🚌Bus 65: 09:34 (~4m)` or `🚌Bus 65: 09:34 (~12m) ⚠`
+- Alt routes (MRT): `🚇East West Line: ~09:34 (~4m)`
 
-**MRT/LRT limitation:** Singapore's MRT and LRT have no public real-time arrival API. The system uses fixed headway estimates: ~3-5 min for MRT (peak), ~5-10 min for LRT. This is a known limitation, not a bug.
+**Clock time derivation:** `now_sgt = datetime.now(timezone.utc).astimezone(SGT)`. X1/X2 clock times computed as `(now_sgt + timedelta(minutes=x)).strftime("%H:%M")`. SGT = UTC+8.
+
+**MRT/LRT limitation:** Singapore's MRT and LRT have no public real-time arrival API. The system uses fixed headway estimates: MRT x1=4 min, x2=8 min; LRT x1=7 min, x2=14 min. These are midpoints of the typical headway ranges, not live data.
 
 ---
 
@@ -596,6 +599,47 @@ model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
 - Route has no rail legs → skip disruption section entirely
 
 **Alt routes:** The same filtering is applied per-alt. Each alt route's notes line shows its own disruption status (e.g., "✅ No MRT disruption") rather than a global system-wide status.
+
+---
+
+## D35 — Walk-Only Route Inline Metrics (Session 7)
+
+**Decision:** When all legs in the recommended route have `mode == "WALK"`, display walk metrics (distance, time, steps, calories, heart-rate zones, Garmin, Whoop) inline immediately after the step-by-step legs. Skip the separate `print_walk_suggestion()` call at the bottom of the output.
+
+**Why:**
+- The original "WALK ALTERNATIVE" section appeared below the alt routes block. When walking IS the recommendation, showing it there implied there was a transit option above it — confusing and redundant.
+- Folding the walk details directly into the recommended route section makes the output coherent: "your recommendation is to walk, here are the details."
+- The 5km distance guard and `is_rainy` guard in `print_walk_suggestion()` deliberately do NOT apply to the inline case — if the route is walk-only, metrics must always be shown regardless of distance or weather.
+
+**Implementation:** `is_walk_only = bool(legs) and all(l["mode"] == "WALK" for l in legs)`. If True, call `_walk_metrics(origin_lat, origin_lng, dest_lat, dest_lng)` inline after legs. Guard `print_walk_suggestion()` with `if not is_walk_only`. Helper `_walk_metrics()` extracted from the original `print_walk_suggestion()` body so both paths share the same logging logic.
+
+---
+
+## D36 — Postal Code Extraction in geocode() (Session 7)
+
+**Decision:** Use `re.findall(r'\b\d{6}\b', address)` to detect a 6-digit Singapore postal code in the calendar location string and prepend it as the highest-priority geocoding candidate before all existing fallbacks.
+
+**Why:**
+- OneMap's search API returns accurate, consistent results for 6-digit postal codes — far more reliably than free-text address strings.
+- Calendar event locations typed by users vary wildly: "Bishan CC", "51 Bishan St 13 S579799", "Singapore 579799", "NUS UTown". Postal codes are the stable, machine-readable part.
+- The existing progressive fallback (full address → strip ", Singapore" → first comma token) sometimes fails for obscure or abbreviated street names (e.g. "Sentul Walk"). A postal code check never fails on OneMap.
+
+**Detection:** `re.findall(r'\b\d{6}\b', address)` — word boundary `\b` ensures 7-digit or longer strings (phone numbers, IDs) are not matched. `address.lower()` used for case-insensitive "singapore" keyword check. Both "singapore present + 6 digits" and "no singapore word + 6 digits" paths extract and prepend the same way — the keyword check adds no differentiation in practice.
+
+**Candidate list after change (example):** `["579799", "Bishan CC, Singapore 579799", "Bishan CC, 579799", "Bishan CC"]`
+
+---
+
+## D37 — Location-Change Detection Log in ingest.main() (Session 7)
+
+**Decision:** Before the ingest loop in `main()`, query the currently stored `dest_lat`/`dest_lng` for the active `event_id` from `calendar_events` and compare against the newly geocoded values. If the Haversine shift exceeds 50m, log `📍 Destination updated (NNN m shift) — will re-fetch routes`.
+
+**Why:**
+- Routes are always re-fetched on every `ingest.py` run (`ingest_routes()` unconditionally deletes old routes and calls OneMap fresh). There is no stale-route bug for the standard "edit calendar location" case.
+- However, there was no visible signal that the system had detected and acted on a location change. Users correcting a wrong calendar address had no confirmation the fix was picked up.
+- The log line is purely diagnostic — no behaviour change. It closes the feedback loop: user edits calendar → re-runs ingest → sees "📍 Destination updated" in the log → confident the correction propagated.
+
+**Threshold:** 50m Haversine shift chosen to avoid false positives from IP-geolocation variance while still catching any real address correction.
 
 ---
 
