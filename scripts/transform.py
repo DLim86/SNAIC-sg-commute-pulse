@@ -431,7 +431,7 @@ def main():
                 _walk_metrics(origin_lat, origin_lng, r["dest_lat"], r["dest_lng"])
 
             # ── Alt routes (compact) ───────────────────────────────────────────
-            alt_rows = con.execute(ALT_ROUTES_QUERY, [r["event_id"], option_id]).fetchall()
+            alt_rows = [] if is_walk_only else con.execute(ALT_ROUTES_QUERY, [r["event_id"], option_id]).fetchall()
             if alt_rows:
                 _lcols = ["leg_sequence", "mode", "service_no", "from_name",
                           "to_name", "duration_min", "distance_m", "num_stops"]
