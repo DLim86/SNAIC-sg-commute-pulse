@@ -3,7 +3,7 @@
 This document lets another Claude session (or any developer) continue this project
 from scratch with no prior chat history.
 
-**Last updated: 2026-06-24 (session 5)**
+**Last updated: 2026-06-25 (session 5 + session 6 transform.py improvements + Day 4 MLOps)**
 
 ---
 
@@ -71,7 +71,7 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `scripts/__init__.py` | Done — empty, required for Airflow imports |
 | `scripts/schema.py` | Done — **9 tables** + `v_enriched_routes` view. `predictions` table added session 4. Ready for model.py. |
 | `scripts/ingest.py` | Done — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always — HOME_ADDRESS is destination-only, not origin) + progressive geocoding fallback + WORK_ADDRESS event-location fallback + `get_smart_default()` time-of-day heuristic + `v3/BusArrival` endpoint + 5-nearest-stop fallback + float-suffix strip on BusStopCode + **`_purge_stale_events()` (session 5)** — deletes stale future events+routes after calendar reschedule |
-| `scripts/transform.py` | Done — `AND start_time > NOW()` filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, **live bus arrivals board** (session 5 — all services at origin stop, x₁ and x₂ mins from now, load status), **alt routes section** (session 5 — top 3 non-recommended options scored by next-bus arrival + duration, stop counts per leg, delay flag for buses >10 min away; queries `route_options` directly — NOT `v_enriched_routes` which would return 47× duplicates from weather cross-join), walk alternative (Zone 1/2), optional Garmin/Whoop |
+| `scripts/transform.py` | Done — `AND start_time > NOW()` filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, **alt routes section** (session 5 — top 3 non-recommended options scored by next-bus arrival + duration, stop counts per leg, delay flag for buses >10 min away; queries `route_options` directly — NOT `v_enriched_routes` which would return 47× duplicates from weather cross-join), walk alternative (Zone 1/2), optional Garmin/Whoop + **session 6:** `recommended_mode` dynamic from actual leg modes; weather+disruption under "Why chosen:"; disruption filtered to route's actual rail lines (`route_rail_lines` set); alt heading "Other route options (sorted by arrival time)" with [2]/[3] labels; MRT+LRT consecutive legs grouped in compact alt display; **inline first-transit live arrival** (X1+X2 for bus, headway for MRT/LRT) replaces separate bus board; per-alt X1 in notes; per-alt disruption note; `MRT_LINE_NAMES` updated with NE/CR/JR |
 
 ### Still to build (in this order)
 
@@ -90,19 +90,48 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 ```
 calendar_events   — event_id PK, title, start_time TIMESTAMPTZ, location_raw, dest_lat, dest_lng, ingested_at
 route_options     — option_id PK, event_id FK, total_duration_min, walk_distance_m, num_transfers, fare, fetched_at
-route_legs        — (option_id, leg_sequence) PK, mode, service_no, from_name, to_name, duration_min, distance_m, num_stops
+route_legs        — (option_id, leg_sequence) PK, mode, service_no, from_name, to_name, duration_min, distance_m, num_stops [session 5]
 weather_forecast  — (area, valid_start) PK, forecast, is_rainy BOOLEAN, valid_end, fetched_at
-bus_arrivals      — (bus_stop_code, service_no, fetched_at) PK, next_bus_mins, next_bus2_mins, load
+bus_arrivals      — (bus_stop_code, service_no, fetched_at) PK, next_bus_mins, next_bus2_mins [session 5], load
 train_alerts      — alert_id PK, affected_line, message, severity, fetched_at
 recommendations   — event_id PK, recommended_mode, total_duration_min, leave_by, estimated_arrival, weather_warning, disruption_warning, reason, created_at
 pipeline_runs     — run_id PK, source, rows_upserted, duration_ms, status, error_msg, ran_at
 predictions       — prediction_id PK, event_id, predicted_min, actual_min (nullable — backfilled), model_version, mae_7day (nullable), predicted_at
 ```
 
-**`predictions` table must be added to `scripts/schema.py` before `scripts/model.py` is built.**
+**`predictions` table is already in `scripts/schema.py`** (added session 4, confirmed present — no schema changes needed before building `scripts/model.py`).
 `actual_min` is filled in after the commute window passes by comparing with `route_options.total_duration_min` for the same `event_id`.
 
 View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_forecast + train_alerts. Returns `route_rank` via `ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY rain_penalty, total_duration_min)`.
+
+---
+
+## Day 4 MLOps Additions (unlocked 2026-06-25)
+
+**MLflow Experiment Tracking** — wrap `train_model()` in `mlflow.start_run()`:
+- `mlflow.log_param("n_estimators", 100)` + `feature_count` + `training_rows`
+- `mlflow.log_metric("mae_validation", mae)` + `rmse`
+- `mlflow.sklearn.log_model(model, "commute_predictor")` — .pkl stored as artifact
+- `mlflow ui` → `http://localhost:5000` shows all runs side-by-side
+
+**Model Registry** — version lifecycle:
+- Staging → register newly trained model, shadow-test for 7 pipeline cycles
+- Production → promoted only when challenger MAE beats current by >5%
+- Archived → retired models kept for rollback
+
+**Drift Detection** — via MAE threshold in `evaluate_model()`:
+- If `mae_7day > DRIFT_THRESHOLD` (default 10 min): `logging.warning("Drift detected")`
+- Optionally insert a `pipeline_runs` entry to trigger Airflow retraining task
+- Features most likely to drift: `hour_of_day` (schedule changes), `is_rainy` (seasonal), `walk_distance_m` (user moves)
+
+**Canary Deploy** — staged promotion pattern:
+1. New model → registered as "staging"
+2. Run staging + production in parallel for 7 days
+3. Auto-promote if staging MAE < production by >5%; otherwise archive challenger
+
+**New dependency:** `mlflow>=2.12.0` — add to `requirements.txt`.
+
+**Design decision:** See D29 (MLflow adoption) and D30 (drift detection) in `docs/DECISIONS.md`.
 
 ---
 
@@ -266,6 +295,16 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 - **`models/*.pkl` gitignored** — commit `models/.gitkeep` so folder exists in repo
 - **`scikit-learn>=1.4.0` and `joblib>=1.3.0`** must be added to `requirements.txt`
 
+### Session 6 — transform.py improvements
+
+- **OneMap `numItineraries` hard-capped at 3** — requesting `numItineraries: 4` returns HTTP 400. OneMap's public transit routing API caps at 3 itineraries. The system always returns exactly 3 routes (1 recommended + 2 alternatives). The alt routes section will always show exactly 2 alternatives, never 3.
+- **MRT/LRT have no public real-time arrival API** — Singapore MRT/LRT does not expose a public real-time arrival feed. The system uses fixed headway estimates: ~3-5 min for MRT, ~5-10 min for LRT. Live bus data is only available via LTA v3/BusArrival at the origin stop.
+- **Dynamic disruption filtering** — `train_alerts.affected_line` is filtered against `{leg.service_no for leg in legs if leg.mode in ("MRT","LRT")}`. Alerts not matching the route's actual rail service codes are ignored. Bus-only routes show no disruption section. Pure MRT routes show "No active MRT disruptions" (not "MRT/LRT").
+- **`recommended_mode` dynamic derivation** — derived from actual leg modes in the route (`modes_in_legs = {l["mode"] for l in legs}`). Combinations produce: "Bus + MRT", "Bus + LRT", "Bus + MRT and LRT", "MRT", "LRT", "Direct Bus", "Walk". Previously approximated from `num_transfers`.
+- **Inline first-transit live arrival** — replaces the separate "Live arrivals — Stop XXXXX" bus board. After the step-by-step legs, one line shows: for bus — X1 + X2 (minutes to first and second bus) + crowding; for MRT/LRT — headway estimate. Alt routes show X1 only in the notes line. See D33 in DECISIONS.md.
+- **`MRT_LINE_NAMES` dict** — "NE" (Northeast Line) was previously missing, causing raw "NE" to display instead of "Northeast Line". Fixed in session 6. Dict now covers: EW, NS, NE, CC, DT, TE, CR, JR (MRT mainline), BP, SE, PE (LRT).
+- **Per-alt route disruption notes** — each alt route in "Other route options" section shows its own first-transit X1 and a disruption/delay note specific to that alt's rail lines and bus services. Global alerts not relevant to a specific route are suppressed.
+
 ### IP Geolocation
 - **ip-api.com** returns city-level accuracy (~1–5 km), free, no API key
 - **VPN:** returns non-SG coords — falls back to Bishan (1.3521, 103.8198) with warning
@@ -334,6 +373,17 @@ airflow standalone   # → http://localhost:8080
 # 12. Full stack
 docker compose up
 ```
+
+---
+
+## Scratch / Debug Scripts (project root, untracked)
+
+These files exist at the project root and are **not production code** — they are one-off debug utilities from session 5 investigations. They are untracked by git and can be deleted or committed to a `scratch/` folder.
+
+| File | Purpose |
+|---|---|
+| `bus_service.py` | Tests LTA v3/BusArrival endpoint directly against 3 specific stop codes (54719, 65721, 65141). Used to confirm the old BusArrivalv2 endpoint was dead and the v3 URL works. |
+| `nearest_busstop.py` | Finds 5 nearest bus stops to a given coordinate using `haversine()` from `scripts/ingest`. Used to debug which stop codes the pipeline was trying. |
 
 ---
 

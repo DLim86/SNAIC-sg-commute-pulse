@@ -186,6 +186,13 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
     <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Predict</span><span class="pipe-arrow">→</span>
     <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Evaluate (8 AM daily)</span>
   </div>
+  <div style="margin-top:10px;margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#67E8F9">Phase 4 — MLOps (Day 4)</div>
+  <div class="pipeline-mini">
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">MLflow Tracking</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">Model Registry</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">Drift Detection</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">Canary Deploy</span>
+  </div>
 </header>
 
 <!-- ARCHITECTURE OVERVIEW -->
@@ -249,8 +256,9 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
       <div class="arch-cell-label">Orchestration</div>
       <div class="arch-cell-items">
         <div class="arch-item new">Airflow DAG</div>
-        <div class="arch-item new">5 tasks / 10-min schedule</div>
+        <div class="arch-item new">7 tasks / 10-min schedule</div>
         <div class="arch-item new">Parallel fetch tasks</div>
+        <div class="arch-item new">evaluate_model (daily 8AM)</div>
         <div class="arch-item new">Airflow UI</div>
       </div>
     </div>
@@ -625,7 +633,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
       <div class="station-card">
         <div class="card-eyebrow">Data Transformation</div>
         <div class="card-title">SQL Cleaning, Recommendation Logic & Walk Alternative</div>
-        <div class="card-desc">Join routes, weather, and alerts into a ranked recommendation. Calculate leave-by time, flag rainy walks, detect MRT disruptions, and rank routes using window functions. Output includes: a live bus arrivals board (all services at origin stop, x₁ and x₂ minutes from now, crowding level), an alt routes section (top 3 non-recommended options scored by next-bus wait + duration, with stop counts per leg and delay flag), and a walk alternative with Zone 1/2 health stats plus optional Garmin/Whoop fitness context. Note: alt routes query <code>route_options</code> directly — querying <code>v_enriched_routes WHERE route_rank &gt; 1</code> returns 47× duplicates because the view cross-joins 47 weather areas.</div>
+        <div class="card-desc">Join routes, weather, and alerts into a ranked recommendation. Calculate leave-by time, flag rainy walks, detect MRT disruptions, and rank routes using window functions. The <code>recommendation_reason</code> field has 9 dynamic labels (e.g. "✓ Fastest + direct", "✓ Fewest transfers (N)", "✓ Least walking (Xm)", "⚠ Rain — Xm exposed walk") computed via <code>MIN() OVER (PARTITION BY event_id)</code> window functions — not hardcoded. Weather and disruption warnings appear under "Why chosen:" for the recommended route. Disruption status is filtered to the actual rail modes in the route (MRT-only route shows MRT disruptions only, not MRT/LRT). Output includes: <strong>inline first-transit live arrival</strong> after the step-by-step legs (X1+X2 for bus; headway estimate ~3-5 min for MRT, ~5-10 min for LRT — no public real-time MRT/LRT arrival API in Singapore), an alt routes section labelled "Other route options (sorted by arrival time)" with [2]/[3] labels (always exactly 2 alternatives — OneMap API hard-caps at 3 total itineraries), consecutive MRT+LRT legs grouped in compact display, per-alt first-transit X1 + disruption note, and a walk alternative with Zone 1/2 health stats plus optional Garmin/Whoop fitness context. Note: alt routes query <code>route_options</code> directly — querying <code>v_enriched_routes WHERE route_rank &gt; 1</code> returns 47× duplicates because the view cross-joins 47 weather areas.</div>
 
         <div class="chip-row">
           <span class="chip chip-amber">SQL JOINs</span>
@@ -635,8 +643,10 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
           <span class="chip chip-amber">CREATE VIEW</span>
           <span class="chip chip-amber">Garmin API</span>
           <span class="chip chip-amber">Whoop API</span>
-          <span class="chip chip-amber">live bus board</span>
-          <span class="chip chip-amber">alt routes</span>
+          <span class="chip chip-amber">inline live arrival</span>
+          <span class="chip chip-amber">alt routes [2]/[3]</span>
+          <span class="chip chip-amber">dynamic reason labels</span>
+          <span class="chip chip-amber">dynamic disruption filter</span>
         </div>
 
         <div class="code-block">
@@ -686,7 +696,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The transformation layer joins three data streams. Leave-by time is start_time minus total duration minus a 10-minute buffer — a documented business rule, not a magic number. A window function ranks routes per event: if raining and walking more than 400m, that route is penalised and drops to a lower rank. Two extra sections follow the recommended route. First: a live bus arrivals board — every service at the origin stop, showing x₁ (minutes to first bus) and x₂ (minutes to second bus) and crowding level. Second: an alt routes section listing the top 3 alternatives, scored by next-bus wait time plus total duration, with number of stops per leg and a warning flag on any bus that is more than 10 minutes away."</p>
+          <p>"The transformation layer joins three data streams. Leave-by time is start_time minus total duration minus a 10-minute buffer — a documented business rule, not a magic number. A window function ranks routes per event: if it's raining and a route has more than 400 metres of walking, that route is penalised and drops in the ranking. The recommendation reason is dynamic — the SQL view produces 9 distinct labels using MIN() OVER (PARTITION BY event_id) window functions, so the label reflects what actually makes each route best: fastest and direct, fewest transfers, least walking, or a rain warning. Weather and disruption notes appear directly under 'Why chosen:' for the recommended route, and disruption is filtered to only the rail lines that route actually uses. After the step-by-step legs, one line shows the next vehicle to board — X1 and X2 for bus with crowding level, or a headway estimate for MRT and LRT because Singapore has no public real-time MRT arrival API. Below that, two alternative routes are listed, sorted by arrival time and labelled [2] and [3] — always exactly two because OneMap caps routing at 3 total itineraries. Each alternative shows compact legs with stop counts, its own first-transit X1 live arrival, and any disruption or delay note for that specific route."</p>
         </div>
       </div>
     </div>
@@ -1023,6 +1033,7 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
 <span class="k">from</span> scripts.ingest <span class="k">import</span> (fetch_calendar, geocode_event,
     fetch_weather, fetch_bus_arrivals, fetch_train_alerts)
 <span class="k">from</span> scripts.transform <span class="k">import</span> run_transformation
+<span class="k">from</span> scripts.model <span class="k">import</span> predict_next_event
 
 <span class="k">with</span> DAG(
     dag_id=<span class="s">"commute_pipeline"</span>,
@@ -1038,9 +1049,11 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
     t4 = PythonOperator(task_id=<span class="s">"fetch_bus_arrivals"</span>, python_callable=fetch_bus_arrivals)
     t5 = PythonOperator(task_id=<span class="s">"fetch_train_alerts"</span>, python_callable=fetch_train_alerts)
     t6 = PythonOperator(task_id=<span class="s">"sql_transform"</span>,     python_callable=run_transformation)
+    t7 = PythonOperator(task_id=<span class="s">"predict_commute"</span>,   python_callable=predict_next_event)
 
-    <span class="com"># Task graph: calendar → geocode → [weather, bus, alerts] → transform</span>
-    t1 >> t2 >> [t3, t4, t5] >> t6</pre>
+    <span class="com"># 7-task graph: calendar → geocode → [weather, bus, alerts] → transform → predict</span>
+    t1 >> t2 >> [t3, t4, t5] >> t6 >> t7
+    <span class="com"># evaluate_model runs in a separate DAG at 0 8 * * * (daily 8 AM)</span></pre>
         </div>
 
         <div class="card-grid">
@@ -1060,7 +1073,7 @@ http://localhost:8080
             </div>
           </div>
           <div class="card-block">
-            <div class="block-label">Task graph</div>
+            <div class="block-label">Task graph (7 tasks)</div>
             <div class="block-content" style="font-family:monospace;font-size:12px;line-height:2.1;color:#6EE7B7;padding-top:4px">
               fetch_calendar<br>
               &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
@@ -1068,7 +1081,9 @@ http://localhost:8080
               &nbsp;&nbsp;↙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘<br>
               <span style="color:#A8C4DC">weather&nbsp;&nbsp;&nbsp;bus&nbsp;&nbsp;&nbsp;alerts</span><br>
               &nbsp;&nbsp;&nbsp;↘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↙<br>
-              sql_transform
+              sql_transform<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+              <span style="color:#FCA5A5">predict_commute</span>
             </div>
           </div>
         </div>
@@ -1400,26 +1415,144 @@ def evaluate_model(con):
   </div><!-- end route-wrapper phase 3 -->
 </div><!-- end route-map phase 3 -->
 
-<!-- DAY 4/5 COMING SOON DIVIDER -->
+<!-- PHASE 4 DIVIDER -->
 <div class="phase-divider" style="margin-top:12px">
   <div class="phase-divider-line"></div>
-  <div class="phase-divider-badge" style="background:rgba(42,48,64,.4);border:1px solid var(--border);color:var(--dim)">DAY 4 · DAY 5 · COMING SOON</div>
+  <div class="phase-divider-badge" style="background:rgba(14,116,144,.1);border:1px solid rgba(14,116,144,.35);color:#67E8F9">PHASE 4 · DAY 4 · MLOPS</div>
   <div class="phase-divider-line"></div>
 </div>
-<div class="phase-divider-sub">Locked — content updates after each class. Focus on Phases 1–3 first.</div>
+<div class="phase-divider-sub">Day 4 content unlocked 25 Jun 2026. MLflow experiment tracking, model registry, drift detection, and canary deployment. Day 5 still coming — update after class.</div>
 
 <div class="route-map">
   <div class="route-wrapper">
 
-    <div class="station soon">
+    <!-- STATION D4 — MLOps -->
+    <div class="station s7">
       <div class="station-rail">
-        <div class="station-dot" style="background:var(--locked);font-size:10px">D4</div>
+        <div class="station-dot">D4</div>
         <div class="route-line"></div>
       </div>
       <div class="station-card">
-        <div class="soon-label">🔒 Unlocks after Day 4</div>
-        <div class="card-title">Monitoring & Observability</div>
-        <div class="card-desc">Content releases after Day 4. Likely covers data quality dashboards, alerting on pipeline failures, row-count anomaly detection, and SLA monitoring. Placeholder — update after class.</div>
+        <div class="card-eyebrow">MLOps · Day 4</div>
+        <div class="card-title">Experiment Tracking, Model Registry &amp; Drift Detection</div>
+        <div class="card-desc">Day 4 adds the full MLOps lifecycle around the Random Forest model. MLflow tracks every training run — parameters, validation MAE, and the saved .pkl as an artifact with a unique run ID. A model registry manages version transitions (staging → <code>@champion</code> → archived) with rollback. Drift detection distinguishes three failure modes: data drift (input distributions shift), concept drift (feature–target relationship changes), and training-serving skew (feature computed differently in train vs production). Shadow deployment logs a challenger's predictions silently without showing them to users; canary deployment shifts live traffic in steps (5% → 50% → 100%) after shadow passes. Prometheus + Grafana handle system-level monitoring alongside the DuckDB-based MAE tracking.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-teal">MLflow</span>
+          <span class="chip chip-teal">Model Registry</span>
+          <span class="chip chip-teal">Drift Detection</span>
+          <span class="chip chip-teal">Shadow → Canary</span>
+          <span class="chip chip-teal">Prometheus + Grafana</span>
+          <span class="chip chip-teal">@champion alias</span>
+          <span class="chip chip-teal">data drift · concept drift</span>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">MLflow Experiment Tracking</div>
+            <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">import mlflow
+
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("commute_prediction")
+
+with mlflow.start_run(run_name="rf_v1"):
+    mlflow.log_param("n_estimators", 100)
+    mlflow.log_param("feature_count", 5)
+    mlflow.log_param("training_rows", len(df))
+    mlflow.log_metric("mae_validation", mae)
+    mlflow.log_metric("rmse", rmse)
+    mlflow.sklearn.log_model(model, "commute_predictor")
+
+# Load from registry for inference — @champion decouples version from code
+model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
+# Docker: ghcr.io/mlflow/mlflow:v3.13.0</pre>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Model Registry — Version Lifecycle</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Staging</strong> — newly trained model registered but not in production. Shadow-tested against production for 7 days.</div>
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Production</strong> — current model serving predictions. Promoted from staging only when MAE improves by &gt;5%.</div>
+              <div><strong style="color:#67E8F9">Archived</strong> — retired models kept for rollback. Any past version can be restored in one command.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">Drift Detection — when to retrain</div>
+          <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC"># Primary drift signal: rising 7-day MAE in predictions table
+# If mae_7day > 10 min threshold → log drift warning → trigger retrain
+
+# Feature distributions most likely to drift in this project:
+#   hour_of_day    — if user's schedule changes (new job, WFH policy)
+#   is_rainy       — seasonal baseline (monsoon vs dry season)
+#   walk_distance_m — if user moves home or changes commute destination
+
+def evaluate_model(con):
+    mae = compute_7day_mae(con)  # already stored in predictions.mae_7day
+    if mae > DRIFT_THRESHOLD:
+        logging.warning(f"Drift detected: MAE {mae:.1f} min > threshold")
+        # Optionally: insert pipeline_runs row to trigger retraining DAG</pre>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Shadow → Canary → Promote</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Shadow</strong> — new model sees same live inputs, predictions logged only, never shown to users. Zero risk.</div>
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Canary</strong> — gradually shift real traffic: 95%/5% → 50%/50% → 100%/0%. Pause if error rate or latency spikes.</div>
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Promote</strong> — if challenger MAE beats production by &gt;5%, set <code>@champion</code> alias. Old production → archived (rollback available).</div>
+              <div><strong style="color:#67E8F9">Rollback</strong> — reassign <code>@champion</code> alias to any prior version. Serving code unchanged.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">MLflow vs pipeline_runs — different concerns</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:8px"><code>pipeline_runs</code> — "ingest ran at 08:10, 47 rows, success". Tracks pipeline health, not model experiments.</div>
+              <div>MLflow — "training run #7 used n_estimators=100, mae=4.2 min, 520 rows, 2026-07-01". Tracks ML experiment history and artifact lineage. Two separate concerns, two separate tools.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Three Drift Types (Day 4)</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Data Drift</strong> — input feature distributions change. Example: user changes jobs, <code>hour_of_day</code> shifts from 8 AM to 10 AM starts.</div>
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Concept Drift</strong> — feature-to-target relationship changes. Example: new MRT line opens; same <code>hour_of_day</code> now predicts a shorter <code>total_duration_min</code>.</div>
+              <div><strong style="color:#67E8F9">Training-Serving Skew</strong> — feature computed differently in training vs production. Example: <code>is_rainy</code> encoded as <code>True/False</code> at training time but <code>1/0</code> in production — model was never trained on these values.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Monitoring: Prometheus + Grafana</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:8px"><strong style="color:#67E8F9">System logs</strong> — request time, endpoint, latency_ms, HTTP status code, error message. Scraped by Prometheus from FastAPI <code>/metrics</code>.</div>
+              <div style="margin-bottom:8px"><strong style="color:#67E8F9">Model logs</strong> — model_uri, feature_version, input_features (JSON), prediction_value, inference_duration_ms. Grafana dashboards visualise these alongside MAE over time.</div>
+              <div>Together: system health (Prometheus/Grafana) + model health (MAE from <code>predictions</code> table) = full observability.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">Apply to model.py — what to add</div>
+          <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+            <div style="margin-bottom:6px">1. <code>pip install mlflow</code> → add to requirements.txt</div>
+            <div style="margin-bottom:6px">2. Wrap <code>train_model()</code> in <code>mlflow.start_run()</code> context</div>
+            <div style="margin-bottom:6px">3. <code>mlflow.sklearn.log_model()</code> instead of bare <code>joblib.dump()</code></div>
+            <div style="margin-bottom:6px">4. Register model: <code>mlflow.register_model(run_uri, "commute_predictor")</code></div>
+            <div>5. In <code>evaluate_model()</code>: add drift check against MAE threshold</div>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"Day 4 adds the full MLOps lifecycle around my model. I integrated MLflow — every <code>--train</code> run logs parameters, validation MAE, and saves the model as a tracked artifact. The model registry uses an <code>@champion</code> alias so inference code never hard-codes a version number. I can roll back to any past version in one command.</p>
+          <p>Day 4 also taught me three ways a model can degrade in production: data drift — where input distributions change, for example my commute schedule shifts from 8am to 10am starts. Concept drift — where the feature-to-target relationship changes, like a new MRT line opening. And training-serving skew — where the same feature is computed differently in training versus production.</p>
+          <p>For monitoring, system metrics like latency and error rates go to Prometheus and Grafana. Model accuracy is tracked by the daily 8am Airflow evaluate_model task — if 7-day MAE crosses 10 minutes, it logs a drift warning. New model versions go through shadow deployment first — same live inputs, predictions logged but never shown to users — then canary deployment at 5% traffic before full promotion."</p>
+        </div>
       </div>
     </div>
 
@@ -1430,7 +1563,7 @@ def evaluate_model(con):
       </div>
       <div class="station-card">
         <div class="soon-label">🔒 Unlocks after Day 5</div>
-        <div class="card-title">Cloud Deployment & Scaling</div>
+        <div class="card-title">Cloud Deployment &amp; Scaling</div>
         <div class="card-desc">Content releases after Day 5. Likely covers deploying to a cloud provider (AWS/GCP), scaling beyond a single machine, managed Airflow, and production-grade secrets management. Placeholder — update after class.</div>
       </div>
     </div>

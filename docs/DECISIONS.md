@@ -415,6 +415,190 @@ for attempt in range(max_retries):
 
 ---
 
+## D27 — next_bus2_mins Column in bus_arrivals (Session 5)
+
+**Decision:** Add `next_bus2_mins INTEGER` to `bus_arrivals` to store the ETA of the second upcoming bus in addition to the first.
+
+**Why:**
+- `transform.py` displays a live bus arrivals board showing x₁ (first bus) and x₂ (second bus) minutes from now
+- Without storing `next_bus2_mins`, the board could only show one arrival — which is less useful if the first bus is about to leave as the user reads the recommendation
+- The LTA v3/BusArrival response already provides `NextBus2.EstimatedArrival` — the field was available at no extra API cost
+- Enables "next bus in 3 min, one after in 11 min" display, letting users decide whether to rush or wait
+
+**Schema change:** `ALTER TABLE bus_arrivals ADD COLUMN IF NOT EXISTS next_bus2_mins INTEGER` (applied as migration in schema.py).
+
+---
+
+## D28 — num_stops Column in route_legs (Session 5)
+
+**Decision:** Add `num_stops INTEGER` to `route_legs` to store the number of stops between boarding and alighting for each leg.
+
+**Why:**
+- The alt routes section in `transform.py` displays compact leg summaries in the format `🚌65 8m/4st` (service, duration, stop count)
+- Stop count gives users a sense of distance and how often they need to pay attention to their stop without showing a full map
+- `num_stops = len(intermediateStops) + 1` — the +1 counts the alighting stop itself. `WALK` legs store `NULL` since walking doesn't have intermediate stops in the OneMap response
+- OneMap's `intermediateStops` array was already available in the route response — zero additional API calls needed
+
+**Schema change:** `ALTER TABLE route_legs ADD COLUMN IF NOT EXISTS num_stops INTEGER` (applied as migration in schema.py).
+
+---
+
+## D29 — MLflow for Experiment Tracking (Day 4)
+
+**Decision:** Integrate MLflow into `scripts/model.py` to track each training run with parameters, metrics, and the saved model artifact. Use MLflow's model registry and `@champion` alias for serving.
+
+**Why:**
+- Without experiment tracking, `--train` overwrites `models/commute_predictor.pkl` silently — there is no record of which parameters were used, what the validation MAE was, or which training date produced which model
+- `pipeline_runs` table logs pipeline events, not model experiments. These are different concerns: `pipeline_runs` tells you "the ingest ran at 08:10, 47 rows, success". MLflow tells you "training run #7 used n_estimators=100, mae=4.2 min, trained on 520 historical rows"
+- MLflow's local tracking server runs as a single process (`mlflow ui`) and stores runs in `mlruns/` — zero infrastructure overhead for a local project
+- The model registry enables staging → production → archive transitions with rollback, which pairs with the shadow/canary deployment pattern (D31)
+- Demonstrates "MLOps" vocabulary the rubric rewards
+
+**Full MLflow API pattern (Day 4):**
+```python
+import mlflow
+
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("commute_prediction")
+
+with mlflow.start_run(run_name="rf_v1"):
+    mlflow.log_param("n_estimators", 100)
+    mlflow.log_param("feature_count", 5)
+    mlflow.log_param("training_rows", len(df))
+    mlflow.log_metric("mae_validation", mae)
+    mlflow.log_metric("rmse", rmse)
+    mlflow.sklearn.log_model(model, "commute_predictor")
+
+# Register for serving:
+mlflow.register_model("runs:/<run_id>/commute_predictor", "commute_predictor")
+# Set alias: client.set_registered_model_alias("commute_predictor", "champion", version)
+
+# Load model for inference (from registry with @champion alias):
+model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
+```
+
+**Local MLflow server (Day 4 Docker image):** `ghcr.io/mlflow/mlflow:v3.13.0`
+
+**Model Registry lifecycle:**
+- `Staging` — newly trained, not yet serving. Shadow-tested against production.
+- `Production` / `@champion` — current model serving predictions. Alias `@champion` decouples version number from serving code.
+- `Archived` — retired models preserved for rollback.
+
+**Two logging concerns:** System logs track request latency, endpoint, status code. Model logs track model URI, feature version, input features, prediction value. Both needed for full monitoring.
+
+---
+
+## D30 — Drift Detection via MAE Threshold (Day 4)
+
+**Decision:** Treat rising 7-day MAE as the primary signal for model drift, rather than statistical feature distribution tests. Distinguish three types of degradation: data drift, concept drift, and training-serving skew.
+
+**Three types of ML degradation (Day 4 taxonomy):**
+
+| Type | Definition | Example in this project |
+|---|---|---|
+| **Data Drift** | Input feature distributions change after deployment | User changes jobs: `hour_of_day` distribution shifts from 8 AM to 10 AM starts |
+| **Concept Drift** | Relationship between features and target changes | Bus network restructuring: same `hour_of_day` → different `total_duration_min` mapping |
+| **Training-Serving Skew** | Feature computation differs between training and production | `is_rainy` encoded as `True/False` in training but `1/0` in production, or a weather API format change |
+
+**Why MAE threshold over distribution tests:**
+- Distribution-based tests (KL divergence, PSI) require enough recent production data — at submission time the pipeline may only have days of real data
+- MAE is already computed by `evaluate_model` (daily 8 AM Airflow task) and stored in `predictions.mae_7day` — drift detection requires no new infrastructure
+- A rising MAE captures the *effect* of all three drift types regardless of root cause — a practical primary signal
+- If MAE-based detection is insufficient (feature distributions shift but accuracy hasn't degraded yet), PSI or KS-test can be added per-feature later
+
+**Implementation:** In `evaluate_model()`, compare `mae_7day` against a configurable threshold (default 10 min). If exceeded, log `logging.warning("Model drift detected: MAE %s > threshold 10")` and optionally trigger a retraining pipeline_run entry so the Airflow DAG can pick it up.
+
+**Before retraining, diagnose root cause:** data problem (stale Parquet)? Feature problem (API format change)? Temporary event (public holiday spike)? Real-world change (new MRT line)? Only the last case requires model retraining — the others require fixing the data or feature pipeline.
+
+---
+
+## D31 — Shadow Deployment Before Canary (Day 4)
+
+**Decision:** Use a two-phase promotion pattern for new model versions: **shadow** first, then **canary**, before full promotion.
+
+**Shadow deployment:**
+- The new (challenger) model receives the same live prediction requests as the production model
+- Its predictions are logged to a shadow table but **never returned to users** — users always see the production model's output
+- Purpose: validate that the challenger produces sensible predictions on real production inputs before any user risk
+- Zero user-facing impact — ideal for testing an untested model version
+
+**Canary deployment:**
+- A small fraction of real user requests is routed to the challenger; the rest continue to production
+- Traffic split: 95%/5% → 50%/50% → 100%/0% — stepped over days or pipeline cycles as confidence grows
+- Warning signals that should pause promotion: API error rate increase, prediction latency spike, prediction distribution shift, delayed MAE degradation
+- Only reached after shadow deployment confirms the challenger is stable
+
+**Why this order matters:** Shadow catches crashes and format errors safely. Canary catches accuracy regressions on a small user slice before they affect everyone. Full promote only after both gates pass.
+
+**Monitoring tools (Day 4):** Prometheus scrapes metrics from the FastAPI `/metrics` endpoint (request count, prediction latency, error rate). Grafana dashboards visualise these metrics alongside 7-day MAE from the `predictions` table. Together they cover system health (Prometheus/Grafana) and model health (MAE tracking).
+
+**For this project's scope:** Shadow testing is simulated by running `model.py --predict` with both production and staging model URIs and comparing results in the `predictions` table. Full traffic routing infrastructure (load balancer, feature flags) is out of scope for the submission.
+
+---
+
+## D32 — Dynamic `recommendation_reason` in `v_enriched_routes` View (Session 6)
+
+**Decision:** Expand the `recommendation_reason` CASE WHEN in `v_enriched_routes` from 4 static labels to 9 dynamic labels computed using DuckDB window functions.
+
+**Why:**
+- The original view produced only 4 labels: "⚠ Rainy", "⚠ MRT disruption", "✓ Fastest option", "Alternative route"
+- "✓ Fastest option" was hardcoded regardless of whether the route was also direct (no transfers), cheapest, or least walking — so the displayed reason was often imprecise or misleading
+- DuckDB window functions (`MIN() OVER (PARTITION BY event_id)`) allow each route row to compare itself against all sibling routes for the same event — enabling truly dynamic labels without Python logic
+
+**9 labels (priority order):**
+1. `⚠ Rain — Xm exposed walk` — rainy + walk > 400m
+2. `⚠ Service disruption — check alternatives` — active heavy alert
+3. `✓ Fastest + direct (no transfers)` — fastest AND zero transfers
+4. `✓ Direct — no transfers` — zero transfers (not necessarily fastest)
+5. `✓ Fastest + fewest transfers` — fastest AND fewest transfers
+6. `✓ Fastest (X min)` — fastest duration
+7. `✓ Fewest transfers (N)` — fewest transfers
+8. `✓ Least walking (Xm)` — least walk distance
+9. `✓ Cheapest fare` / `✓ Best overall` — fallbacks
+
+**Trade-off:** The CASE evaluates each condition in order, so only the highest-priority matching label is shown. A route that is both cheapest and fastest will show "✓ Fastest" not "✓ Cheapest" — this is intentional (time > money for commuters).
+
+---
+
+## D33 — Inline First-Transit Live Arrival (Replacing Separate Bus Board) (Session 6)
+
+**Decision:** Remove the standalone "Live arrivals — Stop XXXXX" bus board section and instead embed first-transit live arrival directly under the recommended route's step-by-step legs. Alt routes show X1 only as a collapsed note.
+
+**Why:**
+- The separate board showed every bus service at the origin stop — useful for browsing, but noisy when you already have a route recommendation. What the commuter needs to know is: when does the specific vehicle I'm boarding arrive?
+- Embedding the live arrival immediately below the legs maintains the recommendation's context ("you take the NE Line — here's when the next train comes")
+- Two arrivals (X1+X2) for the recommended route let users decide whether to rush out the door for the first bus or wait for the next one 8 minutes later
+- Alt routes show X1 only (collapsed) in the notes line — enough to compare without clutter
+
+**Display format:**
+- Recommended route (bus): `🚌  Bus 65     : next 3 min  |  then 11 min  seats`
+- Recommended route (MRT): `🚇  Northeast Line        : ~3-5 min headway`
+- Alt routes (bus): `🚌Bus 48: 4m` or `🚌Bus 14: 12m ⚠`
+- Alt routes (MRT): `🚇Northeast Line: ~3-5m`
+
+**MRT/LRT limitation:** Singapore's MRT and LRT have no public real-time arrival API. The system uses fixed headway estimates: ~3-5 min for MRT (peak), ~5-10 min for LRT. This is a known limitation, not a bug.
+
+---
+
+## D34 — Dynamic Disruption Filtering to Route's Actual Rail Lines (Session 6)
+
+**Decision:** Filter `train_alerts` to only those whose `affected_line` matches a `service_no` present in the current route's legs before displaying the disruption status label.
+
+**Why:**
+- The old code showed "No active MRT/LRT disruptions" even on routes with no MRT or LRT legs at all — the label was meaningless for a bus-only route
+- And the label hardcoded "MRT/LRT" rather than reflecting what the route actually uses — a pure MRT route should say "No active MRT disruptions", not "No active MRT/LRT disruptions"
+- The fix: after fetching leg data, build `route_rail_lines = {leg.service_no for leg in legs if leg.mode in ("MRT", "LRT")}`, then `relevant_alerts = [a for a in alerts if a.affected_line in route_rail_lines]`
+
+**Dynamic label logic:**
+- Route has both MRT and LRT legs → rail_label = "MRT/LRT"
+- Route has only MRT legs → rail_label = "MRT"
+- Route has only LRT legs → rail_label = "LRT"
+- Route has no rail legs → skip disruption section entirely
+
+**Alt routes:** The same filtering is applied per-alt. Each alt route's notes line shows its own disruption status (e.g., "✅ No MRT disruption") rather than a global system-wide status.
+
+---
+
 ## D21 — Star Schema for DuckDB Tables
 
 **Decision:** Design DuckDB tables as an informal star schema with `route_options` as the fact table.

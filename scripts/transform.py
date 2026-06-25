@@ -32,9 +32,10 @@ DB_PATH = Path(__file__).parent.parent / "db" / "commute.duckdb"
 MODE_ICON = {"WALK": "🚶", "BUS": "🚌", "MRT": "🚇", "LRT": "🚈"}
 
 MRT_LINE_NAMES = {
-    "EW": "East West Line", "NS": "North South Line", "CC": "Circle Line",
-    "DT": "Downtown Line",  "TE": "Thomson-East Coast Line",
-    "BP": "Bukit Panjang LRT", "SE": "Sengkang LRT", "PE": "Punggol LRT",
+    "EW": "East West Line",  "NS": "North South Line", "NE": "Northeast Line",
+    "CC": "Circle Line",     "DT": "Downtown Line",    "TE": "Thomson-East Coast Line",
+    "CR": "Cross Island Line","JR": "Jurong Region Line",
+    "BP": "Bukit Panjang LRT","SE": "Sengkang LRT",   "PE": "Punggol LRT",
 }
 
 BEST_ROUTE_QUERY = """
@@ -65,16 +66,10 @@ ORDER BY fetched_at DESC
 LIMIT 1
 """
 
-BUS_BOARD_QUERY = """
-SELECT service_no, next_bus_mins, next_bus2_mins, load
+FIRST_TRANSIT_FULL_QUERY = """
+SELECT next_bus_mins, next_bus2_mins, load
 FROM bus_arrivals
-WHERE fetched_at = (SELECT MAX(fetched_at) FROM bus_arrivals)
-ORDER BY COALESCE(next_bus_mins, 999)
-"""
-
-BUS_STOP_QUERY = """
-SELECT bus_stop_code
-FROM bus_arrivals
+WHERE service_no = ?
 ORDER BY fetched_at DESC
 LIMIT 1
 """
@@ -245,6 +240,21 @@ def main():
                         "to_name", "duration_min", "distance_m", "num_stops"]
             legs = [dict(zip(leg_cols, l)) for l in legs]
 
+            modes_in_legs = {l["mode"] for l in legs}
+            _mrt = "MRT" in modes_in_legs
+            _lrt = "LRT" in modes_in_legs
+            _bus = "BUS" in modes_in_legs
+            if _mrt and _lrt:
+                recommended_mode = "Bus + MRT and LRT" if _bus else "MRT and LRT"
+            elif _mrt:
+                recommended_mode = "Bus + MRT" if _bus else "MRT"
+            elif _lrt:
+                recommended_mode = "Bus + LRT" if _bus else "LRT"
+            elif _bus:
+                recommended_mode = "Direct Bus"
+            else:
+                recommended_mode = "Walk"
+
             # ── Bus waiting time (first BUS leg) ───────────────────────────────
             bus_wait_min = 0
             bus_wait_note = ""
@@ -260,8 +270,20 @@ def main():
                                      "LSD": "very crowded"}.get(load, "")
                         bus_wait_note = f"next Bus {first_bus['service_no']} in {raw_wait} min ({load_desc})"
 
-            # ── Active MRT disruptions ─────────────────────────────────────────
+            # ── Active rail disruptions (filtered to route's lines) ──────────────
             alerts = con.execute(ACTIVE_ALERTS_QUERY).fetchall()
+            route_rail_modes = {l["mode"] for l in legs if l["mode"] in ("MRT", "LRT")}
+            route_rail_lines = {l["service_no"] for l in legs
+                                if l["mode"] in ("MRT", "LRT") and l["service_no"]}
+            if "MRT" in route_rail_modes and "LRT" in route_rail_modes:
+                rail_label = "MRT/LRT"
+            elif "MRT" in route_rail_modes:
+                rail_label = "MRT"
+            elif "LRT" in route_rail_modes:
+                rail_label = "LRT"
+            else:
+                rail_label = None
+            relevant_alerts = [a for a in alerts if a[0] in route_rail_lines]
 
             # ── Leave-latest already in DB; compute leave-now scenario ─────────
             # estimated_arrival with standard conditions: event_start - 10 min buffer
@@ -296,7 +318,7 @@ def main():
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 [
                     r["event_id"],
-                    "Bus + MRT" if r["num_transfers"] > 0 else "Direct Bus",
+                    recommended_mode,
                     r["total_duration_min"],
                     r["leave_by"],
                     estimated_arrival,
@@ -332,6 +354,17 @@ def main():
             log.info("    Route: %d min | $%.2f | %d transfer(s)",
                      r["total_duration_min"], r["fare"] or 0, r["num_transfers"])
             log.info("    Why chosen: %s", r["recommendation_reason"])
+            if rainy_walk_warnings:
+                for w in rainy_walk_warnings:
+                    log.warning("    %s", w)
+            else:
+                log.info("    ☀  Weather: %s — no rain impact",
+                         r.get("weather_forecast", "Clear"))
+            if relevant_alerts:
+                for affected_line, msg in relevant_alerts:
+                    log.warning("    🚨 Disruption [%s]: %s", affected_line, msg[:80])
+            elif rail_label:
+                log.info("    ✅  No active %s disruptions", rail_label)
             log.info("")
 
             # Step-by-step legs
@@ -356,6 +389,27 @@ def main():
             else:
                 log.info("    (no leg detail — re-run ingest.py to populate route_legs)")
 
+            # ── Live arrival for first transit (recommended route, X1 + X2) ────────
+            first_transit = next((l for l in legs if l["mode"] != "WALK"), None)
+            if first_transit:
+                ft_mode = first_transit["mode"]
+                ft_svc = first_transit["service_no"] or ""
+                ft_icon = MODE_ICON.get(ft_mode, "  ")
+                if ft_mode == "BUS" and ft_svc:
+                    bw = con.execute(FIRST_TRANSIT_FULL_QUERY, [ft_svc]).fetchone()
+                    if bw and bw[0] is not None:
+                        x1, x2, load = bw
+                        load_desc = {"SEA": "seats", "SDA": "standing", "LSD": "full"}.get(load or "", "")
+                        x2_str = f"  |  then {x2} min" if x2 is not None else ""
+                        log.info("    %s  Bus %-6s : next %d min%s  %s",
+                                 ft_icon, ft_svc, x1, x2_str, load_desc)
+                    else:
+                        log.info("    %s  Bus %-6s : no live data at origin stop", ft_icon, ft_svc)
+                elif ft_mode == "MRT":
+                    ft_name = MRT_LINE_NAMES.get(ft_svc, ft_svc or "MRT")
+                    log.info("    %s  %-22s : ~3-5 min headway", ft_icon, ft_name)
+                elif ft_mode == "LRT":
+                    log.info("    %s  %-22s : ~5-10 min headway", ft_icon, ft_svc or "LRT")
             log.info("")
 
             # ── Alt routes (compact) ───────────────────────────────────────────
@@ -364,78 +418,104 @@ def main():
                 _lcols = ["leg_sequence", "mode", "service_no", "from_name",
                           "to_name", "duration_min", "distance_m", "num_stops"]
 
-                # Score each alt: duration + first-bus wait (soonest arrival wins)
                 scored = []
                 for alt_oid, alt_dur, alt_fare, _ in alt_rows:
                     alt_legs = [dict(zip(_lcols, l))
                                 for l in con.execute(LEGS_QUERY, [alt_oid]).fetchall()]
-                    first_transit_wait = 0
-                    bus_notes = []
+                    # First non-WALK leg drives arrival scoring and live display
+                    ft_leg = next((l for l in alt_legs if l["mode"] != "WALK"), None)
+                    ft_svc = (ft_leg["service_no"] or "") if ft_leg else ""
+                    ft_x1 = None
+                    if ft_leg and ft_leg["mode"] == "BUS" and ft_svc:
+                        bw = con.execute(BUS_WAIT_QUERY, [ft_svc]).fetchone()
+                        ft_x1 = bw[0] if bw else None
+                    # Extra BUS delays: buses that are not the first transit
+                    extra_bus_notes = []
                     for leg in alt_legs:
                         svc = leg["service_no"] or ""
-                        if leg["mode"] == "BUS" and svc:
+                        if leg["mode"] == "BUS" and svc and svc != ft_svc:
                             bw = con.execute(BUS_WAIT_QUERY, [svc]).fetchone()
                             if bw and bw[0] is not None:
-                                first_transit_wait = bw[0]
                                 flag = " ⚠" if bw[0] > 10 else ""
-                                bus_notes.append(f"Bus {svc} ~{bw[0]}m{flag}")
-                            break
-                    scored.append((alt_dur + first_transit_wait, alt_oid, alt_dur, alt_fare, alt_legs, bus_notes))
+                                extra_bus_notes.append(f"Bus {svc} in {bw[0]}m{flag}")
+                    scored.append((alt_dur + (ft_x1 or 0), alt_oid, alt_dur, alt_fare,
+                                   alt_legs, ft_leg, ft_x1, extra_bus_notes))
 
                 scored.sort(key=lambda x: x[0])
 
                 log.info("─" * 56)
-                log.info("🔄  Alt routes  (top 3 by arrival time)")
-                for display_rank, (_, alt_oid, alt_dur, alt_fare, alt_legs, bus_notes) in enumerate(scored[:3], 2):
+                log.info("🔄  Other route options  (sorted by arrival time)")
+                for display_rank, (_, alt_oid, alt_dur, alt_fare, alt_legs,
+                                   ft_leg, ft_x1, extra_bus_notes) in enumerate(scored[:3], 2):
                     parts = []
-                    for leg in alt_legs:
-                        mode, dur, svc = leg["mode"], leg["duration_min"], leg["service_no"] or ""
+                    ai = 0
+                    while ai < len(alt_legs):
+                        leg = alt_legs[ai]
+                        mode = leg["mode"]
+                        dur = leg["duration_min"]
+                        svc = leg["service_no"] or ""
                         stops = leg["num_stops"]
-                        st = f"/{stops}stop" if stops else ""
+                        st = f"/{stops}st" if stops else ""
                         if mode == "WALK":
-                            parts.append(f"🚶{dur}min")
+                            parts.append(f"🚶{dur}m")
+                            ai += 1
                         elif mode == "BUS":
-                            parts.append(f"🚌{svc} {dur}min{st}")
-                        elif mode == "MRT":
-                            parts.append(f"🚇{svc or 'MRT'} {dur}min{st}")
-                        elif mode == "LRT":
-                            parts.append(f"🚈{svc or 'LRT'} {dur}min{st}")
+                            parts.append(f"🚌{svc} {dur}m{st}")
+                            ai += 1
+                        elif mode in ("MRT", "LRT"):
+                            rail = []
+                            while ai < len(alt_legs) and alt_legs[ai]["mode"] in ("MRT", "LRT"):
+                                rail.append(alt_legs[ai])
+                                ai += 1
+                            r_mrt = any(l["mode"] == "MRT" for l in rail)
+                            r_lrt = any(l["mode"] == "LRT" for l in rail)
+                            r_dur = sum(l["duration_min"] for l in rail)
+                            if r_mrt and r_lrt:
+                                parts.append(f"🚇🚈MRT+LRT {r_dur}m")
+                            elif r_mrt:
+                                parts.append(f"🚇{rail[0]['service_no'] or 'MRT'} {r_dur}m")
+                            else:
+                                parts.append(f"🚈{rail[0]['service_no'] or 'LRT'} {r_dur}m")
+                        else:
+                            ai += 1
                     leg_str = " → ".join(parts) if parts else "(no legs)"
-                    note_str = f"   [{', '.join(bus_notes)}]" if bus_notes else ""
-                    log.info(
-                        "    [%d]  %d min  $%.2f    %s%s",
-                        display_rank, alt_dur, alt_fare or 0, leg_str, note_str,
-                    )
+                    log.info("    [%d]  %d min  $%.2f    %s",
+                             display_rank, alt_dur, alt_fare or 0, leg_str)
+
+                    # Notes line: first transit X1 | disruption | extra bus delays
+                    notes = []
+                    if ft_leg:
+                        at_icon = MODE_ICON.get(ft_leg["mode"], "  ")
+                        at_svc = ft_leg["service_no"] or ""
+                        if ft_leg["mode"] == "BUS" and at_svc:
+                            if ft_x1 is not None:
+                                flag = " ⚠" if ft_x1 > 10 else ""
+                                notes.append(f"{at_icon}Bus {at_svc}: {ft_x1}m{flag}")
+                            else:
+                                notes.append(f"{at_icon}Bus {at_svc}: no live data")
+                        elif ft_leg["mode"] == "MRT":
+                            ft_name = MRT_LINE_NAMES.get(at_svc, at_svc or "MRT")
+                            notes.append(f"{at_icon}{ft_name}: ~3-5m")
+                        elif ft_leg["mode"] == "LRT":
+                            notes.append(f"{at_icon}{at_svc or 'LRT'}: ~5-10m")
+                    alt_rail_modes = {l["mode"] for l in alt_legs if l["mode"] in ("MRT", "LRT")}
+                    alt_rail_lines = {l["service_no"] for l in alt_legs
+                                      if l["mode"] in ("MRT", "LRT") and l["service_no"]}
+                    alt_alerts = [a for a in alerts if a[0] in alt_rail_lines]
+                    if alt_alerts:
+                        for aline, _ in alt_alerts:
+                            notes.append(f"⚠ {aline} disruption")
+                    elif alt_rail_modes:
+                        if "MRT" in alt_rail_modes and "LRT" in alt_rail_modes:
+                            notes.append("✅ No MRT/LRT disruption")
+                        elif "MRT" in alt_rail_modes:
+                            notes.append("✅ No MRT disruption")
+                        else:
+                            notes.append("✅ No LRT disruption")
+                    notes.extend(extra_bus_notes)
+                    if notes:
+                        log.info("         %s", " | ".join(notes))
                 log.info("")
-
-            # Warnings
-            if rainy_walk_warnings:
-                for w in rainy_walk_warnings:
-                    log.warning("    %s", w)
-            else:
-                log.info("    ☀  Weather: %s — no rain impact",
-                         r.get("weather_forecast", "Clear"))
-
-            if alerts:
-                for affected_line, msg in alerts:
-                    log.warning("    🚨 Disruption [%s]: %s", affected_line, msg[:80])
-            else:
-                log.info("    ✅  No active MRT/LRT disruptions")
-
-            # ── Live bus board ─────────────────────────────────────────────────
-            bus_board = con.execute(BUS_BOARD_QUERY).fetchall()
-            if bus_board:
-                stop_row = con.execute(BUS_STOP_QUERY).fetchone()
-                stop_code_str = stop_row[0] if stop_row else "?"
-                load_label = {"SEA": "seats", "SDA": "stndg", "LSD": "full "}
-                log.info("")
-                log.info("─" * 56)
-                log.info("🚌  Live arrivals — Stop %s", stop_code_str)
-                log.info("─" * 56)
-                for svc_no, x1, x2, load in bus_board:
-                    x2_str = f"  |  {x2:2d} min" if x2 is not None else "          "
-                    ll = load_label.get(load or "", "     ")
-                    log.info("    Bus %-6s   in %2d min%s   %s", svc_no or "?", x1 or 0, x2_str, ll)
 
             print_walk_suggestion(r["dest_lat"], r["dest_lng"], r["is_rainy"])
 

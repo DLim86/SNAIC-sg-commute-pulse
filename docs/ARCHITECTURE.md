@@ -1,6 +1,6 @@
 # Architecture — SNAIC-sg-commute-pulse
 
-**Last updated: 2026-06-24**
+**Last updated: 2026-06-25 (session 5 + session 6 transform.py improvements + Day 4 MLOps)**
 
 ---
 
@@ -212,6 +212,7 @@ CREATE TABLE IF NOT EXISTS route_legs (
     to_name      VARCHAR,
     duration_min INTEGER,
     distance_m   INTEGER,
+    num_stops    INTEGER,      -- stops between boarding and alighting (WALK = NULL); session 5
     PRIMARY KEY (option_id, leg_sequence)
 );
 
@@ -228,11 +229,12 @@ CREATE TABLE IF NOT EXISTS weather_forecast (
 
 -- DIMENSION: real-time bus arrivals (near-real-time, short history)
 CREATE TABLE IF NOT EXISTS bus_arrivals (
-    bus_stop_code VARCHAR,
-    service_no    VARCHAR,
-    next_bus_mins INTEGER,
-    load          VARCHAR,      -- SEA=seats, SDA=standing, LSD=limited standing
-    fetched_at    TIMESTAMP,
+    bus_stop_code  VARCHAR,
+    service_no     VARCHAR,
+    next_bus_mins  INTEGER,
+    next_bus2_mins INTEGER,     -- ETA of second upcoming bus (session 5)
+    load           VARCHAR,     -- SEA=seats, SDA=standing, LSD=limited standing
+    fetched_at     TIMESTAMP,
     PRIMARY KEY (bus_stop_code, service_no, fetched_at)
 );
 
@@ -303,14 +305,30 @@ SELECT
     w.forecast AS weather_forecast,
     w.is_rainy,
     CASE WHEN ta.alert_id IS NOT NULL THEN ta.message ELSE NULL END AS alert_msg,
+    -- Dynamic reason — 9 labels via window functions (session 6)
     CASE
         WHEN w.is_rainy AND r.walk_distance_m > 400
-            THEN '⚠ Rainy — take covered transport'
+            THEN '⚠ Rain — ' || CAST(r.walk_distance_m AS VARCHAR) || 'm exposed walk'
         WHEN ta.alert_id IS NOT NULL
-            THEN '⚠ MRT disruption — add 20 min buffer'
+            THEN '⚠ Service disruption — check alternatives'
+        WHEN r.num_transfers = 0
+             AND r.total_duration_min = MIN(r.total_duration_min) OVER (PARTITION BY r.event_id)
+            THEN '✓ Fastest + direct (no transfers)'
+        WHEN r.num_transfers = 0
+            THEN '✓ Direct — no transfers'
         WHEN r.total_duration_min = MIN(r.total_duration_min) OVER (PARTITION BY r.event_id)
-            THEN '✓ Fastest option'
-        ELSE 'Alternative route'
+             AND r.num_transfers = MIN(r.num_transfers) OVER (PARTITION BY r.event_id)
+            THEN '✓ Fastest + fewest transfers'
+        WHEN r.total_duration_min = MIN(r.total_duration_min) OVER (PARTITION BY r.event_id)
+            THEN '✓ Fastest (' || CAST(r.total_duration_min AS VARCHAR) || ' min)'
+        WHEN r.num_transfers = MIN(r.num_transfers) OVER (PARTITION BY r.event_id)
+            THEN '✓ Fewest transfers (' || CAST(r.num_transfers AS VARCHAR) || ')'
+        WHEN r.walk_distance_m = MIN(r.walk_distance_m) OVER (PARTITION BY r.event_id)
+            THEN '✓ Least walking (' || CAST(r.walk_distance_m AS VARCHAR) || 'm)'
+        WHEN r.fare > 0
+             AND r.fare = MIN(CASE WHEN r.fare > 0 THEN r.fare END) OVER (PARTITION BY r.event_id)
+            THEN '✓ Cheapest fare'
+        ELSE '✓ Best overall'
     END AS recommendation_reason,
     ROW_NUMBER() OVER (
         PARTITION BY r.event_id
