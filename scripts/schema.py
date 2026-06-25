@@ -173,6 +173,8 @@ LEFT JOIN train_alerts ta
 MIGRATIONS = [
     "ALTER TABLE bus_arrivals ADD COLUMN IF NOT EXISTS next_bus2_mins INTEGER",
     "ALTER TABLE route_legs ADD COLUMN IF NOT EXISTS num_stops INTEGER",
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS predicted_crowd VARCHAR",
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS actual_crowd VARCHAR",
 ]
 
 

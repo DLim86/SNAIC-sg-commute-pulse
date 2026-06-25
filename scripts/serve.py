@@ -67,7 +67,8 @@ LIMIT 3
 """
 
 PREDICTION_QUERY = """
-SELECT predicted_min, actual_min, model_version, mae_7day, predicted_at
+SELECT predicted_min, actual_min, predicted_crowd, actual_crowd,
+       model_version, mae_7day, predicted_at
 FROM predictions
 WHERE event_id = ?
 ORDER BY predicted_at DESC
@@ -354,10 +355,13 @@ st.subheader("🤖 ML Prediction")
 
 pred = con.execute(PREDICTION_QUERY, [event_id]).fetchone()
 
+CROWD_ICON = {"SEA": "🟢", "SDA": "🟡", "LSD": "🔴"}
+CROWD_LABEL = {"SEA": "Seats available", "SDA": "Standing", "LSD": "Very full"}
+
 if pred is None:
     st.info("Model not yet trained — run `python scripts/model.py --train` then `python scripts/model.py --predict`")
 else:
-    predicted_min, actual_min, model_version, mae_7day, predicted_at = pred
+    predicted_min, actual_min, predicted_crowd, actual_crowd, model_version, mae_7day, predicted_at = pred
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Predicted journey", f"{predicted_min} min")
@@ -367,6 +371,17 @@ else:
     with col3:
         mae_str = f"{mae_7day:.1f} min" if mae_7day is not None else "—"
         st.metric("7-day MAE", mae_str)
+
+    if predicted_crowd:
+        icon = CROWD_ICON.get(predicted_crowd, "")
+        label = CROWD_LABEL.get(predicted_crowd, predicted_crowd)
+        actual_crd_str = ""
+        if actual_crowd:
+            a_icon = CROWD_ICON.get(actual_crowd, "")
+            a_label = CROWD_LABEL.get(actual_crowd, actual_crowd)
+            actual_crd_str = f"  ·  Actual crowd: {a_icon} {a_label}"
+        st.caption(f"Predicted crowd at boarding: {icon} {label}{actual_crd_str}")
+
     st.caption(f"Model: {model_version or '—'}  ·  Predicted at {fmt_sgt(predicted_at)}")
 
 # --- Footer + auto-refresh ---
