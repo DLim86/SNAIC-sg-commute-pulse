@@ -3,7 +3,7 @@
 This document lets another Claude session (or any developer) continue this project
 from scratch with no prior chat history.
 
-**Last updated: 2026-06-25 (session 5 + session 6 transform.py improvements + Day 4 MLOps)**
+**Last updated: 2026-06-25 (session 8 — per-route ML predictions + mode-aware actual backfill)**
 
 ---
 
@@ -41,18 +41,18 @@ Given a user's next Google Calendar event, the pipeline:
 
 | Criterion | Marks | Current Gap |
 |---|---|---|
-| End-to-End Pipeline | 30 | Need: serve.py, api.py, Airflow DAG, Docker |
-| **ML and Real-Time Output** | **30** | **CRITICAL: need model.py — zero ML without it** |
+| End-to-End Pipeline | 30 | Need: api.py, Airflow DAG, Docker |
+| **ML and Real-Time Output** | **30** | **model.py DONE ✅ — per-route predictions, mode-aware actual backfill, dashboard panel** |
 | Technical Depth & Robustness | 10 | Strong: retry, idempotency, logging, coord validation |
 | Presentation & Explanation | 30 | Needs video practice, reflection answers |
 
-**ML criterion requires:** batch processing ✅ + model training/inference ❌ + live dashboard ✅ (pending) + model evaluation ❌
+**ML criterion requires:** batch processing ✅ + model training/inference ✅ + live dashboard ✅ + model evaluation ✅
 
 The rubric example: "Generate predictions for the next two hours and compare earlier predictions with actual data. Evaluate the prediction model every day at 8:00 AM." — This is exactly what model.py + the Airflow evaluate_model task must do.
 
 ---
 
-## Build Status (as of 2026-06-24)
+## Build Status (as of 2026-06-25 session 8)
 
 ### Done and tested
 
@@ -69,17 +69,17 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `docs/ARCHITECTURE.md` | Updated — includes ML layer, smart default data flow, geocoding fallback |
 | `docs/DECISIONS.md` | Complete — D01–D37 (session 7 added: D35 walk-only inline, D36 postal code extraction, D37 location-change log; D33 format updated to clock times) |
 | `scripts/__init__.py` | Done — empty, required for Airflow imports |
-| `scripts/schema.py` | Done — **9 tables** + `v_enriched_routes` view. `predictions` table added session 4. Ready for model.py. |
+| `scripts/schema.py` | Done — **9 tables** + `v_enriched_routes` view. `predictions` table added session 4. **Session 8 migrations:** 4 new `predictions` columns (`option_id`, `boarding_stop_code`, `alighting_stop_code`, `transit_service_no`) + `predicted_crowd` + `actual_crowd`. Run `python scripts/schema.py` to apply all migrations. |
 | `scripts/ingest.py` | Done — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always — HOME_ADDRESS is destination-only, not origin) + progressive geocoding fallback + WORK_ADDRESS event-location fallback + `get_smart_default()` time-of-day heuristic + `v3/BusArrival` endpoint + 5-nearest-stop fallback + float-suffix strip on BusStopCode + **`_purge_stale_events()` (session 5)** — deletes stale future events+routes after calendar reschedule + **postal code extraction in `geocode()` (session 7)** — `re.findall(r'\b\d{6}\b')` prepended as first candidate + **location-change detection log (session 7)** — logs `📍 Destination updated (NNN m shift)` when dest shifts >50m |
-| `scripts/transform.py` | Done — `AND start_time > NOW()` filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, **alt routes section** (session 5 — top 3 non-recommended options scored by next-bus arrival + duration, stop counts per leg, delay flag for buses >10 min away; queries `route_options` directly — NOT `v_enriched_routes` which would return 47× duplicates from weather cross-join), walk alternative (Zone 1/2), optional Garmin/Whoop + **session 6:** `recommended_mode` dynamic from actual leg modes; weather+disruption under "Why chosen:"; disruption filtered to route's actual rail lines (`route_rail_lines` set); alt heading "Other route options (sorted by arrival time)" with [2]/[3] labels; MRT+LRT consecutive legs grouped in compact alt display; **inline first-transit live arrival** (X1+X2 for bus, headway for MRT/LRT) replaces separate bus board; per-alt X1 in notes; per-alt disruption note; `MRT_LINE_NAMES` updated with NE/CR/JR + **session 7:** clock-time arrivals HH:MM SGT; `_walk_metrics()` helper; walk-only inline display (`is_walk_only` flag) |
-| `scripts/serve.py` | Done (session 7) — Streamlit dashboard, `read_only=True` DuckDB, 60s auto-refresh via `time.sleep(60); st.rerun()`, event card, 3-column metrics (leave-by/duration/fare), "Why chosen" info block, conditional weather/disruption warnings, step-by-step legs with mode icons, inline live arrivals with clock times, alt route expanders [2]/[3], ML prediction panel (placeholder until model.py trained). Run: `streamlit run scripts/serve.py` |
+| `scripts/transform.py` | Done — `AND start_time > NOW()` filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, **alt routes section** (session 5), walk alternative (Zone 1/2), optional Garmin/Whoop + **session 6:** `recommended_mode` dynamic; disruption filtered to route's rail lines; alt heading with [2]/[3] labels; MRT+LRT grouped in alt display; inline first-transit live arrival (X1+X2 bus, headway MRT/LRT); `MRT_LINE_NAMES` with NE/CR/JR + **session 7:** clock-time arrivals HH:MM SGT; `_walk_metrics()` helper; walk-only inline display (`is_walk_only` flag) + **session 8:** `alt_rows = [] if is_walk_only` — alt routes skipped entirely for walk-only routes |
+| `scripts/model.py` | Done (session 8) — `--train` (RandomForestRegressor + GradientBoostingClassifier, 500 synthetic bootstrap rows, saves `models/commute_predictor.pkl` + `models/crowd_classifier.pkl`); `--predict` scores ALL 3 route options for next event (not just rank-1), stores `prediction_id = f"{option_id}_pred"`, with `option_id`, `boarding_stop_code` (from `bus_arrivals`), `alighting_stop_code` (matched from `route_legs.to_name` → `bus_stops.Description` via `_match_stop_name()`), `transit_service_no`; `--evaluate` computes 7-day MAE; `--backfill` fills `actual_min` per mode: BUS → LTA v3/BusArrival at alighting stop (within 3h window), MRT → `total_duration_min + 4` (or +20 if HEAVY disruption in `train_alerts`), LRT → `total_duration_min + 7` (or +20), WALK → `total_duration_min` deterministic. Weather cross-join bug fixed: scalar subquery replaces LEFT JOIN that produced 47× rows. |
+| `scripts/serve.py` | Done (session 8) — Streamlit dashboard, `read_only=True` DuckDB, 60s auto-refresh via `time.sleep(60); st.rerun()`, event card, 3-column metrics (leave-by/duration/fare), "Why chosen" info block, conditional weather/disruption warnings, step-by-step legs with mode icons, inline live arrivals with clock times, alt route expanders [2]/[3] each showing `🤖 ML: ~X min · crowd: 🟡 Standing` caption, ML prediction panel keyed by `prediction_id = f"{option_id}_pred"`. `CROWD_ICON` / `CROWD_LABEL` at module level (shared by recommended panel + alt expanders). Run: `streamlit run scripts/serve.py` |
 
 ### Still to build (in this order)
 
 | File | Purpose | Why this order |
 |---|---|---|
-| `scripts/model.py` | **NEXT — CRITICAL** — train RF, predict, evaluate, 30-mark rubric criterion | ML panel in serve.py shows placeholder until this is built |
-| `scripts/api.py` | FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`, `/api/v1/prediction/{event_id}` | After model.py so prediction endpoint can be included |
+| `scripts/api.py` | **NEXT** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`, `/api/v1/prediction/{event_id}` | model.py done; api.py is the last missing script |
 | `dags/__init__.py` + `dags/commute_pipeline_dag.py` | Airflow DAG — 7 tasks, `schedule="*/10 * * * *"` | After all scripts exist |
 | `docker-compose.yml` + `Dockerfile` | 3 services: pipeline, api, dashboard | Last — wraps everything |
 
@@ -96,11 +96,11 @@ bus_arrivals      — (bus_stop_code, service_no, fetched_at) PK, next_bus_mins,
 train_alerts      — alert_id PK, affected_line, message, severity, fetched_at
 recommendations   — event_id PK, recommended_mode, total_duration_min, leave_by, estimated_arrival, weather_warning, disruption_warning, reason, created_at
 pipeline_runs     — run_id PK, source, rows_upserted, duration_ms, status, error_msg, ran_at
-predictions       — prediction_id PK, event_id, predicted_min, actual_min (nullable — backfilled), model_version, mae_7day (nullable), predicted_at
+predictions       — prediction_id PK, event_id, option_id [s8], predicted_min, predicted_crowd [s8], actual_min (nullable), actual_crowd [s8], model_version, mae_7day (nullable), boarding_stop_code [s8], alighting_stop_code [s8], transit_service_no [s8], predicted_at
 ```
 
-**`predictions` table is already in `scripts/schema.py`** (added session 4, confirmed present — no schema changes needed before building `scripts/model.py`).
-`actual_min` is filled in after the commute window passes by comparing with `route_options.total_duration_min` for the same `event_id`.
+**`predictions` table:** base columns added session 4; 6 new columns added session 8 via `MIGRATIONS` in schema.py. `prediction_id` format changed from `{event_id}_pred` to `{option_id}_pred` (session 8) — one row per route option, not per event. Old rows (pre-session-8) have `option_id IS NULL` and are silently ignored by serve.py.
+`actual_min` is mode-aware backfill (session 8): BUS → LTA v3/BusArrival at alighting stop; MRT → `total_duration_min + 4` headway (or +20 disruption); LRT → `total_duration_min + 7`; WALK → `total_duration_min`.
 
 View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_forecast + train_alerts. Returns `route_rank` via `ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY rain_penalty, total_duration_min)`.
 
@@ -135,25 +135,22 @@ View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_fo
 
 ---
 
-## model.py Design (to build)
+## model.py — BUILT (session 8)
 
 **Purpose:** Satisfy the 30-mark "ML and Real-Time Output" rubric criterion.
 
-**Model:** `RandomForestRegressor` (scikit-learn)
-- **Features:** `hour_of_day` (0–23), `day_of_week` (0–6), `is_rainy` (0/1), `walk_distance_m`, `num_transfers`
-- **Target:** `total_duration_min`
-- **Saved to:** `models/commute_predictor.pkl` (models/*.pkl in .gitignore, models/.gitkeep committed)
+**Models:**
+- `RandomForestRegressor` → `models/commute_predictor.pkl` — predicts `total_duration_min`
+- `GradientBoostingClassifier` → `models/crowd_classifier.pkl` — predicts crowd level (SEA/SDA/LSD)
+- **Features:** `hour_of_day`, `day_of_week`, `is_rainy`, `walk_distance_m`, `num_transfers`, `next_bus_mins`
 
-**Three modes (CLI args):**
-- `python scripts/model.py --train` — trains model, saves .pkl, logs to pipeline_runs
-- `python scripts/model.py --predict` — loads .pkl, scores next calendar event, inserts into predictions table
-- `python scripts/model.py --evaluate` — computes 7-day MAE of predicted_min vs actual_min, logs to pipeline_runs
+**Four CLI modes:**
+- `python scripts/model.py --train` — trains both models on synthetic + real data, saves .pkl
+- `python scripts/model.py --predict` — scores ALL 3 route options for next event, `prediction_id = f"{option_id}_pred"`
+- `python scripts/model.py --evaluate` — 7-day MAE, skips gracefully if <7 actuals exist
+- `python scripts/model.py --backfill` — fills `actual_min` per transit mode (see gotchas)
 
-**Cold start solution:** Bootstrap with ~500 synthetic historical rows using known patterns (rush hour 7–9am/5–7pm: +15%, rain: +8%, weekend: −20%) before training. Mark these with `model_version = "synthetic"` so they can be filtered later.
-
-**Airflow integration:** The main DAG adds `predict_commute` task (runs each cycle after sql_transform). A separate daily DAG or scheduled task runs `evaluate_model` at 8 AM.
-
-**Requirements to add:** `scikit-learn>=1.4.0`, `joblib>=1.3.0`
+**Key helper:** `_match_stop_name(to_name, stops_df)` — matches `route_legs.to_name` against `bus_stops.Description` (exact lowercase, then 15-char prefix). Loads `bus_stops.parquet` with `dropna(subset=["BusStopCode","Description"])` to prevent NaN float promotion.
 
 ---
 
@@ -168,21 +165,7 @@ Additionally: `evaluate_model` task at `0 8 * * *` (8 AM daily) — can be a sep
 
 ---
 
-## serve.py Design (to build)
-
-Key requirements:
-- `duckdb.connect(str(DB_PATH), read_only=True)` — never write from dashboard
-- `@st.cache_data(ttl=300)` — 5-minute refresh
-- Show: event title, leave_by metric, predicted_min metric, fare metric
-- Show: step-by-step legs table from `route_legs`
-- Show: weather warning (st.warning) if `is_rainy = True`
-- Show: disruption alert (st.error) if `alert_msg` is not None
-- Show: ML prediction vs actual, 7-day MAE from predictions table
-- `st.rerun()` or `time.sleep(300)` loop for auto-refresh
-
----
-
-## api.py Design (to build)
+## api.py Design (to build — NEXT)
 
 Endpoints:
 - `GET /health` — returns `{"status": "ok"}`
@@ -288,12 +271,21 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 - **For Docker/Airflow:** pre-generate `token.json` locally and volume-mount it into the container
 - **No-event case:** pipeline logs a warning and exits cleanly, records 'skipped' in pipeline_runs — does NOT crash
 
-### ML (model.py — to build)
-- **Cold start:** bootstrap with ~500 synthetic rows before real data accumulates (rush hour +15%, rain +8%, weekend −20%)
-- **`evaluate_model` cold start:** skip gracefully if fewer than 7 actual_min values exist — log warning, do not crash
-- **`actual_min` backfill:** compare predicted event's `event_id` against `route_options.total_duration_min` after event time passes
-- **`models/*.pkl` gitignored** — commit `models/.gitkeep` so folder exists in repo
-- **`scikit-learn>=1.4.0` and `joblib>=1.3.0`** must be added to `requirements.txt`
+### Session 7 — ingest.py + transform.py additions
+- **Postal code extraction (session 7):** `geocode()` now runs `re.findall(r'\b\d{6}\b', address)` before any other candidate. Word boundary `\b` prevents matching 7-digit strings. Postal codes geocode with near-perfect accuracy on OneMap — tried first, before full address.
+- **Location-change detection log (session 7):** before the ingest loop in `main()`, stored `dest_lat`/`dest_lng` is queried and compared to newly geocoded values. If Haversine shift > 50m, logs `📍 Destination updated (NNN m shift)`. Routes are always re-fetched regardless.
+- **Clock-time arrivals (session 7):** `transform.py` shows `HH:MM SGT` clock times instead of relative minutes. Computed as `(now_sgt + timedelta(minutes=x)).strftime("%H:%M")` where `now_sgt = datetime.now(timezone.utc).astimezone(SGT)`. MRT headway: x1=4 min. LRT: x1=7 min.
+- **Walk-only inline display (session 7):** `is_walk_only = bool(legs) and all(l["mode"] == "WALK" for l in legs)`. When true, `_walk_metrics()` folds into the recommended route section. The 5km and `is_rainy` guards do NOT apply to walk-only routes. `print_walk_suggestion()` is skipped.
+
+### Session 8 — model.py built; serve.py + transform.py updated
+- **Weather cross-join (session 8):** `predict()` uses scalar subquery `(SELECT COALESCE(is_rainy, FALSE) FROM weather_forecast ORDER BY fetched_at DESC LIMIT 1)` instead of `LEFT JOIN weather_forecast w ON w.fetched_at = (SELECT MAX...)`. The JOIN produced 47× rows (one per weather area). Scalar subquery returns one boolean.
+- **`prediction_id` format change (session 8):** changed from `{event_id}_pred` to `{option_id}_pred`. Old rows (pre-session-8) have `option_id IS NULL` and are silently ignored by serve.py's `PREDICTION_QUERY WHERE prediction_id = ?`. Re-run `--predict` to generate new-format rows.
+- **`_match_stop_name()` (session 8):** matches `route_legs.to_name` against `bus_stops.Description` — exact lowercase, then first-15-char prefix (if len ≥ 5). BUS legs only. MRT/LRT set `transit_service_no` but leave `alighting_stop_code = None`.
+- **Mode-aware backfill (session 8):** `--backfill` determines `dominant_mode` from `route_legs` for each `option_id`. BUS: LTA v3/BusArrival at alighting stop within 3h, else proxy. MRT: `total_duration_min + 4` (or +20 if HEAVY disruption in `train_alerts` window). LRT: `total_duration_min + 7` (or +20). WALK: `total_duration_min` deterministic. Old predictions without `option_id` use legacy `route_options` proxy.
+- **`serve.py` ML panel keyed by `prediction_id` (session 8):** `PREDICTION_QUERY` uses `WHERE prediction_id = ?`. Recommended route passes `f"{option_id}_pred"`. Each alt expander passes `f"{alt_id}_pred"`. `CROWD_ICON`/`CROWD_LABEL` moved to module level so both sections share them.
+- **Alt routes skipped for walk-only (session 8, transform.py):** `alt_rows = [] if is_walk_only else con.execute(ALT_ROUTES_QUERY, ...).fetchall()` — one-line guard before the alt routes block.
+- **MRT/LRT have no public real-time arrival API:** Singapore SMRT/SBS Transit do not publish a real-time train arrival API. "Next at HH:MM" for MRT/LRT in transform.py is `now_sgt + headway_estimate` — an educated approximation. Same estimate is used in `--backfill` for MRT/LRT actual_min.
+- **`models/*.pkl` gitignored** — `models/.gitkeep` committed so folder exists in repo.
 
 ### Session 6 — transform.py improvements
 
@@ -357,9 +349,11 @@ python scripts/ingest.py
 # 7. Transform
 python scripts/transform.py
 
-# 8. ML — train then predict
+# 8. ML — train, predict (all 3 routes), evaluate, backfill actuals
 python scripts/model.py --train
 python scripts/model.py --predict
+python scripts/model.py --evaluate
+python scripts/model.py --backfill
 
 # 9. Dashboard
 streamlit run scripts/serve.py   # → http://localhost:8501

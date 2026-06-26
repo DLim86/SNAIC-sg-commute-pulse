@@ -918,7 +918,7 @@ con.execute(<span class="s">"""
     </div>
 
     <!-- STATION 09 — FastAPI -->
-    <div class="station s9">
+    <div class="station s9 current">
       <div class="station-rail">
         <div class="station-dot">09</div>
         <div class="route-line"></div>
@@ -1290,7 +1290,7 @@ data.gov.sg    →  weather_forecast       ──┘         ↓
     </div>
 
     <!-- STATION ML — MLOps Pipeline -->
-    <div class="station s6 current">
+    <div class="station s6 done">
       <div class="station-rail">
         <div class="station-dot">ML</div>
         <div class="route-line"></div>
@@ -1313,24 +1313,30 @@ data.gov.sg    →  weather_forecast       ──┘         ↓
           <div class="card-block">
             <div class="block-label">What the rubric requires (30 marks)</div>
             <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
-              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Batch processing</strong> ✅ Airflow runs every 10 min.</div>
-              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Model training</strong> ❌ → <code>scripts/model.py</code> trains a <code>RandomForestRegressor</code> on historical route data, saves to <code>models/commute_predictor.pkl</code>.</div>
-              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Inference</strong> ❌ → Each pipeline run scores the next event and stores the prediction in DuckDB.</div>
-              <div style="margin-bottom:6px"><strong style="color:#FCA5A5">Evaluation / MLOps</strong> ❌ → Daily Airflow task at 8 AM computes 7-day MAE and logs it.</div>
-              <div><strong style="color:#FCA5A5">Live dashboard</strong> ✅ → Streamlit shows predicted vs actual commute time.</div>
+              <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Batch processing</strong> ✅ Airflow runs every 10 min.</div>
+              <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Model training</strong> ✅ <code>scripts/model.py --train</code> trains <code>RandomForestRegressor</code> (duration) + <code>GradientBoostingClassifier</code> (crowd). Saves to <code>models/</code>.</div>
+              <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Inference</strong> ✅ <code>--predict</code> scores ALL 3 route options, stores <code>prediction_id = "{option_id}_pred"</code>. Alt routes [2]/[3] in dashboard each show "🤖 ML: ~X min · crowd: 🟡 Standing".</div>
+              <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Evaluation / MLOps</strong> ✅ <code>--evaluate</code> computes 7-day MAE. <code>--backfill</code> fills actuals: BUS → LTA API at alighting stop; MRT/LRT → headway ± disruption penalty; WALK → deterministic.</div>
+              <div><strong style="color:#6EE7B7">Live dashboard</strong> ✅ Streamlit shows predicted vs actual for recommended route + per-alt ML captions.</div>
             </div>
           </div>
           <div class="card-block">
             <div class="block-label">DuckDB table: predictions</div>
             <div class="block-content">
 <pre style="font-family:monospace;font-size:11px;line-height:1.7;color:#A8C4DC">CREATE TABLE IF NOT EXISTS predictions (
-    prediction_id  VARCHAR PRIMARY KEY,
-    event_id       VARCHAR,
-    predicted_min  INTEGER,
-    actual_min     INTEGER,  -- filled after commute
-    model_version  VARCHAR,
-    mae_7day       DOUBLE,   -- filled by evaluate task
-    predicted_at   TIMESTAMP
+    prediction_id        VARCHAR PRIMARY KEY,  -- {option_id}_pred
+    event_id             VARCHAR,
+    option_id            VARCHAR,  -- which of the 3 routes
+    predicted_min        INTEGER,
+    predicted_crowd      VARCHAR,  -- SEA/SDA/LSD
+    actual_min           INTEGER,  -- mode-aware backfill
+    actual_crowd         VARCHAR,
+    model_version        VARCHAR,
+    mae_7day             DOUBLE,
+    boarding_stop_code   VARCHAR,
+    alighting_stop_code  VARCHAR,
+    transit_service_no   VARCHAR,
+    predicted_at         TIMESTAMP
 );</pre>
             </div>
           </div>
@@ -1404,7 +1410,7 @@ def evaluate_model(con):
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The second rubric criterion requires ML and real-time output. I added a commute time predictor using scikit-learn. The model is trained on historical route data — features are hour of day, day of week, weather conditions, walking distance, and number of transfers. Each pipeline run scores the next calendar event and stores a predicted journey time. A daily Airflow task at 8 AM evaluates the model — comparing predictions to actuals over the last seven days and logging the MAE to the pipeline monitoring table. The Streamlit dashboard shows predicted versus actual time so users can see whether the model is improving."</p>
+          <p>"The second rubric criterion requires ML and real-time output. I added a commute time predictor using scikit-learn — a Random Forest Regressor for journey duration and a Gradient Boosting Classifier for crowd level. Features are hour of day, day of week, rain conditions, walking distance, transfers, and next bus wait time. Unlike a simple system that scores only the recommended route, my predict task scores all three route options individually — so the dashboard shows an ML prediction for the recommended route and also for each alternative in the expanders, keyed by option_id. A daily Airflow evaluate task computes 7-day MAE. The backfill task fills in actual_min per transit mode: for bus routes it calls LTA's real-time API at the alighting stop; for MRT and LRT it uses a headway estimate adjusted for any active disruption; for walk-only routes it's deterministic. The Streamlit dashboard shows predicted versus actual for every route option so users can see whether the model is improving."</p>
         </div>
       </div>
     </div>

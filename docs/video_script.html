@@ -378,7 +378,7 @@
         <div class="say-label">Say This</div>
         <p>The Streamlit dashboard is the live output layer. It auto-refreshes every 60 seconds using <code>time.sleep(60); st.rerun()</code> — the page shows a "Running" spinner for 60 seconds, then reloads. This does not re-trigger any API calls — it only re-queries DuckDB. That's the "regularly refreshed dashboard" the rubric asks for.</p>
         <p>The dashboard connects to DuckDB with <code>read_only=True</code> — it never writes, which avoids lock conflicts with the pipeline. The connection is cached with <code>@st.cache_resource</code> so it persists across rerenders.</p>
-        <p>Three metrics appear prominently: the leave-by time, the journey duration, and the fare. Below that, any weather or disruption warnings appear from the SQL layer — the dashboard just displays what the transformation already decided. Bus arrival times are shown as actual clock times — 09:34 and 09:39 — so the user knows exactly when to board. Alternative routes appear in expandable sections labelled [2] and [3]. At the bottom, an ML prediction panel shows the model's predicted duration and 7-day MAE — until model.py is trained, it shows a placeholder message telling you what command to run.</p>
+        <p>Three metrics appear prominently: the leave-by time, the journey duration, and the fare. Below that, any weather or disruption warnings appear from the SQL layer — the dashboard just displays what the transformation already decided. Bus arrival times are shown as actual clock times — 09:34 and 09:39 — so the user knows exactly when to board. Alternative routes appear in expandable sections labelled [2] and [3]. At the bottom of each alt expander, a "🤖 ML: ~X min · crowd: 🟡 Standing" caption shows the ML prediction specific to that route option — the model scores all three routes, not just the recommended one. The main ML prediction panel below the recommended route shows predicted duration, crowd level, actual from last run, and 7-day MAE.</p>
       </div>
     </div>
   </div>
@@ -398,21 +398,21 @@
       <div class="do">
         <div class="do-label">Screen Action</div>
         <ul>
-          <li>Open <code>scripts/model.py</code> in VS Code — show the <code>train_model()</code> function</li>
-          <li>Show the <code>models/commute_predictor.pkl</code> file exists in Explorer</li>
-          <li>Run <code>python scripts/model.py --predict</code> in terminal — show the prediction output</li>
-          <li>Switch to Streamlit — show the "Predicted: 38 min | Actual last run: 41 min | 7-day MAE: 4.2 min" metrics</li>
+          <li>Open <code>scripts/model.py</code> in VS Code — show the <code>train_model()</code> function and the <code>predict()</code> loop over all route options</li>
+          <li>Show <code>models/commute_predictor.pkl</code> and <code>models/crowd_classifier.pkl</code> exist in Explorer</li>
+          <li>Run <code>python scripts/model.py --predict</code> in terminal — show 3 lines logged, one per route option</li>
+          <li>Switch to Streamlit — show recommended route ML panel ("Predicted: 38 min | crowd: 🟢 Seats available | 7-day MAE: 4.2 min")</li>
+          <li>Expand alt route [2] or [3] — show "🤖 ML: ~41 min · crowd: 🟡 Standing" caption at the bottom</li>
           <li>Switch to Airflow — show the <code>predict_commute</code> task and the daily <code>evaluate_model</code> task</li>
         </ul>
       </div>
       <div class="say">
         <div class="say-label">Say This</div>
-        <p>This is the ML component. The model answers the question: given today's conditions, how long will this journey actually take?</p>
-        <p>I use a Random Forest Regressor from scikit-learn. The features are: hour of day, day of week, whether it's raining, walking distance in metres, and number of transfers. The target is total journey duration in minutes.</p>
-        <p>I integrated MLflow for experiment tracking. Every <code>--train</code> run calls <code>mlflow.set_experiment("commute_prediction")</code> and logs parameters, validation MAE, and the trained model as a tracked artifact. The model is registered in MLflow's model registry with a <code>@champion</code> alias. Inference loads it with <code>mlflow.pyfunc.load_model("models:/commute_predictor@champion")</code> — no version number hard-coded in the code. When I retrain and promote a new model, I update the alias and the serving layer picks it up automatically.</p>
-        <p>Each pipeline run calls the predict task — it loads the champion model, scores the next calendar event, and inserts the prediction into a <code>predictions</code> table. When the commute window passes, the pipeline backfills the <code>actual_min</code> column by comparing with the actual route taken.</p>
-        <p>There's a third component — model evaluation. A daily Airflow task runs every morning at 8am. It computes the 7-day Mean Absolute Error and stores it in <code>predictions.mae_7day</code>. If MAE crosses 10 minutes, it logs a drift warning — the signal to retrain. This is the MLOps feedback loop: train → predict → evaluate → drift check → retrain.</p>
-        <p>You can see the predicted versus actual comparison live in the Streamlit dashboard. The 7-day MAE shows me whether the model is getting better or worse as real data accumulates.</p>
+        <p>This is the ML component. I have two models: a Random Forest Regressor that predicts journey duration, and a Gradient Boosting Classifier that predicts bus crowding level — Seats Available, Standing, or Very Full.</p>
+        <p>Features for the duration model are: hour of day, day of week, whether it's raining, walking distance in metres, number of transfers, and next bus wait time. The target is total journey duration in minutes. Training data starts with 500 synthetic historical rows using known Singapore commute patterns — rush hour adds 15%, rain adds 8%, weekends subtract 20% — so the model works from day one without needing weeks of real data first.</p>
+        <p>What makes this design more interesting than a basic implementation: the predict task scores all three route options individually, not just the recommended one. Each prediction is stored with a <code>prediction_id</code> keyed to the specific route — <code>{option_id}_pred</code> — so the dashboard can show ML context for every alternative. Scroll down to alt routes [2] and [3] — each expander shows a "🤖 ML: ~X min · crowd: 🟡 Standing" caption. The user can see not just which route is recommended but what the model thinks about each option.</p>
+        <p>The backfill system is also mode-aware. After the event time passes, the pipeline calls <code>--backfill</code> to fill in actual journey times. For bus routes, it calls LTA's live bus arrival API at the alighting stop — the stop where you get off — within a 3-hour window after the event. That's a real measured signal, not an estimate. For MRT and LRT, there's no public real-time arrival API in Singapore, so actual_min is total_duration_min plus a headway estimate — adjusted upward by 20 minutes if a HEAVY disruption was active in the train_alerts table during the commute window. Walk routes are deterministic — walking time doesn't vary.</p>
+        <p>Evaluation: a daily Airflow task at 8am computes 7-day Mean Absolute Error and stores it in <code>predictions.mae_7day</code>. If MAE crosses 10 minutes, it logs a drift warning — the signal to retrain. This is the full MLOps feedback loop: train → predict → backfill actual → evaluate → drift check → retrain.</p>
       </div>
       <div class="note">
         <div class="note-label">If Asked: What is model drift? How do you detect it?</div>
@@ -555,7 +555,7 @@
         <span class="chip chip-green">Streamlit at localhost:8501 — shows leave-by, prediction, fare</span>
         <span class="chip chip-green">FastAPI at localhost:8000/docs — try it out works live</span>
         <span class="chip chip-green">docker compose up starts all 3 services cleanly</span>
-        <span class="chip chip-green">python scripts/model.py --predict outputs a prediction</span>
+        <span class="chip chip-green">python scripts/model.py --predict logs 3 lines (one per route option)</span>
         <span class="chip chip-green">python scripts/transform.py shows LEAVE LATEST + LEAVE NOW + legs</span>
         <span class="chip chip-green">predictions table has at least a few rows in DuckDB</span>
         <span class="chip chip-green">config.py NOT in git status output</span>
