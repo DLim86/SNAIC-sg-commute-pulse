@@ -3,7 +3,7 @@
 This document lets another Claude session (or any developer) continue this project
 from scratch with no prior chat history.
 
-**Last updated: 2026-06-25 (session 8 — per-route ML predictions + mode-aware actual backfill)**
+**Last updated: 2026-06-26 (session 9 — FastAPI, Airflow DAG, Docker, smart scheduler, serve.py stale-connection fix)**
 
 ---
 
@@ -52,36 +52,37 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 
 ---
 
-## Build Status (as of 2026-06-25 session 8)
+## Build Status (as of 2026-06-26 session 9) — ALL COMPLETE ✅
 
-### Done and tested
+### All files done and tested
 
 | File | Status |
 |---|---|
 | `.gitignore` | Complete |
 | `config_example.py` | Complete — template with HOME_ADDRESS, WORK_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN, all empty strings |
-| `config.py` | Exists locally, gitignored — real credentials + GARMIN_EMAIL/PASSWORD/WHOOP_ACCESS_TOKEN present as `""` (leave blank to skip fitness integrations) |
-| `requirements.txt` | Complete — `>=` pins for Python 3.14 compat; `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` already added |
+| `config.py` | Exists locally, gitignored — real credentials present |
+| `requirements.txt` | Complete — `>=` pins for Python 3.14 compat; `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` |
 | `README.md` | Complete |
-| `docs/roadmap.html` | Updated 2026-06-24 — 3 phases: Day1 pipeline, Day2 production, Day3 architecture+ML |
-| `docs/AI_HANDOFF.md` | This file |
-| `docs/video_script.html` | Updated 2026-06-24 — complete 15-min script for full project including ML, reflection |
+| `docs/roadmap.html` | Updated session 9 — stations 09/10/11 marked DONE, scheduler described |
+| `docs/AI_HANDOFF.md` | This file — updated session 9 |
+| `docs/video_script.html` | Updated session 9 — Docker section mentions scheduler.py |
 | `docs/ARCHITECTURE.md` | Updated — includes ML layer, smart default data flow, geocoding fallback |
-| `docs/DECISIONS.md` | Complete — D01–D37 (session 7 added: D35 walk-only inline, D36 postal code extraction, D37 location-change log; D33 format updated to clock times) |
+| `docs/DECISIONS.md` | Complete — D01–D37 |
 | `scripts/__init__.py` | Done — empty, required for Airflow imports |
-| `scripts/schema.py` | Done — **9 tables** + `v_enriched_routes` view. `predictions` table added session 4. **Session 8 migrations:** 4 new `predictions` columns (`option_id`, `boarding_stop_code`, `alighting_stop_code`, `transit_service_no`) + `predicted_crowd` + `actual_crowd`. Run `python scripts/schema.py` to apply all migrations. |
-| `scripts/ingest.py` | Done — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always — HOME_ADDRESS is destination-only, not origin) + progressive geocoding fallback + WORK_ADDRESS event-location fallback + `get_smart_default()` time-of-day heuristic + `v3/BusArrival` endpoint + 5-nearest-stop fallback + float-suffix strip on BusStopCode + **`_purge_stale_events()` (session 5)** — deletes stale future events+routes after calendar reschedule + **postal code extraction in `geocode()` (session 7)** — `re.findall(r'\b\d{6}\b')` prepended as first candidate + **location-change detection log (session 7)** — logs `📍 Destination updated (NNN m shift)` when dest shifts >50m |
-| `scripts/transform.py` | Done — `AND start_time > NOW()` filter, LEAVE LATEST + LEAVE NOW, step-by-step legs, rain/delay warnings, **alt routes section** (session 5), walk alternative (Zone 1/2), optional Garmin/Whoop + **session 6:** `recommended_mode` dynamic; disruption filtered to route's rail lines; alt heading with [2]/[3] labels; MRT+LRT grouped in alt display; inline first-transit live arrival (X1+X2 bus, headway MRT/LRT); `MRT_LINE_NAMES` with NE/CR/JR + **session 7:** clock-time arrivals HH:MM SGT; `_walk_metrics()` helper; walk-only inline display (`is_walk_only` flag) + **session 8:** `alt_rows = [] if is_walk_only` — alt routes skipped entirely for walk-only routes |
-| `scripts/model.py` | Done (session 8) — `--train` (RandomForestRegressor + GradientBoostingClassifier, 500 synthetic bootstrap rows, saves `models/commute_predictor.pkl` + `models/crowd_classifier.pkl`); `--predict` scores ALL 3 route options for next event (not just rank-1), stores `prediction_id = f"{option_id}_pred"`, with `option_id`, `boarding_stop_code` (from `bus_arrivals`), `alighting_stop_code` (matched from `route_legs.to_name` → `bus_stops.Description` via `_match_stop_name()`), `transit_service_no`; `--evaluate` computes 7-day MAE; `--backfill` fills `actual_min` per mode: BUS → LTA v3/BusArrival at alighting stop (within 3h window), MRT → `total_duration_min + 4` (or +20 if HEAVY disruption in `train_alerts`), LRT → `total_duration_min + 7` (or +20), WALK → `total_duration_min` deterministic. Weather cross-join bug fixed: scalar subquery replaces LEFT JOIN that produced 47× rows. |
-| `scripts/serve.py` | Done (session 8) — Streamlit dashboard, `read_only=True` DuckDB, 60s auto-refresh via `time.sleep(60); st.rerun()`, event card, 3-column metrics (leave-by/duration/fare), "Why chosen" info block, conditional weather/disruption warnings, step-by-step legs with mode icons, inline live arrivals with clock times, alt route expanders [2]/[3] each showing `🤖 ML: ~X min · crowd: 🟡 Standing` caption, ML prediction panel keyed by `prediction_id = f"{option_id}_pred"`. `CROWD_ICON` / `CROWD_LABEL` at module level (shared by recommended panel + alt expanders). Run: `streamlit run scripts/serve.py` |
-
-### Still to build (in this order)
-
-| File | Purpose | Why this order |
-|---|---|---|
-| `scripts/api.py` | **NEXT** — FastAPI: `/health`, `/api/v1/recommendation/{event_id}`, `/api/v1/pipeline/status`, `/api/v1/prediction/{event_id}` | model.py done; api.py is the last missing script |
-| `dags/__init__.py` + `dags/commute_pipeline_dag.py` | Airflow DAG — 7 tasks, `schedule="*/10 * * * *"` | After all scripts exist |
-| `docker-compose.yml` + `Dockerfile` | 3 services: pipeline, api, dashboard | Last — wraps everything |
+| `scripts/schema.py` | Done — 9 tables + `v_enriched_routes` view. Run `python scripts/schema.py` to apply all migrations. |
+| `scripts/ingest.py` | Done — full pipeline + **session 9: 3 argparse modes** (`--mode calendar-check` / `--mode routes` / `--mode weather`). Default (no mode) = full pipeline. `_fetch_raw_calendar_event()` helper for cheap Google Calendar-only check (no OneMap). |
+| `scripts/transform.py` | Done — all session 6/7/8 features: dynamic mode, clock-time arrivals, walk-only inline, alt routes skipped for walk-only |
+| `scripts/model.py` | Done (session 8) — `--train`, `--predict` (all 3 routes, `{option_id}_pred`), `--evaluate` (7-day MAE), `--backfill` (mode-aware) |
+| `scripts/serve.py` | Done — **session 9 critical fix: removed `@st.cache_resource` from `get_connection()`** — was caching stale DuckDB connection; now opens fresh read-only connection every 60s rerun. |
+| `scripts/api.py` | **Done (session 9)** — FastAPI, 6 endpoints. Per-request `contextmanager get_db()` opens+closes read-only DuckDB connection. `/recommendation/next` defined before `/{event_id}` (FastAPI routing order). Swagger at `http://localhost:8000/docs`. |
+| `scripts/scheduler.py` | **Done (session 9)** — 4-state machine: NO_EVENT (60s day / 1hr night) → WATCHING (sleep to leave_by - 30 min) → IMMINENT (1s poll, cached geocode) → EXPIRED. Group 1: `calendar-check` every tick. Group 2: `routes` only on key change. Group 3: `weather` every 30 min. Replaces shell loop in docker-compose.yml. |
+| `dags/__init__.py` | Done (session 9) — empty, required for Airflow imports |
+| `dags/commute_pipeline_dag.py` | Done (session 9) — 7-task chain: `schema_check >> ingest >> transform >> predict_commute >> backfill_actuals >> gate_evaluate >> evaluate_model`. `gate_evaluate` = `ShortCircuitOperator` (passes only at 8 AM SGT). Schedule `*/30 * * * *`. |
+| `Dockerfile` | Done (session 9) — `python:3.12-slim` + `libgomp1` + pip install + `mkdir -p db data/raw models` |
+| `.dockerignore` | Done (session 9) — excludes `.git/`, `__pycache__/`, `*.duckdb`, `models/*.pkl`, `LTA/`, `OneMap/`, `Prompt.txt`, `*.log`, `docs/` |
+| `docker-compose.yml` | Done (session 9) — 3 services sharing `db_data` named volume. Pipeline: `python scripts/scheduler.py`. API on :8000. Dashboard on :8501. Volume mounts: `./token.json`, `./credentials.json`. |
+| `db/commute.duckdb` | Exists locally, gitignored — populated by real Google Calendar events |
+| `data/raw/bus_stops/bus_stops.parquet` | Cached — 5,205 LTA bus stops |
 
 ---
 
@@ -154,27 +155,50 @@ View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_fo
 
 ---
 
-## Airflow DAG — 7 Tasks (to build)
+## Airflow DAG — BUILT (session 9)
 
+**Actual implementation** (sequential, not parallel):
 ```
-fetch_calendar → geocode_destination → [fetch_weather, fetch_bus_arrivals, fetch_train_alerts] → sql_transform → predict_commute
+schema_check >> ingest >> transform >> predict_commute >> backfill_actuals >> gate_evaluate >> evaluate_model
 ```
 
-Schedule: `*/10 * * * *` (every 10 minutes)
-Additionally: `evaluate_model` task at `0 8 * * *` (8 AM daily) — can be a separate DAG or CronJob.
+- `gate_evaluate` = `ShortCircuitOperator` — only passes when `datetime.now(SGT).hour == 8`
+- Schedule: `*/30 * * * *` (every 30 minutes, not 10 — changed from early design)
+- `ingest` calls `python scripts/ingest.py` (full pipeline — weather + routes + bus + train internally)
+- Run: `airflow standalone` → UI at `http://localhost:8080`
 
 ---
 
-## api.py Design (to build — NEXT)
+## api.py — BUILT (session 9)
 
-Endpoints:
-- `GET /health` — returns `{"status": "ok"}`
-- `GET /api/v1/recommendation/{event_id}` — reads v_enriched_routes WHERE route_rank=1
-- `GET /api/v1/pipeline/status` — reads pipeline_runs ORDER BY ran_at DESC LIMIT 10
-- `GET /api/v1/prediction/{event_id}` — reads predictions table for that event
+6 endpoints — all read-only, `contextmanager get_db()` opens/closes per request:
+- `GET /health` → `{"status": "ok", "db": "connected"}`
+- `GET /api/v1/recommendation/next` → next upcoming event's full recommendation + legs + live arrival
+- `GET /api/v1/recommendation/{event_id}` → same for specific event_id
+- `GET /api/v1/prediction/{event_id}` → all 3 ML predictions for that event
+- `GET /api/v1/pipeline/status` → last 10 pipeline_runs
+- `GET /api/v1/alerts` → active HEAVY train alerts from last 30 min
 
-All connections: `duckdb.connect(str(DB_PATH), read_only=True)`
-Run with: `uvicorn scripts.api:app --reload --port 8000`
+Run: `uvicorn scripts.api:app --reload --port 8000` → Swagger at `http://localhost:8000/docs`
+
+---
+
+## scheduler.py — BUILT (session 9)
+
+Replaces the fixed `sleep 1800` shell loop in docker-compose.yml. Pure Python state machine.
+
+**3 groups:**
+- Group 1 (`--mode calendar-check`): every tick. Cached geocode — no OneMap during IMMINENT.
+- Group 2 (`--mode routes`): fires only when `new_key != prev_key` (event or dest changed >10m). Calls OneMap + LTA + transform + predict + backfill.
+- Group 3 (`--mode weather`): every 30 min regardless of state. Calls weather + transform.
+
+**4 states:**
+| State | Condition | Sleep |
+|---|---|---|
+| NO_EVENT | no event key returned | 60s (6am–midnight) · 1hr (midnight–6am) |
+| WATCHING | leave_by > 30 min away | sleep until `leave_by - 30 min` (max 1hr) |
+| IMMINENT | ≤ 30 min to leave_by | 1s — fastest response, geocode fully cached |
+| EXPIRED | start_time < now | 5s then reset `prev_key=""` |
 
 ---
 
@@ -287,6 +311,16 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 - **MRT/LRT have no public real-time arrival API:** Singapore SMRT/SBS Transit do not publish a real-time train arrival API. "Next at HH:MM" for MRT/LRT in transform.py is `now_sgt + headway_estimate` — an educated approximation. Same estimate is used in `--backfill` for MRT/LRT actual_min.
 - **`models/*.pkl` gitignored** — `models/.gitkeep` committed so folder exists in repo.
 
+### Session 9 — api.py, Airflow DAG, Docker, scheduler, serve.py fix
+- **`serve.py` `@st.cache_resource` removed:** the decorator cached the DuckDB connection at startup. Every 60s rerun saw the same stale connection — new rows written by the pipeline never appeared. Fix: removed decorator, now opens fresh `read_only=True` connection every rerun. Restart Streamlit to clear old cached connection.
+- **`api.py` FastAPI routing order:** `/api/v1/recommendation/next` must be defined BEFORE `/{event_id}`. FastAPI matches routes top-to-bottom; "next" would be captured as an event_id parameter if order is wrong.
+- **`api.py` per-request DuckDB connection:** `contextmanager get_db()` opens `read_only=True`, yields, closes in `finally`. Multiple simultaneous read-only connections to DuckDB are safe.
+- **`scheduler.py` no ip-api during IMMINENT:** ip-api.com free tier limit is 45 req/min. During IMMINENT 1s polling, Group 1 uses cached geocode — no ip-api call. ip-api is only called in Group 2 (`run_routes()`) which fires at most once per cycle when event/dest changes.
+- **`ingest.py` `_fetch_raw_calendar_event()`:** lightweight Google Calendar only — no geocoding, no ip-api. Returns `(event_id, location_raw, start_dt_str)`. Used in `run_calendar_check()` to skip OneMap when event_id and location string are unchanged.
+- **Airflow DAG `gate_evaluate`:** `ShortCircuitOperator` returns `True` only when `datetime.now(SGT).hour == 8`. Skips `evaluate_model` on all other runs without failing the DAG.
+- **DuckDB WAL lock in Docker named volume:** killed pipeline container leaves stale `.duckdb.wal` in `db_data`. Fix: `docker compose down -v` then `docker compose up --build`. Data lost — repopulate by triggering pipeline once.
+- **`docker compose restart` does NOT rebuild:** reuses existing image. Code changes require `docker compose up --build`.
+
 ### Session 6 — transform.py improvements
 
 - **OneMap `numItineraries` hard-capped at 3** — requesting `numItineraries: 4` returns HTTP 400. OneMap's public transit routing API caps at 3 itineraries. The system always returns exactly 3 routes (1 recommended + 2 alternatives). The alt routes section will always show exactly 2 alternatives, never 3.
@@ -361,11 +395,14 @@ streamlit run scripts/serve.py   # → http://localhost:8501
 # 10. API
 uvicorn scripts.api:app --reload --port 8000   # → http://localhost:8000/docs
 
-# 11. Airflow
+# 11. Airflow (optional — for DAG demo)
 airflow standalone   # → http://localhost:8080
 
-# 12. Full stack
-docker compose up
+# 12. Full stack with smart scheduler
+docker compose up          # uses scheduler.py — adaptive polling
+docker compose up --build  # rebuild after code changes
+docker compose down -v     # wipe DB volume (clears stale WAL lock)
+docker compose logs pipeline -f   # stream pipeline + scheduler logs
 ```
 
 ---

@@ -312,8 +312,8 @@
       </div>
       <div class="say">
         <div class="say-label">Say This</div>
-        <p>The Airflow DAG runs every 10 minutes on a cron schedule — <code>*/10 * * * *</code>. It has 7 tasks. The first two run sequentially: fetch the calendar event, then geocode the destination. The next three run in parallel — fetch weather, bus arrivals, and train alerts simultaneously because they don't depend on each other. Then SQL transformation runs once all three complete. Finally, the prediction task scores the next event against the ML model.</p>
-        <p>I used Airflow instead of a cron job because it gives me this UI — I can see every task run, whether it succeeded or failed, and click into the logs to debug. A cron job has no visibility.</p>
+        <p>The Airflow DAG runs every 30 minutes on a cron schedule — <code>*/30 * * * *</code>. It has 7 tasks in a sequential chain: schema_check, ingest, transform, predict_commute, backfill_actuals, then a ShortCircuitOperator called gate_evaluate that only passes at 8 AM Singapore time, and finally evaluate_model. The gate means the ML evaluation only runs once a day even though the DAG fires every 30 minutes.</p>
+        <p>I used Airflow instead of a cron job because it gives me this UI — I can see every task run, whether it succeeded or failed, and click into the logs to debug. A cron job has no visibility. The Airflow setup is for demonstration — in Docker production, a custom scheduler.py handles orchestration with an adaptive state machine, which I'll show in a moment.</p>
         <p>Now let me show what the pipeline actually does to the data. Every API call goes through a retry wrapper — 3 attempts, exponential backoff of 1 second, 2 seconds, 4 seconds. LTA's API returns errors during rush hour. Without retry, one blip at 8am kills the whole run.</p>
         <p>Before loading to DuckDB, raw responses are saved as Parquet files in a date-partitioned folder — you can see them here in <code>data/raw/</code>. That's the data lake layer. The reason is replayability: if I find a bug in my SQL transformation, I can fix it and re-run from the raw files without calling the APIs again.</p>
         <p>Every insert uses <code>INSERT OR REPLACE</code> — never a bare INSERT. If the pipeline crashes halfway and restarts, it produces the same result as a clean run. No duplicate rows. That property is called idempotency and it's essential for any scheduled pipeline.</p>
@@ -377,7 +377,7 @@
       <div class="say">
         <div class="say-label">Say This</div>
         <p>The Streamlit dashboard is the live output layer. It auto-refreshes every 60 seconds using <code>time.sleep(60); st.rerun()</code> — the page shows a "Running" spinner for 60 seconds, then reloads. This does not re-trigger any API calls — it only re-queries DuckDB. That's the "regularly refreshed dashboard" the rubric asks for.</p>
-        <p>The dashboard connects to DuckDB with <code>read_only=True</code> — it never writes, which avoids lock conflicts with the pipeline. The connection is cached with <code>@st.cache_resource</code> so it persists across rerenders.</p>
+        <p>The dashboard connects to DuckDB with <code>read_only=True</code> — it never writes, which avoids lock conflicts with the pipeline. A fresh connection is opened on every 60-second rerun — I intentionally removed the <code>@st.cache_resource</code> decorator because caching the connection caused a bug where the dashboard showed stale data even after the pipeline had written new rows. Opening a fresh read-only connection every rerun costs almost nothing and ensures the display is always current.</p>
         <p>Three metrics appear prominently: the leave-by time, the journey duration, and the fare. Below that, any weather or disruption warnings appear from the SQL layer — the dashboard just displays what the transformation already decided. Bus arrival times are shown as actual clock times — 09:34 and 09:39 — so the user knows exactly when to board. Alternative routes appear in expandable sections labelled [2] and [3]. At the bottom of each alt expander, a "🤖 ML: ~X min · crowd: 🟡 Standing" caption shows the ML prediction specific to that route option — the model scores all three routes, not just the recommended one. The main ML prediction panel below the recommended route shows predicted duration, crowd level, actual from last run, and 7-day MAE.</p>
       </div>
     </div>
@@ -468,17 +468,19 @@
       <div class="do">
         <div class="do-label">Screen Action</div>
         <ul>
-          <li>Open <code>docker-compose.yml</code> in VS Code — show the 3 services</li>
+          <li>Open <code>docker-compose.yml</code> in VS Code — point out the 3 services and the <code>scheduler.py</code> command for the pipeline service</li>
+          <li>Open <code>scripts/scheduler.py</code> briefly — show the 4 state labels in the comments (NO_EVENT, WATCHING, IMMINENT, EXPIRED)</li>
           <li>Run <code>docker compose up</code> in terminal (or show it already running)</li>
           <li>Show all 3 services starting — pipeline, api, dashboard</li>
+          <li>Show <code>docker compose logs pipeline -f</code> streaming scheduler state transitions</li>
           <li>Show that <code>localhost:8501</code> (dashboard) and <code>localhost:8000/docs</code> (API) are both accessible</li>
         </ul>
       </div>
       <div class="say">
         <div class="say-label">Say This</div>
-        <p>Docker Compose packages the entire system into 3 containers. <code>docker compose up</code> — one command — starts everything. Anyone can clone the repo, add their API keys to a <code>.env</code> file, and run the full system. No Python installation, no virtual environment setup. That's the point of containerisation.</p>
-        <p>The DuckDB file is volume-mounted — <code>./db:/app/db</code> — so data persists across container restarts. The pipeline, API, and dashboard share this one file as their common data store.</p>
-        <p>All three services use a single Dockerfile built from the same <code>requirements.txt</code>. Each service overrides the <code>command</code> field — so the same image runs as a pipeline, an API server, or a dashboard depending on which service definition is used.</p>
+        <p>Docker Compose packages the entire system into 3 containers. <code>docker compose up</code> — one command — starts everything. Anyone can clone the repo, add their API keys, and run the full system. No Python installation, no virtual environment setup. That's the point of containerisation.</p>
+        <p>The pipeline container runs <code>scripts/scheduler.py</code> — a custom state machine with 4 states. NO_EVENT: polls every 60 seconds during the day, hourly between midnight and 6 AM. WATCHING: sleeps until 30 minutes before departure. IMMINENT: polls every 1 second, using a cached geocode — it never calls OneMap or ip-api during tight polling to avoid rate limits. EXPIRED: resets when the event start time passes. This is much smarter than a fixed sleep loop — it barely uses any API quota when nothing is happening, and reacts in under a second when you're about to leave.</p>
+        <p>The DuckDB file is in a named Docker volume so data persists across container restarts. The pipeline, API, and dashboard share this one file as their common data store. All three services use a single Dockerfile built from the same <code>requirements.txt</code> — each service just overrides the <code>command</code> field.</p>
       </div>
     </div>
   </div>
@@ -537,7 +539,7 @@
         <p><strong>ML and Real-Time Output.</strong> Added a scikit-learn Random Forest model that predicts commute duration from route features; predictions are stored per event, compared against actuals, and evaluated daily via Airflow at 8 AM — full MLOps feedback loop. Results are served on a live Streamlit dashboard refreshed every 60 seconds.</p>
         <p><strong>Production Robustness.</strong> Implemented exponential backoff retry on all API calls, idempotent INSERT OR REPLACE, GPS coordinate validation rejecting non-Singapore coordinates, and a pipeline_runs monitoring table — making the pipeline safe to run in production without supervision.</p>
         <p><strong>Data Serving API.</strong> Designed a FastAPI REST layer exposing commute recommendations and ML predictions as queryable endpoints with auto-generated Swagger documentation — decoupling the recommendation engine from any specific frontend.</p>
-        <p><strong>Orchestration and Infrastructure.</strong> Orchestrated 7 tasks with Apache Airflow (10-minute schedule, parallel fetch phase, daily model evaluation); containerised the full stack with Docker Compose — pipeline, API, and dashboard as 3 services with volume-mounted persistent DuckDB storage.</p>
+        <p><strong>Orchestration and Infrastructure.</strong> Orchestrated 7 tasks with Apache Airflow (30-minute schedule, ShortCircuitOperator for daily 8 AM model evaluation); containerised the full stack with Docker Compose — pipeline, API, and dashboard as 3 services with a named-volume DuckDB. The Docker pipeline uses a custom 4-state scheduler (NO_EVENT/WATCHING/IMMINENT/EXPIRED) replacing a fixed sleep loop.</p>
       </div>
     </div>
   </div>

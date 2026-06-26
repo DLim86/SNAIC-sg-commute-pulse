@@ -710,17 +710,17 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
       <div class="station-card">
         <div class="card-eyebrow">Data Serving</div>
         <div class="card-title">Streamlit Dashboard</div>
-        <div class="card-desc">A read-only Streamlit dashboard that queries DuckDB and shows the top commute recommendation for the next calendar event. The dashboard auto-refreshes every 60 seconds using <code>time.sleep(60); st.rerun()</code>. It shows: an event card with a countdown to leave-by time; a 3-column metrics panel (leave by / journey time / fare); a "Why chosen" info block; conditional weather and train disruption warnings; step-by-step legs with mode icons; inline live bus arrivals with actual HH:MM clock times and X2 miss-it arrival; estimated MRT/LRT headways with a caveat that no public real-time MRT API exists; alt route expanders [2] and [3] with compact leg tokens and first-transit X1 clock times; and an ML prediction panel that shows a placeholder until <code>scripts/model.py</code> has been trained. The DB connection uses <code>duckdb.connect(DB_PATH, read_only=True)</code> and is cached via <code>@st.cache_resource</code>.</div>
+        <div class="card-desc">A read-only Streamlit dashboard that queries DuckDB and shows the top commute recommendation for the next calendar event. The dashboard auto-refreshes every 60 seconds using <code>time.sleep(60); st.rerun()</code>. It shows: an event card with a countdown to leave-by time; a 3-column metrics panel (leave by / journey time / fare); a "Why chosen" info block; conditional weather and train disruption warnings; step-by-step legs with mode icons; inline live bus arrivals with actual HH:MM clock times and X2 miss-it arrival; estimated MRT/LRT headways with a caveat that no public real-time MRT API exists; alt route expanders [2] and [3] with compact leg tokens and first-transit X1 clock times; and an ML prediction panel that shows predicted duration, crowd level, and 7-day MAE. <strong>Critical:</strong> the DB connection opens a fresh <code>duckdb.connect(DB_PATH, read_only=True)</code> on every 60s rerun — NOT cached with <code>@st.cache_resource</code>. Caching caused a stale connection bug where new pipeline data was never visible (fixed session 9).</div>
 
         <div class="chip-row">
           <span class="chip chip-red">Streamlit</span>
           <span class="chip chip-red">DuckDB read_only</span>
-          <span class="chip chip-red">@st.cache_resource</span>
+          <span class="chip chip-red">fresh connection per rerun</span>
           <span class="chip chip-red">st.metric</span>
           <span class="chip chip-red">st.expander</span>
           <span class="chip chip-red">60s auto-refresh</span>
           <span class="chip chip-red">clock-time arrivals</span>
-          <span class="chip chip-red">ML placeholder panel</span>
+          <span class="chip chip-red">ML prediction panel</span>
         </div>
 
         <div class="code-block">
@@ -734,7 +734,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
 DB_PATH = str(Path(__file__).parent.parent / <span class="s">"db"</span> / <span class="s">"commute.duckdb"</span>)
 SGT = timezone(timedelta(hours=<span class="n">8</span>))
 
-<span class="o">@st.cache_resource</span>
+<span class="com"># Fresh connection every rerun — NOT @st.cache_resource (causes stale data)</span>
 <span class="k">def</span> <span class="f">get_connection</span>():
     <span class="k">return</span> duckdb.connect(DB_PATH, read_only=<span class="k">True</span>)
 
@@ -750,7 +750,7 @@ st.rerun()</pre>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The Streamlit dashboard connects to DuckDB in read-only mode — it never writes. The connection is cached with @st.cache_resource so it persists across rerenders without reopening the file. The page auto-refreshes every 60 seconds using time.sleep and st.rerun — no extra dependencies needed, and it does not re-trigger any API calls. Bus arrival times show as actual clock times — 09:34 and 09:39 — not vague 'X minutes' estimates, so the user knows exactly when to leave. The ML prediction panel at the bottom shows the model's predicted journey time and the 7-day MAE once model.py has been trained — it shows a placeholder until then."</p>
+          <p>"The Streamlit dashboard connects to DuckDB in read-only mode — it never writes. The page auto-refreshes every 60 seconds using time.sleep and st.rerun — no extra dependencies needed, and it does not re-trigger any API calls. Each 60-second refresh opens a fresh DuckDB connection so it always sees the latest data written by the pipeline — I discovered a bug in session 9 where caching the connection with @st.cache_resource caused the dashboard to show stale data even after the pipeline wrote new rows. Bus arrival times show as actual clock times — 09:34 and 09:39 — not vague 'X minutes' estimates, so the user knows exactly when to leave. The ML prediction panel shows the model's predicted journey time, crowd level, and 7-day MAE for the recommended route, plus individual ML captions inside each alternative route expander."</p>
         </div>
       </div>
     </div>
@@ -918,7 +918,7 @@ con.execute(<span class="s">"""
     </div>
 
     <!-- STATION 09 — FastAPI -->
-    <div class="station s9 current">
+    <div class="station s9 done">
       <div class="station-rail">
         <div class="station-dot">09</div>
         <div class="route-line"></div>
@@ -1004,7 +1004,7 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
     </div>
 
     <!-- STATION 10 — Airflow -->
-    <div class="station s10">
+    <div class="station s10 done">
       <div class="station-rail">
         <div class="station-dot">10</div>
         <div class="route-line"></div>
@@ -1012,7 +1012,7 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
       <div class="station-card">
         <div class="card-eyebrow">Orchestration · Day 2</div>
         <div class="card-title">Airflow Pipeline DAG</div>
-        <div class="card-desc">Replace manual script execution with a scheduled DAG. Airflow defines the pipeline as a task graph — what runs first, what runs in parallel, when to retry on failure, how often to schedule. Running locally with airflow standalone gives you a web UI showing which tasks succeeded or failed, with logs per task. This is the Airflow that hiring managers ask about.</div>
+        <div class="card-desc">Replace manual script execution with a scheduled DAG. Airflow defines the pipeline as a task graph — what runs, in what order, when to retry on failure, how often to schedule. Running locally with <code>airflow standalone</code> gives you a web UI showing which tasks succeeded or failed, with per-task logs. The actual DAG is a 7-task sequential chain with a <code>ShortCircuitOperator</code> that gates the daily evaluation task to 8 AM SGT only. This is Airflow that hiring managers ask about.</div>
 
         <div class="chip-row">
           <span class="chip chip-green">Apache Airflow</span>
@@ -1027,30 +1027,31 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
 <span class="k">from</span> airflow <span class="k">import</span> DAG
 <span class="k">from</span> airflow.operators.python <span class="k">import</span> PythonOperator
 <span class="k">from</span> datetime <span class="k">import</span> datetime, timedelta
-<span class="k">from</span> scripts.ingest <span class="k">import</span> (fetch_calendar, geocode_event,
-    fetch_weather, fetch_bus_arrivals, fetch_train_alerts)
-<span class="k">from</span> scripts.transform <span class="k">import</span> run_transformation
-<span class="k">from</span> scripts.model <span class="k">import</span> predict_next_event
+<span class="k">from</span> airflow.operators.bash <span class="k">import</span> BashOperator
+<span class="k">from</span> airflow.operators.python <span class="k">import</span> ShortCircuitOperator
+
+PROJECT_DIR = str(Path(__file__).parent.parent)
+
+<span class="k">def</span> <span class="f">_is_evaluation_window</span>(**ctx):
+    <span class="k">return</span> datetime.now(timezone.utc).astimezone(SGT).hour == <span class="n">8</span>
 
 <span class="k">with</span> DAG(
     dag_id=<span class="s">"commute_pipeline"</span>,
-    schedule=<span class="s">"*/10 * * * *"</span>,       <span class="com"># every 10 minutes</span>
-    start_date=datetime(<span class="n">2026</span>, <span class="n">7</span>, <span class="n">1</span>),
+    schedule=<span class="s">"*/30 * * * *"</span>,       <span class="com"># every 30 minutes</span>
+    start_date=datetime(<span class="n">2026</span>, <span class="n">6</span>, <span class="n">1</span>),
     catchup=<span class="k">False</span>,
-    default_args={<span class="s">"retries"</span>: <span class="n">2</span>, <span class="s">"retry_delay"</span>: timedelta(minutes=<span class="n">1</span>)}
 ) <span class="k">as</span> dag:
 
-    t1 = PythonOperator(task_id=<span class="s">"fetch_calendar"</span>,   python_callable=fetch_calendar)
-    t2 = PythonOperator(task_id=<span class="s">"geocode_destination"</span>, python_callable=geocode_event)
-    t3 = PythonOperator(task_id=<span class="s">"fetch_weather"</span>,     python_callable=fetch_weather)
-    t4 = PythonOperator(task_id=<span class="s">"fetch_bus_arrivals"</span>, python_callable=fetch_bus_arrivals)
-    t5 = PythonOperator(task_id=<span class="s">"fetch_train_alerts"</span>, python_callable=fetch_train_alerts)
-    t6 = PythonOperator(task_id=<span class="s">"sql_transform"</span>,     python_callable=run_transformation)
-    t7 = PythonOperator(task_id=<span class="s">"predict_commute"</span>,   python_callable=predict_next_event)
+    schema_check    = BashOperator(task_id=<span class="s">"schema_check"</span>,    bash_command=<span class="f">f"cd '{PROJECT_DIR}' && python scripts/schema.py"</span>)
+    ingest          = BashOperator(task_id=<span class="s">"ingest"</span>,          bash_command=<span class="f">f"cd '{PROJECT_DIR}' && python scripts/ingest.py"</span>)
+    transform       = BashOperator(task_id=<span class="s">"transform"</span>,       bash_command=<span class="f">f"cd '{PROJECT_DIR}' && python scripts/transform.py"</span>)
+    predict_commute = BashOperator(task_id=<span class="s">"predict_commute"</span>, bash_command=<span class="f">f"cd '{PROJECT_DIR}' && python scripts/model.py --predict"</span>)
+    backfill_actuals= BashOperator(task_id=<span class="s">"backfill_actuals"</span>,bash_command=<span class="f">f"cd '{PROJECT_DIR}' && python scripts/model.py --backfill"</span>)
+    gate_evaluate   = ShortCircuitOperator(task_id=<span class="s">"gate_evaluate"</span>, python_callable=_is_evaluation_window)
+    evaluate_model  = BashOperator(task_id=<span class="s">"evaluate_model"</span>,  bash_command=<span class="f">f"cd '{PROJECT_DIR}' && python scripts/model.py --evaluate"</span>)
 
-    <span class="com"># 7-task graph: calendar → geocode → [weather, bus, alerts] → transform → predict</span>
-    t1 >> t2 >> [t3, t4, t5] >> t6 >> t7
-    <span class="com"># evaluate_model runs in a separate DAG at 0 8 * * * (daily 8 AM)</span></pre>
+    <span class="com"># gate_evaluate passes only at 8 AM SGT; skips evaluate_model at all other times</span>
+    schema_check >> ingest >> transform >> predict_commute >> backfill_actuals >> gate_evaluate >> evaluate_model</pre>
         </div>
 
         <div class="card-grid">
@@ -1093,7 +1094,7 @@ http://localhost:8080
     </div>
 
     <!-- STATION 11 — Docker Compose -->
-    <div class="station s11">
+    <div class="station s11 done">
       <div class="station-rail">
         <div class="station-dot">11</div>
         <div class="route-line"></div>
@@ -1101,7 +1102,7 @@ http://localhost:8080
       <div class="station-card">
         <div class="card-eyebrow">Infrastructure · Day 2</div>
         <div class="card-title">Docker Compose — One Command Start</div>
-        <div class="card-desc">Package the entire system into three Docker containers: the pipeline, the FastAPI server, and the Streamlit dashboard. With a single docker compose up, anyone can run the full system on any machine without installing Python or configuring anything. The DuckDB file is volume-mounted so data persists across restarts.</div>
+        <div class="card-desc">Package the entire system into three Docker containers: the pipeline, the FastAPI server, and the Streamlit dashboard. With a single <code>docker compose up</code>, anyone can run the full system on any machine without installing Python or configuring anything. The DuckDB file is volume-mounted so data persists across restarts. The pipeline service runs <code>scripts/scheduler.py</code> — a 4-state adaptive state machine (NO_EVENT → WATCHING → IMMINENT → EXPIRED) that polls every 1 second near departure time using a cached geocode, and sleeps up to 1 hour when an event is far away. This replaces the old fixed 30-minute sleep loop.</div>
 
         <div class="chip-row">
           <span class="chip chip-navy">Docker</span>
@@ -1109,36 +1110,47 @@ http://localhost:8080
           <span class="chip chip-navy">volumes</span>
           <span class="chip chip-navy">service networking</span>
           <span class="chip chip-navy">port mapping</span>
+          <span class="chip chip-navy">scheduler.py</span>
+          <span class="chip chip-navy">4-state machine</span>
         </div>
 
         <div class="code-block">
-          <pre><span class="com"># docker-compose.yml</span>
-<span class="k">version</span>: <span class="s">"3.9"</span>
+          <pre><span class="com"># docker-compose.yml (actual implementation)</span>
 <span class="k">services</span>:
 
   <span class="n">pipeline</span>:
     build: .
-    command: python -m scripts.ingest
+    command: [<span class="s">"python"</span>, <span class="s">"scripts/scheduler.py"</span>]
     volumes:
-      - ./db:/app/db         <span class="com"># DuckDB file persists across runs</span>
-      - ./data:/app/data     <span class="com"># Parquet raw zone</span>
-    env_file: .env           <span class="com"># API keys via .env (gitignored)</span>
+      - db_data:/app/db
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./token.json:/app/token.json
+      - ./credentials.json:/app/credentials.json
+    restart: unless-stopped
 
   api:
     build: .
-    command: uvicorn scripts.api:app --host 0.0.0.0 --port 8000
+    command: uvicorn scripts.api:app --host 0.0.0.0 --port 8000 --workers 1
     ports: [<span class="s">"8000:8000"</span>]
-    volumes: [./db:/app/db]
-    depends_on: [pipeline]
+    volumes: [db_data:/app/db]
+    restart: unless-stopped
 
   dashboard:
     build: .
-    command: streamlit run scripts/serve.py --server.port 8501
+    command:
+      - streamlit
+      - run
+      - scripts/serve.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+      - --server.headless=true
     ports: [<span class="s">"8501:8501"</span>]
-    volumes: [./db:/app/db]
-    environment:
-      - API_URL=http://api:8000  <span class="com"># container-to-container via service name</span>
-    depends_on: [api]</pre>
+    volumes: [db_data:/app/db]
+    restart: unless-stopped
+
+<span class="k">volumes</span>:
+  db_data:</pre>
         </div>
 
         <div class="card-grid">
@@ -1162,8 +1174,11 @@ docker compose up
 # Rebuild after code changes:
 docker compose up --build
 
-# Run just the pipeline once:
-docker compose run pipeline
+# Stream pipeline (scheduler) logs:
+docker compose logs pipeline -f
+
+# Wipe DB volume (clears stale WAL lock):
+docker compose down -v
 
 # Stop everything:
 docker compose down</pre>
@@ -1173,7 +1188,7 @@ docker compose down</pre>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I containerised the system with Docker Compose — three services: pipeline, API, and dashboard. The DuckDB file is volume-mounted so data persists between container restarts. Anyone reviewing my project can clone the repo, add API keys to a .env file, and run docker compose up. No Python installation, no virtual environment setup. That's the point of containerisation — reproducible, deployable anywhere."</p>
+          <p>"I containerised the system with Docker Compose — three services: pipeline, API, and dashboard. The DuckDB file is in a named volume so data persists between container restarts. The pipeline service runs a custom scheduler — a 4-state state machine that polls every second when you're close to your departure time, and sleeps up to an hour when the next event is still far away. That's smarter than a fixed timer — it reduces API calls when there's nothing imminent, and catches last-minute calendar changes immediately before you need to leave. Anyone reviewing my project can clone the repo, add their API keys, and run docker compose up."</p>
         </div>
       </div>
     </div>
@@ -1647,7 +1662,7 @@ def evaluate_model(con):
             </li>
             <li>
               <strong>Orchestration & Infrastructure</strong>
-              Orchestrated the pipeline with an Apache Airflow DAG (5 tasks, 10-minute schedule, parallel fetch phase); containerised the full stack with Docker Compose — pipeline, API, and dashboard as three services with volume-mounted persistent storage.
+              Orchestrated the pipeline with an Apache Airflow DAG (7 tasks, 30-minute schedule, gate_evaluate ShortCircuitOperator for daily 8 AM ML evaluation); containerised the full stack with Docker Compose — pipeline, API, and dashboard as three services with volume-mounted persistent storage. The Docker pipeline service uses a custom scheduler.py (4-state machine) instead of a fixed sleep loop.
             </li>
             <li>
               <strong>Data Architecture</strong>

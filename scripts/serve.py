@@ -93,8 +93,8 @@ LIMIT 1
 st.set_page_config(page_title="SG Commute Pulse", page_icon="🚇", layout="centered")
 
 
-@st.cache_resource
 def get_connection():
+    # fresh connection every rerun so we always see latest DB state
     return duckdb.connect(DB_PATH, read_only=True)
 
 
