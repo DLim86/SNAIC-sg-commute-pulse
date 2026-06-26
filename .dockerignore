@@ -1,0 +1,12 @@
+.git/
+**/__pycache__/
+*.pyc
+*.pyo
+*.duckdb
+*.duckdb.wal
+models/*.pkl
+LTA/
+OneMap/
+Prompt.txt
+*.log
+docs/
