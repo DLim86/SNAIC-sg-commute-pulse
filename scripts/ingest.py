@@ -699,5 +699,124 @@ def main():
     log.info("=== Ingest pipeline complete ===")
 
 
+# ── Partial-run mode helpers (used by scheduler.py) ──────────────────────────
+
+def _fetch_raw_calendar_event():
+    """Google Calendar only — no geocoding, no ip-api. Returns (event_id, location_raw, start_dt_str) or (None, None, None)."""
+    service = _get_calendar_service()
+    now_utc = datetime.now(timezone.utc).isoformat()
+    result = service.events().list(
+        calendarId=GOOGLE_CALENDAR_ID,
+        timeMin=now_utc,
+        maxResults=10,
+        singleEvents=True,
+        orderBy="startTime",
+    ).execute()
+    for event in result.get("items", []):
+        location = event.get("location", "").strip()
+        start_dt_str = event.get("start", {}).get("dateTime")
+        if not location or not start_dt_str:
+            continue
+        if datetime.fromisoformat(start_dt_str).astimezone(timezone.utc) <= datetime.now(timezone.utc):
+            continue
+        return f"GCAL_{event['id']}", location, start_dt_str
+    return None, None, None
+
+
+def run_calendar_check():
+    """Group 1: smart calendar check. Prints event key to stdout; empty string if no event.
+
+    During IMMINENT state (1s polling): cache hit skips OneMap geocode entirely.
+    Only calls OneMap when event or location string actually changes.
+    """
+    con = duckdb.connect(str(DB_PATH))
+    try:
+        new_event_id, new_location_raw, _ = _fetch_raw_calendar_event()
+
+        if new_event_id is not None:
+            stored = con.execute(
+                "SELECT location_raw, dest_lat, dest_lng FROM calendar_events WHERE event_id = ?",
+                [new_event_id],
+            ).fetchone()
+            if stored and stored[0] == new_location_raw and stored[1] is not None:
+                # Same event, same location string — use cached coords
+                print(f"{new_event_id}|{round(stored[1], 4)}|{round(stored[2], 4)}")
+                return
+
+        # Cache miss or no calendar event — full path (OneMap geocode)
+        token = get_onemap_token()
+        try:
+            event_id, dest_lat, dest_lng = fetch_next_calendar_event(con, token)
+            _purge_stale_events(con, event_id)
+        except ValueError as exc:
+            log.warning("No usable calendar event — %s", exc)
+            result = get_smart_default(con, token)
+            if result is None:
+                print("")
+                return
+            event_id, dest_lat, dest_lng = result
+            _purge_stale_events(con, event_id)
+
+        print(f"{event_id}|{round(dest_lat, 4)}|{round(dest_lng, 4)}")
+    finally:
+        con.close()
+
+
+def run_routes():
+    """Group 2: routes + bus arrivals + train alerts using stored event coords."""
+    token = get_onemap_token()
+    origin_lat, origin_lng = get_current_location()
+    con = duckdb.connect(str(DB_PATH))
+    try:
+        row = con.execute(
+            "SELECT event_id, dest_lat, dest_lng FROM calendar_events "
+            "WHERE start_time > NOW() ORDER BY start_time LIMIT 1"
+        ).fetchone()
+        if not row:
+            log.warning("No stored event — skipping route refresh")
+            return
+        event_id, dest_lat, dest_lng = row
+        ingest_routes(con, event_id, dest_lat, dest_lng, token, origin_lat, origin_lng)
+        ingest_bus_arrivals(con, origin_lat, origin_lng)
+        ingest_train_alerts(con)
+        log.info("=== Routes + live data refreshed ===")
+    finally:
+        con.close()
+
+
+def run_weather():
+    """Group 3: weather only using stored event destination."""
+    con = duckdb.connect(str(DB_PATH))
+    try:
+        row = con.execute(
+            "SELECT dest_lat, dest_lng FROM calendar_events "
+            "WHERE start_time > NOW() ORDER BY start_time LIMIT 1"
+        ).fetchone()
+        if not row:
+            log.warning("No stored event — skipping weather refresh")
+            return
+        ingest_weather(con, row[0], row[1])
+        log.info("=== Weather refreshed ===")
+    finally:
+        con.close()
+
+
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    ap = argparse.ArgumentParser(description="SG Commute Pulse ingestion pipeline")
+    ap.add_argument(
+        "--mode",
+        choices=["calendar-check", "routes", "weather"],
+        help="Partial run mode (used by scheduler). Omit to run the full pipeline.",
+    )
+    args = ap.parse_args()
+
+    if args.mode == "calendar-check":
+        run_calendar_check()
+    elif args.mode == "routes":
+        run_routes()
+    elif args.mode == "weather":
+        run_weather()
+    else:
+        main()

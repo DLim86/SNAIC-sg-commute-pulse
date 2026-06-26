@@ -2,19 +2,7 @@ services:
 
   pipeline:
     build: .
-    command:
-      - sh
-      - -c
-      - |
-        python scripts/schema.py &&
-        python scripts/model.py --train &&
-        while true; do
-          python scripts/ingest.py &&
-          python scripts/transform.py &&
-          python scripts/model.py --predict &&
-          python scripts/model.py --backfill
-          sleep 1800
-        done
+    command: ["python", "scripts/scheduler.py"]
     volumes:
       - db_data:/app/db
       - ./data:/app/data
