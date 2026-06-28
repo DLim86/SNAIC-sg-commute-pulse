@@ -1,6 +1,6 @@
 # Architecture — SNAIC-sg-commute-pulse
 
-**Last updated: 2026-06-25 (session 5 + session 6 transform.py improvements + Day 4 MLOps)**
+**Last updated: 2026-06-28 (session 9 — api.py, Airflow DAG, Docker, scheduler.py; Day 5 docs)**
 
 ---
 
@@ -67,47 +67,58 @@
 │  Streamlit Dashboard  :8501                                 │
 │  → leave-by · ML prediction · fare · weather warning        │
 │  → step-by-step legs · predicted vs actual · 7-day MAE     │
-│  → @st.cache_data(ttl=300) auto-refresh every 5 min        │
+│  → FRESH read-only DuckDB connection every 60s rerun        │
+│    (session 9 fix: removed @st.cache_resource — was         │
+│     returning stale rows after pipeline wrote new data)     │
 │                                                             │
 │  FastAPI  :8000                                             │
+│  GET /health                                                │
+│  GET /api/v1/recommendation/next       ← defined FIRST      │
 │  GET /api/v1/recommendation/{event_id}                      │
 │  GET /api/v1/prediction/{event_id}                          │
 │  GET /api/v1/pipeline/status                                │
-│  GET /health                                                │
+│  GET /api/v1/alerts                                         │
 │  GET /docs  (auto-generated Swagger UI)                     │
+│  Per-request contextmanager get_db() — opens+closes         │
+│  read_only DuckDB on each request, no held file handle      │
 └─────────────────────────────────────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────────────┐
 │                    ORCHESTRATION                            │
 │                                                             │
-│  Airflow DAG: commute_pipeline                              │
-│  Schedule: */10 * * * * (every 10 minutes)                  │
+│  Airflow DAG: commute_pipeline  (dags/commute_pipeline_dag.py)│
+│  Schedule: */30 * * * *  catchup=False                      │
 │                                                             │
-│  fetch_calendar → geocode_destination                       │
-│                        ↓         ↓          ↓              │
-│                   fetch_weather  fetch_bus  fetch_alerts    │
-│                        ↓         ↓          ↓              │
-│                        └────────┬─────────┘               │
-│                                 ↓                          │
-│                           sql_transform                    │
-│                                 ↓                          │
-│                         predict_commute  ← NEW (model.py)  │
+│  SEQUENTIAL 7-task chain:                                   │
+│  schema_check >> ingest >> transform >> predict_commute     │
+│    >> backfill_actuals >> gate_evaluate >> evaluate_model   │
 │                                                             │
-│  Separate daily schedule (0 8 * * *):                       │
-│                         evaluate_model   ← NEW (model.py)  │
+│  gate_evaluate = ShortCircuitOperator                       │
+│    → passes ONLY when datetime.now(SGT).hour == 8           │
+│    → evaluate_model only runs once per day at 8 AM SGT      │
+│                                                             │
+│  All tasks use BashOperator with absolute PROJECT_DIR path  │
 └─────────────────────────────────────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────────────┐
 │                    INFRASTRUCTURE (Docker)                  │
 │                                                             │
-│  Service: pipeline   → python -m scripts.ingest             │
+│  Service: pipeline   → python scripts/scheduler.py          │
+│    4-state machine: NO_EVENT (60s/1hr) → WATCHING           │
+│    → IMMINENT (1s, cached geocode) → EXPIRED                │
+│    Group 1: calendar-check every tick                       │
+│    Group 2: routes only when event/dest changes             │
+│    Group 3: weather every 30 min                            │
+│                                                             │
 │  Service: api        → uvicorn scripts.api:app :8000        │
 │  Service: dashboard  → streamlit run scripts/serve.py :8501 │
 │                                                             │
-│  Volume: ./db:/app/db      (DuckDB persists)                │
-│  Volume: ./data:/app/data  (Parquet raw zone)               │
-│  Volume: ./models:/app/models  (ML .pkl files)              │
-│  Secrets: .env file (gitignored)                            │
+│  Named volume: db_data → /app/db  (DuckDB persists)        │
+│  Bind mounts: ./token.json  ./credentials.json (OAuth2)     │
+│  Image: python:3.12-slim + libgomp1 (scikit-learn threads)  │
+│                                                             │
+│  WAL lock gotcha: if pipeline killed mid-write, run         │
+│  "docker compose down -v" to wipe stale .duckdb.wal         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -119,7 +130,11 @@
 Google Calendar API (OAuth2)
   → fetch_next_calendar_event(): scan next 10 upcoming events
   → skip all-day events (no dateTime) and events with no location
-  → geocode() with progressive fallback: full address → strip ", Singapore" → first token
+  → geocode() with progressive fallback (session 7):
+      0. re.findall(r'\b\d{6}\b', address) — postal code extracted first (most reliable)
+      1. full address string
+      2. address with ", Singapore" stripped
+      3. first comma-delimited token
   → if all geocode attempts fail AND WORK_ADDRESS is set: use WORK_ADDRESS as destination
   → event_id = f"GCAL_{google_event_id}"
   → INSERT OR REPLACE INTO calendar_events
@@ -166,12 +181,13 @@ ML Pipeline (model.py):
      → features: hour, dow, is_rainy, walk_distance_m, num_transfers
      → target: total_duration_min
      → fit RandomForestRegressor, save models/commute_predictor.pkl
-  → --predict: load pkl, score next event, INSERT into predictions table
+  → --predict: load pkl, score ALL 3 route options → prediction_id = "{option_id}_pred"
+     weather cross-join fix: scalar subquery (SELECT is_rainy FROM weather ORDER BY fetched_at DESC LIMIT 1)
   → --evaluate: compute 7-day MAE (predicted_min vs actual_min), log to pipeline_runs
 
 Serving:
-  → Streamlit reads v_enriched_routes + predictions (read_only=True, TTL=300s)
-  → FastAPI reads same views and tables (read_only=True)
+  → Streamlit: fresh read_only=True connection every 60s rerun (no cache decorator)
+  → FastAPI: per-request contextmanager get_db() opens+closes read_only connection
   → Swagger UI at /docs for live API testing
 ```
 

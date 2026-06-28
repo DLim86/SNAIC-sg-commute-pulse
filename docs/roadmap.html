@@ -1439,7 +1439,7 @@ def evaluate_model(con):
   <div class="phase-divider-badge" style="background:rgba(14,116,144,.1);border:1px solid rgba(14,116,144,.35);color:#67E8F9">PHASE 4 · DAY 4 · MLOPS</div>
   <div class="phase-divider-line"></div>
 </div>
-<div class="phase-divider-sub">Day 4 content unlocked 25 Jun 2026. MLflow experiment tracking, model registry, drift detection, and canary deployment. Day 5 still coming — update after class.</div>
+<div class="phase-divider-sub">Day 4 unlocked 25 Jun 2026: MLflow experiment tracking, model registry, drift detection, and canary deployment. Day 5 unlocked 28 Jun 2026: GPU acceleration (RAPIDS/Triton), BI (Metabase), Feature Store — Technology Selection Exercise validates existing FastAPI + pandas + scikit-learn choices.</div>
 
 <div class="route-map">
   <div class="route-wrapper">
@@ -1574,15 +1574,83 @@ def evaluate_model(con):
       </div>
     </div>
 
-    <div class="station soon">
+    <!-- STATION D5 — GPU Acceleration & BI -->
+    <div class="station s7">
       <div class="station-rail">
-        <div class="station-dot" style="background:var(--locked);font-size:10px">D5</div>
+        <div class="station-dot">D5</div>
         <div class="route-line"></div>
       </div>
       <div class="station-card">
-        <div class="soon-label">🔒 Unlocks after Day 5</div>
-        <div class="card-title">Cloud Deployment &amp; Scaling</div>
-        <div class="card-desc">Content releases after Day 5. Likely covers deploying to a cloud provider (AWS/GCP), scaling beyond a single machine, managed Airflow, and production-grade secrets management. Placeholder — update after class.</div>
+        <div class="card-eyebrow">GPU &amp; BI · Day 5 · Unlocked 28 Jun 2026</div>
+        <div class="card-title">GPU Acceleration, Triton &amp; Business Intelligence</div>
+        <div class="card-desc">Day 5 covers the RAPIDS GPU ecosystem (cuDF, cuML, Dask-cuDF, CuPy), NVIDIA Triton Inference Server, Feature Stores, and Business Intelligence (Metabase). These concepts teach you to match tools to the actual scale of your problem — and to explain confidently why you chose the simpler tool when the simpler tool is the right tool. No code changes are required; Day 5 validates every technology choice already made in this project.</div>
+
+        <div class="chip-row">
+          <span class="chip chip-teal">RAPIDS</span>
+          <span class="chip chip-teal">cuDF</span>
+          <span class="chip chip-teal">cuML</span>
+          <span class="chip chip-teal">Triton Inference Server</span>
+          <span class="chip chip-teal">Metabase</span>
+          <span class="chip chip-teal">Feature Store</span>
+          <span class="chip chip-teal">Technology Selection</span>
+        </div>
+
+        <div class="card-block" style="margin-bottom:20px">
+          <div class="block-label">Technology Selection Exercise — where this project sits</div>
+          <div class="block-content">
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.8;color:#A8C4DC">Scenario                               Recommended tool         This project?
+───────────────────────────────────    ──────────────────       ─────────────
+100 MB daily CSV, one dashboard        pandas + Parquet          ✅ YES
+Low traffic prediction API             FastAPI                   ✅ YES
+High-throughput inference (1000s/s)    Triton                    ❌ NO — 3 predictions/run
+Slow ML training (training bottleneck) cuML / GPU XGBoost        ❌ NO — trains in &lt;1s</pre>
+            <div style="font-size:12px;color:var(--muted);margin-top:10px">The exercise explicitly teaches: "simple is enough when data is small and traffic is low." Our pipeline scores 3 route options per run, processes ~50 rows of data, and has one user. pandas + FastAPI + scikit-learn are the correct tool choices — confirmed by Day 5.</div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">RAPIDS ecosystem — when you'd actually use it</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">cuDF</strong> — GPU DataFrame (pandas API). Use when data is GB-scale and pandas becomes the bottleneck. Not our scenario: we process ~50 rows per run.</div>
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">cuML</strong> — GPU-accelerated ML (scikit-learn API). Use when model training takes hours due to dataset size. Our Random Forest trains in under 1 second on CPU.</div>
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Dask-cuDF</strong> — distributed GPU DataFrames across a cluster. Use for TB-scale ETL. Overkill for 47 weather rows.</div>
+              <div><strong style="color:#67E8F9">CuPy</strong> — NumPy replacement on GPU. Use when numerical computation is the bottleneck. Our bottleneck is API latency, not computation.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Triton vs FastAPI — what the choice actually means</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">FastAPI</strong> — Python ASGI server. Calls <code>model.predict()</code> directly. Startup in 1s. No GPU required. Correct for &lt;100 predictions/min.</div>
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Triton</strong> — NVIDIA's model serving runtime. Handles TensorRT/ONNX/TorchScript. Dynamic batching across concurrent requests. Production-scale at &gt;1000 req/s.</div>
+              <div>Our FastAPI <code>/api/v1/prediction/{event_id}</code> scores 3 route options in under 1ms. Triton's deployment overhead (GPU server, model repository, gRPC client) would cost more than the rest of the pipeline combined. FastAPI is correct.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card-block">
+            <div class="block-label">Metabase vs Streamlit</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px"><strong style="color:#67E8F9">Metabase</strong> — no-code BI builder for non-technical stakeholders. SQL questions → charts. Requires its own Docker service + PostgreSQL metadata store.</div>
+              <div><strong style="color:#67E8F9">Streamlit</strong> — Python-code dashboard. Full control over layout, ML panels, and 60s live refresh. No extra SQL layer. Correct for a developer-owned single-user project. Metabase adds infrastructure for zero benefit here.</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="block-label">Feature Store — what it solves (and why we don't need one)</div>
+            <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
+              <div style="margin-bottom:6px">A <strong style="color:#67E8F9">Feature Store</strong> centralises engineered features so multiple teams and models share consistent definitions — preventing training-serving skew at scale.</div>
+              <div>We have one model and one engineer. Features are computed inline in the SQL training query. A Feature Store (e.g. Feast, Hopsworks) would add a registry, a serving layer, and a separate service — to avoid a problem we don't have. Would become necessary if the project grew to 10+ models across multiple teams.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="video-tip">
+          <div class="video-tip-label">▶ In your video, say this</div>
+          <p>"Day 5 covered the RAPIDS GPU ecosystem — cuDF, cuML, Triton Inference Server — and Business Intelligence tools like Metabase. But Day 5 also taught a Technology Selection Exercise that made something clear: you should only add these tools when your problem actually needs them.</p>
+          <p>The exercise maps scenarios to tools. Low-traffic prediction API goes to FastAPI — that's us. One hundred megabyte daily data goes to pandas and Parquet — that's us. High-throughput inference at thousands of requests per second goes to Triton — not us. Slow ML training goes to cuML — we train in under one second on CPU.</p>
+          <p>So I chose not to add GPU infrastructure. The pipeline is I/O-bound on API latency, not compute-bound. FastAPI is entirely sufficient for one user's prediction requests. If this scaled to thousands of simultaneous commuters, I'd add Triton for batched inference and Metabase for a non-technical operations dashboard. Knowing when not to use a tool is just as important as knowing how to use it."</p>
+        </div>
       </div>
     </div>
 

@@ -74,9 +74,9 @@ Given a next calendar event, the pipeline:
 | `config.py` | Exists locally, gitignored — real credentials + GARMIN_EMAIL/PASSWORD/WHOOP_ACCESS_TOKEN added as `""` (optional, skip by leaving blank) |
 | `requirements.txt` | Complete — `>=` pins for C-extension compat; includes `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` |
 | `README.md` | Complete |
-| `docs/roadmap.html` | Complete — interactive 12-station roadmap (updated session 9: stations 09/10/11 marked DONE, scheduler added) |
-| `docs/AI_HANDOFF.md` | Complete — full handoff context (updated session 9) |
-| `docs/video_script.html` | Complete — timed video script (updated session 9: Docker section mentions scheduler) |
+| `docs/roadmap.html` | Complete — 12-station roadmap. **2026-06-28: Station D5 unlocked** (GPU/Triton/BI/Technology Selection Exercise). Phase 4 divider updated. |
+| `docs/AI_HANDOFF.md` | Complete — full handoff context. **2026-06-28: rubric table updated to ALL DONE, Day 5 section added, file list updated to D38** |
+| `docs/video_script.html` | Complete — timed 15-min script. **2026-06-28: "Start All Services" setup section added at top; Docker showcase is Section 9 (11:00–12:00); Q3 4th paragraph covers Day 5 GPU/Triton rationale; RUNBOOK.md merged in** |
 | `scripts/__init__.py` | Empty — required for Airflow DAG imports |
 | `scripts/schema.py` | **DONE** — 9 tables + `v_enriched_routes` view. `predictions` table added (session 4). **session 6 — `recommendation_reason` CASE expanded to 9 dynamic labels using `MIN() OVER (PARTITION BY event_id)` window functions.** **session 8 — 4 new `predictions` columns: `option_id`, `boarding_stop_code`, `alighting_stop_code`, `transit_service_no`.** Run once (or re-run to refresh view). |
 | `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always) + progressive geocoding fallback + WORK_ADDRESS fallback + `get_smart_default()` + `v3/BusArrival` + 5-nearest-stop fallback + float-suffix strip + **`_purge_stale_events()`** (session 5) + **`next_bus2_mins`** (session 5) + **FK fix in `ingest_routes`** (session 5) + **postal code extraction in `geocode()`** (session 7) + **location-change detection log** (session 7) + **session 9 — 3 argparse modes: `--mode calendar-check` (Group 1: cached geocode, no ip-api during IMMINENT), `--mode routes` (Group 2: OneMap + LTA, triggered only on event/dest change), `--mode weather` (Group 3: data.gov.sg only). Default (no flag) = full pipeline, unchanged.** |
@@ -115,13 +115,14 @@ Events are read from Google Calendar via OAuth2 (`fetch_next_calendar_event()` i
 
 All build tasks from sessions 1–9 are complete. The remaining work is:
 
-1. **Video recording** — use `docs/video_script.html` as the script. Run all services before recording:
-   - `streamlit run scripts/serve.py` → `http://localhost:8501`
-   - `uvicorn scripts.api:app --reload --port 8000` → `http://localhost:8000/docs`
-   - `airflow standalone` → `http://localhost:8080`
-   - `docker compose up` (for Docker demo)
-2. **PDF resume bullets** — copy from Station 12 in `docs/roadmap.html`
-3. **Optional Day 5 unlock** — update `docs/roadmap.html` after Day 5 class if new content released
+1. **Video recording** — use `docs/video_script.html` as the script. The "Start All Services" setup section at the top has all startup commands and URLs. Docker showcase is Section 9 (11:00–12:00). Services to start before recording:
+   - Terminal 1: `python scripts/ingest.py` then `python scripts/transform.py` then `python scripts/model.py --predict`
+   - Terminal 2: `streamlit run scripts/serve.py` → `http://localhost:8501`
+   - Terminal 3: `uvicorn scripts.api:app --reload --port 8000` → `http://localhost:8000/docs`
+   - Terminal 4: `airflow standalone` → `http://localhost:8080`
+   - Terminal 5 (just before Section 9): `docker compose up`
+2. **PDF resume bullets** — copy from Section 11 in `docs/video_script.html` or Station 12 in `docs/roadmap.html`
+3. **Day 5 complete** — Station D5 unlocked in roadmap.html, D38 added to DECISIONS.md, AI_HANDOFF.md updated. No further code changes needed.
 
 ---
 
@@ -305,4 +306,4 @@ git push
 - Session 6 (2026-06-25): transform.py improvements — dynamic `recommended_mode`, inline first-transit live arrivals, dynamic disruption filtering, `MRT_LINE_NAMES` NE/CR/JR. schema.py `recommendation_reason` CASE expanded. Decisions D32–D34 added.
 - Session 8 (2026-06-25): Per-route ML predictions (all 3 options, keyed by option_id); mode-aware actual backfill; serve.py ML panel per alt route; weather cross-join bug fixed; walk-only alt routes skipped.
 - Session 9 (2026-06-26): api.py (6 FastAPI endpoints), Airflow DAG (7 tasks + ShortCircuit), Docker (3-service compose), serve.py @st.cache_resource bug fixed, ingest.py 3 argparse modes, scheduler.py state machine (4 states, 3 groups).
-- Day 5: not yet released — update roadmap after class at `docs/roadmap.html`
+- Day 5 (2026-06-28): GPU Acceleration (RAPIDS/cuDF/cuML/Dask-cuDF/CuPy), NVIDIA Triton Inference Server, Feature Store, Business Intelligence (Metabase). Technology Selection Exercise validates existing choices: low-traffic prediction API → FastAPI ✅; 100MB data → pandas + Parquet ✅. No code additions. `docs/roadmap.html` Station D5 unlocked; `docs/DECISIONS.md` D38 added; `docs/AI_HANDOFF.md` updated.

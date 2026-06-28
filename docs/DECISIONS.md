@@ -657,3 +657,28 @@ model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
 **SCD Type:** All dimension tables use SCD Type 1 (INSERT OR REPLACE overwrites the previous value). The 8am weather reading is replaced by the 10am reading — no history of past forecasts is kept in the DuckDB tables (raw history is preserved in the Parquet raw zone instead).
 
 **Trade-off:** SCD Type 2 (keep full history with valid_from/valid_to dates) would allow historical trend analysis. For this project scope, SCD Type 1 simplicity is the right trade-off. The Parquet raw zone serves as the historical record if needed.
+
+---
+
+## D38 — Technology Selection for GPU, Triton, and BI (Day 5 lens)
+
+**Decision:** Do NOT add GPU acceleration (cuDF/cuML), NVIDIA Triton Inference Server, or Metabase to this project.
+
+**Why — using the Day 5 Technology Selection Exercise table directly:**
+
+| Day 5 scenario | Recommended tool | Does this project fit? |
+|---|---|---|
+| 100MB daily CSV, one dashboard | pandas + Parquet | ✅ YES — we process ~50 rows per pipeline run |
+| Low traffic prediction API | FastAPI | ✅ YES — one user, one commute event at a time |
+| High-throughput inference (1000s req/s) | Triton Inference Server | ❌ NO — we score 3 route options per pipeline run |
+| Many ML experiments are slow (training bottleneck) | cuML / GPU XGBoost | ❌ NO — 500-row bootstrap trains in <1s on CPU |
+
+**GPU acceleration (cuDF, cuML, Dask-cuDF, CuPy):** RAPIDS speeds up data operations on NVIDIA GPUs. Our dataset is: 3 route options, 47 weather rows, 5,205 bus stop lookups. This is megabytes, not gigabytes. The pipeline is I/O-bound (API latency, ~2s per LTA call), not compute-bound. CPU is idle while waiting for LTA responses. Adding cuDF would increase system requirements without any measurable performance gain.
+
+**Triton Inference Server:** Designed for high-throughput GPU inference with dynamic batching, multiple model formats (TensorRT, ONNX, TorchScript), and Prometheus metrics. Our inference workload is 3 predictions per pipeline run — `model.predict()` in Python takes <1ms on CPU. Triton's deployment overhead (GPU server, model repository, gRPC client) would dwarf the problem it solves.
+
+**Metabase:** A BI tool for non-technical users to build dashboards with SQL queries. Streamlit already serves our dashboard function and is more flexible (Python code, not drag-and-drop SQL). Adding Metabase would require a separate Docker service, a PostgreSQL metadata store, and a second DuckDB connection — significant overhead for a single-user project.
+
+**Feature Store:** Useful at scale for sharing engineered features across multiple models and teams. With one model and one engineer, features are computed inline in the SQL query. A Feature Store adds indirection without value at this project's size.
+
+**Trade-off accepted:** If the project scaled to a multi-user commute recommendation service (thousands of concurrent users, multiple city deployments), the choices would change: Triton for high-throughput batched inference, Dask-cuDF for GPU-accelerated batch processing, Metabase for analyst dashboards. Knowing when to scale up — and when not to — is the skill the Day 5 exercise teaches.

@@ -211,6 +211,45 @@
   <div class="progress-label"><span>Start</span><span>7:30 — ML</span><span>12:00 — Reflection</span><span>15:00</span></div>
   <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
 
+  <!-- ─── SETUP ─── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num ok">⚙</div>
+      <div class="section-title">Start All Services — Do This Before Recording</div>
+      <div class="timer">Prep (not recorded)</div>
+    </div>
+    <div class="section-body">
+      <div class="do">
+        <div class="do-label">Open 4 terminals and run one command each</div>
+        <ul>
+          <li><strong>Terminal 1 — Ingest (refresh data):</strong> <code>python scripts/ingest.py</code> then <code>python scripts/transform.py</code> then <code>python scripts/model.py --predict</code></li>
+          <li><strong>Terminal 2 — Streamlit:</strong> <code>streamlit run scripts/serve.py</code> → <a href="http://localhost:8501" style="color:#58A6FF">http://localhost:8501</a></li>
+          <li><strong>Terminal 3 — FastAPI:</strong> <code>uvicorn scripts.api:app --reload --port 8000</code> → <a href="http://localhost:8000/docs" style="color:#58A6FF">http://localhost:8000/docs</a></li>
+          <li><strong>Terminal 4 — Airflow:</strong> <code>airflow standalone</code> → <a href="http://localhost:8080" style="color:#58A6FF">http://localhost:8080</a> (user: admin, password: in terminal output)</li>
+          <li><strong>Terminal 5 — Docker (for Section 9):</strong> <code>docker compose up</code> — keep this ready but start it just before Section 9 so it's freshly launching on screen</li>
+        </ul>
+      </div>
+      <div style="background:#0D2137;border-left:3px solid #1F6FEB;border-radius:0 6px 6px 0;padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;color:#58A6FF;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">All URLs at a glance</div>
+        <table style="font-family:monospace;font-size:13px;border-collapse:collapse;width:100%">
+          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">Streamlit dashboard</td><td style="color:#C9D1D9">http://localhost:8501</td></tr>
+          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI Swagger UI</td><td style="color:#C9D1D9">http://localhost:8000/docs</td></tr>
+          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI health check</td><td style="color:#C9D1D9">http://localhost:8000/health</td></tr>
+          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI next recommendation</td><td style="color:#C9D1D9">http://localhost:8000/api/v1/recommendation/next</td></tr>
+          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">Airflow UI</td><td style="color:#C9D1D9">http://localhost:8080</td></tr>
+        </table>
+      </div>
+      <div class="note">
+        <div class="note-label">Order of operations if starting from scratch</div>
+        <p><code>python scripts/schema.py</code> → <code>python scripts/ingest.py</code> → <code>python scripts/transform.py</code> → <code>python scripts/model.py --train</code> (first time only) → <code>python scripts/model.py --predict</code> → then start Streamlit, FastAPI, Airflow in separate terminals. DuckDB will have data by the time the dashboard opens.</p>
+      </div>
+      <div style="background:#2D0F0F;border-left:3px solid #DA3633;border-radius:0 6px 6px 0;padding:12px 16px">
+        <div style="font-size:10px;font-weight:700;color:#F85149;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Never show on screen</div>
+        <p style="color:#C9D1D9;font-size:13.5px"><code>config.py</code> contents &nbsp;·&nbsp; <code>credentials.json</code> &nbsp;·&nbsp; <code>token.json</code> &nbsp;·&nbsp; any actual API key value</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── SECTION 1 ─── -->
   <div class="section">
     <div class="section-header">
@@ -514,6 +553,7 @@
         <p>Three improvements. First, I'd add Kafka streaming for bus arrivals. Right now the pipeline polls every 10 minutes. With Kafka, LTA could push arrival updates as they happen and the dashboard would update in seconds, not minutes. This would also let me demonstrate Flink for windowed stream processing.</p>
         <p>Second, I'd accumulate more historical data for the ML model. The Random Forest performs better with more training examples. With 30 days of real commute data, the prediction accuracy would be meaningfully better than the synthetic bootstrap I'm using today.</p>
         <p>Third, a Telegram bot that pushes the recommendation to my phone 30 minutes before each calendar event. Right now I have to open the dashboard to check — a push notification would make it genuinely zero-friction.</p>
+        <p>Fourth, and this is something Day 5 taught me to think about explicitly: if this system scaled from one user to thousands of simultaneous commuters, the technology choices would change. I'd replace FastAPI with NVIDIA Triton Inference Server for high-throughput batched ML inference, replace pandas with cuDF from the RAPIDS ecosystem for GPU-accelerated data processing, and add Metabase as a BI dashboard for non-technical operations staff. But right now, those tools would be overkill — the Day 5 Technology Selection Exercise maps "low traffic prediction API" to FastAPI and "100MB daily data" to pandas and Parquet, which is exactly what I built. Knowing when not to use a tool is just as important as knowing when to use one.</p>
       </div>
     </div>
   </div>

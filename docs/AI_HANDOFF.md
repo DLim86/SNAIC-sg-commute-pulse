@@ -3,7 +3,7 @@
 This document lets another Claude session (or any developer) continue this project
 from scratch with no prior chat history.
 
-**Last updated: 2026-06-26 (session 9 — FastAPI, Airflow DAG, Docker, smart scheduler, serve.py stale-connection fix)**
+**Last updated: 2026-06-28 (Day 5 docs — D5 roadmap station, D38 decision, video script setup section + Docker demo, RUNBOOK merged into video_script.html)**
 
 ---
 
@@ -37,16 +37,16 @@ Given a user's next Google Calendar event, the pipeline:
 
 ---
 
-## Rubric (actual — reviewed 2026-06-24)
+## Rubric (actual — reviewed 2026-06-24) — ALL CODE COMPLETE ✅
 
-| Criterion | Marks | Current Gap |
+| Criterion | Marks | Status |
 |---|---|---|
-| End-to-End Pipeline | 30 | Need: api.py, Airflow DAG, Docker |
-| **ML and Real-Time Output** | **30** | **model.py DONE ✅ — per-route predictions, mode-aware actual backfill, dashboard panel** |
-| Technical Depth & Robustness | 10 | Strong: retry, idempotency, logging, coord validation |
-| Presentation & Explanation | 30 | Needs video practice, reflection answers |
+| End-to-End Pipeline | 30 | ✅ DONE — Calendar→OneMap→LTA→weather→DuckDB→FastAPI+Streamlit; Airflow 7-task DAG; Docker 3-service compose; scheduler.py state machine |
+| ML and Real-Time Output | 30 | ✅ DONE — model.py (--train/--predict/--evaluate/--backfill); per-route predictions keyed by option_id; Airflow gate_evaluate at 8AM SGT; serve.py ML panel |
+| Technical Depth & Robustness | 10 | ✅ DONE — fetch_with_retry() exponential backoff; INSERT OR REPLACE idempotency; GPS bounds validation; logging (no print); Parquet raw zone; 4-state scheduler; DuckDB FK guard; stale event purge |
+| Presentation & Explanation | 30 | ⏳ VIDEO PENDING — docs/video_script.html script ready; Docker is Section 9 (11:00–12:00) |
 
-**ML criterion requires:** batch processing ✅ + model training/inference ✅ + live dashboard ✅ + model evaluation ✅
+**Only remaining task: record the 15-minute video.** docs/video_script.html has the full script including a "Start All Services" setup section and timed sections for all 4 demo tools.
 
 The rubric example: "Generate predictions for the next two hours and compare earlier predictions with actual data. Evaluate the prediction model every day at 8:00 AM." — This is exactly what model.py + the Airflow evaluate_model task must do.
 
@@ -63,11 +63,11 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `config.py` | Exists locally, gitignored — real credentials present |
 | `requirements.txt` | Complete — `>=` pins for Python 3.14 compat; `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` |
 | `README.md` | Complete |
-| `docs/roadmap.html` | Updated session 9 — stations 09/10/11 marked DONE, scheduler described |
-| `docs/AI_HANDOFF.md` | This file — updated session 9 |
-| `docs/video_script.html` | Updated session 9 — Docker section mentions scheduler.py |
-| `docs/ARCHITECTURE.md` | Updated — includes ML layer, smart default data flow, geocoding fallback |
-| `docs/DECISIONS.md` | Complete — D01–D37 |
+| `docs/roadmap.html` | Updated 2026-06-28 — Station D5 unlocked (GPU/Triton/BI/Technology Selection Exercise). All 12 stations complete. |
+| `docs/AI_HANDOFF.md` | This file — updated 2026-06-28 |
+| `docs/video_script.html` | Updated 2026-06-28 — "Start All Services" setup section at top; Docker is Section 9 (11:00–12:00); Q3 4th paragraph covers Day 5 GPU/Triton/Metabase rationale; RUNBOOK.md merged in |
+| `docs/ARCHITECTURE.md` | Updated 2026-06-28 — session 9 changes: correct Airflow chain, Docker scheduler.py, serve.py connection fix, all 6 FastAPI endpoints |
+| `docs/DECISIONS.md` | Complete — D01–D38 (D38 = Day 5 Technology Selection: why no GPU/Triton/Metabase) |
 | `scripts/__init__.py` | Done — empty, required for Airflow imports |
 | `scripts/schema.py` | Done — 9 tables + `v_enriched_routes` view. Run `python scripts/schema.py` to apply all migrations. |
 | `scripts/ingest.py` | Done — full pipeline + **session 9: 3 argparse modes** (`--mode calendar-check` / `--mode routes` / `--mode weather`). Default (no mode) = full pipeline. `_fetch_raw_calendar_event()` helper for cheap Google Calendar-only check (no OneMap). |
@@ -133,6 +133,26 @@ View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_fo
 **New dependency:** `mlflow>=2.12.0` — add to `requirements.txt`.
 
 **Design decision:** See D29 (MLflow adoption) and D30 (drift detection) in `docs/DECISIONS.md`.
+
+---
+
+## Day 5 GPU & BI (unlocked 2026-06-28)
+
+Day 5 covers GPU acceleration (RAPIDS ecosystem) and Business Intelligence. **No code changes required** — Day 5 content validates existing tool choices using the Technology Selection Exercise.
+
+**Technology Selection Exercise outcome (from Day 5 slides):**
+- 100MB daily CSV, one dashboard → pandas + Parquet ✅ (our project)
+- Low traffic prediction API → FastAPI ✅ (our project)
+- High-throughput inference → Triton (not our project — we score 3 routes per run)
+- Slow ML training → cuML/GPU XGBoost (not our project — 500-row bootstrap trains in <1s)
+
+**RAPIDS ecosystem (not used — wrong scale):** cuDF (GPU DataFrame), cuML (GPU ML), Dask-cuDF (distributed GPU), CuPy (GPU arrays). Our pipeline is I/O-bound on API latency, not compute-bound. Adding cuDF would require an NVIDIA GPU and add zero measurable performance gain at our data volume.
+
+**Metabase (not used — Streamlit already serves this role):** BI dashboard for non-technical users. Streamlit is more flexible for a developer-owned project and requires no additional Docker service or PostgreSQL metadata store.
+
+**Video talking point:** "The Day 5 Technology Selection Exercise validated every tool I'd already chosen. I use FastAPI because this is a low-traffic API. I use pandas + DuckDB because my data is small. Knowing when NOT to add GPU infrastructure is just as important as knowing when to add it."
+
+**Design decision:** See D38 in `docs/DECISIONS.md`.
 
 ---
 
