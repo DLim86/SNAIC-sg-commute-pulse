@@ -220,7 +220,7 @@
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Open 4 terminals and run one command each</div>
+        <div class="do-label">Open 5 terminals — commands listed per terminal below</div>
         <ul>
           <li><strong>Terminal 1 — Ingest (refresh data):</strong> <code>python scripts/ingest.py</code> then <code>python scripts/transform.py</code> then <code>python scripts/model.py --predict</code></li>
           <li><strong>Terminal 2 — Streamlit:</strong> <code>streamlit run scripts/serve.py</code> → <a href="http://localhost:8501" style="color:#58A6FF">http://localhost:8501</a></li>
@@ -293,7 +293,7 @@
       <div class="say">
         <div class="say-label">Say This</div>
         <p>The system has three layers, each mapped to a rubric criterion.</p>
-        <p><strong>Layer 1 — Batch pipeline.</strong> An Airflow DAG runs every 10 minutes. It fetches four data sources, cleans and stores data in DuckDB, and runs a SQL transformation. This is the core data engineering pipeline.</p>
+        <p><strong>Layer 1 — Batch pipeline.</strong> An Airflow DAG runs every 30 minutes. It fetches four data sources, cleans and stores data in DuckDB, and runs a SQL transformation. This is the core data engineering pipeline.</p>
         <p><strong>Layer 2 — ML predictions.</strong> After each transformation, a Random Forest model predicts the commute duration for the next event and compares it with what actually happened. A daily Airflow task evaluates 7-day prediction accuracy. This satisfies the ML and real-time output criterion.</p>
         <p><strong>Layer 3 — Live serving.</strong> A Streamlit dashboard auto-refreshes every 60 seconds showing the current recommendation, the ML prediction, and weather and disruption warnings. A FastAPI layer exposes the same data as a REST endpoint so any client can consume it.</p>
         <p>My architecture follows the <strong>lake-warehouse pattern</strong>. Raw API responses land in date-partitioned Parquet files — that's the data lake. Cleaned, typed data lives in DuckDB — that's the data warehouse, modelled as a star schema with route_options as the fact table.</p>
@@ -409,7 +409,7 @@
           <li>Open Streamlit at <code>http://localhost:8501</code></li>
           <li>Point at: event title, leave-by metric, ML prediction metric, fare, weather warning</li>
           <li>Show the step-by-step legs table</li>
-          <li>Show the "last refreshed" timestamp — explain the 5-min auto-refresh</li>
+          <li>Show the "last refreshed" timestamp — explain the 60-second auto-refresh</li>
           <li>If possible: briefly update weather data to rainy and show the warning appear</li>
         </ul>
       </div>
@@ -488,7 +488,7 @@
       </div>
       <div class="say">
         <div class="say-label">Say This</div>
-        <p>FastAPI sits between DuckDB and any consumer. Instead of Streamlit querying DuckDB directly, it calls this API. That means any client can consume the recommendation — a mobile app, a Telegram bot, a teammate's script — without touching the database.</p>
+        <p>Streamlit is the dashboard client and reads DuckDB directly with <code>read_only=True</code> — it doesn't need to go through an API for its own display. FastAPI exposes the same recommendation data as REST endpoints for any other client — a mobile app, a Telegram bot, a teammate's script — without those clients needing to know anything about DuckDB or how the data is structured internally.</p>
         <p>FastAPI auto-generates this Swagger UI at <code>/docs</code>. I can click "Try it out" right now and execute a live API call. The response includes <code>leave_by</code>, <code>total_duration_min</code>, <code>fare</code>, <code>weather_forecast</code>, and <code>recommendation_reason</code> — all the fields the Streamlit dashboard also shows.</p>
         <p>The pipeline status endpoint reads from the <code>pipeline_runs</code> monitoring table — so I can see the last 10 pipeline runs, whether each succeeded, how many rows were upserted, and how long it took. This is operational monitoring exposed as an API.</p>
         <p>All FastAPI connections to DuckDB open with <code>read_only=True</code> — FastAPI never writes to the database. Only the Airflow pipeline writes.</p>
@@ -508,7 +508,7 @@
         <div class="do-label">Screen Action</div>
         <ul>
           <li>Open <code>docker-compose.yml</code> in VS Code — point out the 3 services and the <code>scheduler.py</code> command for the pipeline service</li>
-          <li>Open <code>scripts/scheduler.py</code> briefly — show the 4 state labels in the comments (NO_EVENT, WATCHING, IMMINENT, EXPIRED)</li>
+          <li>Open <code>scripts/scheduler.py</code> briefly — show the 7 state constants at the top of the file and the state variable names in <code>main()</code></li>
           <li>Run <code>docker compose up</code> in terminal (or show it already running)</li>
           <li>Show all 3 services starting — pipeline, api, dashboard</li>
           <li>Show <code>docker compose logs pipeline -f</code> streaming scheduler state transitions</li>
@@ -518,7 +518,7 @@
       <div class="say">
         <div class="say-label">Say This</div>
         <p>Docker Compose packages the entire system into 3 containers. <code>docker compose up</code> — one command — starts everything. Anyone can clone the repo, add their API keys, and run the full system. No Python installation, no virtual environment setup. That's the point of containerisation.</p>
-        <p>The pipeline container runs <code>scripts/scheduler.py</code> — a custom state machine with 4 states. NO_EVENT: polls every 60 seconds during the day, hourly between midnight and 6 AM. WATCHING: sleeps until 30 minutes before departure. IMMINENT: polls every 1 second, using a cached geocode — it never calls OneMap or ip-api during tight polling to avoid rate limits. EXPIRED: resets when the event start time passes. This is much smarter than a fixed sleep loop — it barely uses any API quota when nothing is happening, and reacts in under a second when you're about to leave.</p>
+        <p>The pipeline container runs <code>scripts/scheduler.py</code> — a 7-state adaptive machine. It separates cheap checks from expensive API calls. Calendar is checked cheaply on every tick using a cached geocode. When a new event appears, it's confirmed stable over five 30-second checks before OneMap is called — this avoids wasted route fetches if you're still editing the event. During the stable WATCHING phase, calendar is polled every 10 minutes, not every second. Near departure it enters a 60-second 1-second burst to catch last-minute changes, then backs off to 30-second checks. Once you've left, it monitors lightly every 10 minutes. Near the expected arrival time it checks a few more times to look for the next event, then holds a 10-minute cooldown before returning to idle. Weather refreshes every 30 minutes independently of all states. OneMap, LTA, and ip-api are never called every second.</p>
         <p>The DuckDB file is in a named Docker volume so data persists across container restarts. The pipeline, API, and dashboard share this one file as their common data store. All three services use a single Dockerfile built from the same <code>requirements.txt</code> — each service just overrides the <code>command</code> field.</p>
       </div>
     </div>
@@ -545,7 +545,7 @@
       </div>
       <div class="say">
         <div class="say-label">Question 2 — Most Proud Of</div>
-        <p>The part I'm most proud of is the end-to-end live data integration. Real Google Calendar events drive real API calls — every 10 minutes, Airflow ingests live LTA bus arrivals, live MRT alerts, live weather — and produces a genuine, actionable recommendation that is specific to my actual next meeting and current conditions. This is not a demo with mock data; it's a system I use.</p>
+        <p>The part I'm most proud of is the end-to-end live data integration. Real Google Calendar events drive real API calls — every 30 minutes, Airflow ingests live LTA bus arrivals, live MRT alerts, live weather — and produces a genuine, actionable recommendation that is specific to my actual next meeting and current conditions. This is not a demo with mock data; it's a system I use.</p>
         <p>The walk alternative feature with Zone 1 and Zone 2 heart rate context is also something I'm proud of, because it makes the pipeline genuinely personal — it's not just the fastest route, it's the right route for your health and your schedule together.</p>
       </div>
       <div class="say">
@@ -579,7 +579,7 @@
         <p><strong>ML and Real-Time Output.</strong> Added a scikit-learn Random Forest model that predicts commute duration from route features; predictions are stored per event, compared against actuals, and evaluated daily via Airflow at 8 AM — full MLOps feedback loop. Results are served on a live Streamlit dashboard refreshed every 60 seconds.</p>
         <p><strong>Production Robustness.</strong> Implemented exponential backoff retry on all API calls, idempotent INSERT OR REPLACE, GPS coordinate validation rejecting non-Singapore coordinates, and a pipeline_runs monitoring table — making the pipeline safe to run in production without supervision.</p>
         <p><strong>Data Serving API.</strong> Designed a FastAPI REST layer exposing commute recommendations and ML predictions as queryable endpoints with auto-generated Swagger documentation — decoupling the recommendation engine from any specific frontend.</p>
-        <p><strong>Orchestration and Infrastructure.</strong> Orchestrated 7 tasks with Apache Airflow (30-minute schedule, ShortCircuitOperator for daily 8 AM model evaluation); containerised the full stack with Docker Compose — pipeline, API, and dashboard as 3 services with a named-volume DuckDB. The Docker pipeline uses a custom 4-state scheduler (NO_EVENT/WATCHING/IMMINENT/EXPIRED) replacing a fixed sleep loop.</p>
+        <p><strong>Orchestration and Infrastructure.</strong> Orchestrated 7 tasks with Apache Airflow (30-minute schedule, ShortCircuitOperator for daily 8 AM model evaluation); containerised the full stack with Docker Compose — pipeline, API, and dashboard as 3 services with a named-volume DuckDB. The Docker pipeline uses a custom 7-state adaptive scheduler (NO_EVENT → EVENT_DETECTED_BURST → WATCHING → LEAVE_WINDOW → IN_TRANSIT → ARRIVAL_VERIFY → POST_ARRIVAL_COOLDOWN) — bounds every polling burst and separates cheap calendar checks from expensive OneMap/LTA API calls.</p>
       </div>
     </div>
   </div>

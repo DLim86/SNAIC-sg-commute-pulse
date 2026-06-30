@@ -64,7 +64,7 @@ for attempt in range(max_retries):
 **Decision:** All inserts use `INSERT OR REPLACE INTO table SELECT ...` — never bare `INSERT`.
 
 **Why:**
-- The pipeline runs every 10 minutes via Airflow
+- The pipeline runs every 30 minutes via Airflow
 - If it crashes mid-run and restarts, it must not create duplicate rows
 - `INSERT OR REPLACE` silently overwrites on primary key conflict — same result whether run once or ten times
 - This property is called **idempotency** — critical for any production pipeline
@@ -160,7 +160,7 @@ for attempt in range(max_retries):
 - Demonstrates the "data product" concept: the recommendation engine is a service, not a dashboard
 - FastAPI is explicitly taught in Day 2 of the course
 
-**Architecture:** `Streamlit → FastAPI → DuckDB` (not `Streamlit → DuckDB`)
+**Architecture:** Streamlit reads DuckDB directly (`read_only=True`) for the dashboard. FastAPI also reads DuckDB directly per request via `contextmanager get_db()`. Both are independent DuckDB clients — FastAPI is not a proxy for Streamlit. The value of FastAPI is that it gives *other* clients (mobile apps, bots, scripts) a stable REST interface without needing direct database access.
 
 ---
 
@@ -192,9 +192,9 @@ for attempt in range(max_retries):
 **Services:**
 | Service | Command | Port |
 |---|---|---|
-| `pipeline` | `python -m scripts.ingest` | — |
-| `api` | `uvicorn scripts.api:app --host 0.0.0.0 --port 8000` | 8000 |
-| `dashboard` | `streamlit run scripts/serve.py --server.port 8501` | 8501 |
+| `pipeline` | `python scripts/scheduler.py` (7-state adaptive scheduler) | — |
+| `api` | `uvicorn scripts.api:app --host 0.0.0.0 --port 8000 --workers 1` | 8000 |
+| `dashboard` | `streamlit run scripts/serve.py --server.port=8501 --server.headless=true` | 8501 |
 
 ---
 
@@ -277,14 +277,14 @@ for attempt in range(max_retries):
 **Decision:** Use Airflow on a 10-minute cron schedule instead of a Kafka event stream.
 
 **Why:**
-- LTA bus arrival data updates every 1–2 minutes. Weather updates every 2 hours. There is no data source in this pipeline that changes faster than once per minute — polling every 10 minutes captures all meaningful updates.
+- LTA bus arrival data updates every 1–2 minutes. Weather updates every 2 hours. There is no data source in this pipeline that changes faster than once per minute — polling every 30 minutes via the Airflow DAG captures all meaningful updates.
 - Kafka is designed for sub-second event volumes (click streams, payments, IoT sensor bursts). Adding Kafka for data that updates every 2 minutes adds broker setup, consumer group management, partition logic, and offset tracking — all overhead with no benefit for this data velocity.
 - Airflow gives a web UI for visualising task runs, viewing logs, and seeing failures — a cron job or while-loop has no visibility.
 - Airflow is explicitly taught in the course and is a standard DE employer requirement.
 
 **When Kafka would be the right choice:** If we were consuming raw GPS pings from all taxis in real time (thousands per second), or if we needed sub-10-second dashboard updates for a live operations room.
 
-**Trade-off:** The dashboard is stale by up to 10 minutes. For a commute recommendation used to plan departures, this is acceptable. Real-time to the second is not needed here.
+**Trade-off:** The Airflow pipeline run is stale by up to 30 minutes. The Streamlit dashboard independently re-queries DuckDB every 60 seconds via `time.sleep(60); st.rerun()` — so the dashboard reflects the latest stored data within a minute of it being written. For a commute recommendation used to plan departures, this is acceptable. Real-time to the second is not needed here.
 
 ---
 
@@ -404,7 +404,7 @@ for attempt in range(max_retries):
 **Decision:** After storing the active calendar event, call `_purge_stale_events(con, keep_event_id)` to delete all other future `calendar_events` + their `route_options` + `route_legs` rows from DuckDB.
 
 **Why:**
-- `ingest.py` runs every 10 minutes and processes one event per run (the next upcoming event). Over time, DuckDB accumulates one row per unique `event_id` in `calendar_events`.
+- `ingest.py` runs every 30 minutes (Airflow schedule `*/30 * * * *`) and processes one event per run (the next upcoming event). Over time, DuckDB accumulates one row per unique `event_id` in `calendar_events`.
 - If a user reschedules a calendar event, the old entry (with the old `start_time`) stays in the database. Both old and new `start_time` values can be `> NOW()`, so `BEST_ROUTE_QUERY` in transform.py (`ORDER BY start_time LIMIT 1`) may pick the stale entry rather than the freshly-ingested one.
 - This was discovered when "Collect Aye Sim card" was moved from 5 PM to 7 PM, while "Home" was moved to 5 PM. The old "Collect Aye Sim card" at 5 PM persisted in the DB. The new "Home" event failed routing (origin = destination bug), so had no route_options. Transform returned the old stale event.
 - The purge runs AFTER the new event and its routes are successfully stored, so there is no window where the DB is empty.
@@ -444,6 +444,8 @@ for attempt in range(max_retries):
 ---
 
 ## D29 — MLflow for Experiment Tracking (Day 4)
+
+> **Production Extension — not in submitted code.** The submitted `model.py` uses `joblib` for model persistence and the 4-mode CLI (`--train`/`--predict`/`--evaluate`/`--backfill`). MLflow, the Model Registry, and the `@champion` alias represent the production path documented in the Day 4 curriculum — they are not integrated in the submitted implementation.
 
 **Decision:** Integrate MLflow into `scripts/model.py` to track each training run with parameters, metrics, and the saved model artifact. Use MLflow's model registry and `@champion` alias for serving.
 
@@ -513,6 +515,8 @@ model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
 ---
 
 ## D31 — Shadow Deployment Before Canary (Day 4)
+
+> **Production Extension — not in submitted code.** The submitted code does not implement traffic splitting, a staging model table, or load-balancer routing. Shadow testing is simulated by running `model.py --predict` with both model URIs and comparing results in the `predictions` table. This decision describes the Day 4 production deployment pattern as a documented future path.
 
 **Decision:** Use a two-phase promotion pattern for new model versions: **shadow** first, then **canary**, before full promotion.
 

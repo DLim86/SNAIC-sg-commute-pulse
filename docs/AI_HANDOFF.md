@@ -43,7 +43,7 @@ Given a user's next Google Calendar event, the pipeline:
 |---|---|---|
 | End-to-End Pipeline | 30 | ✅ DONE — Calendar→OneMap→LTA→weather→DuckDB→FastAPI+Streamlit; Airflow 7-task DAG; Docker 3-service compose; scheduler.py state machine |
 | ML and Real-Time Output | 30 | ✅ DONE — model.py (--train/--predict/--evaluate/--backfill); per-route predictions keyed by option_id; Airflow gate_evaluate at 8AM SGT; serve.py ML panel |
-| Technical Depth & Robustness | 10 | ✅ DONE — fetch_with_retry() exponential backoff; INSERT OR REPLACE idempotency; GPS bounds validation; logging (no print); Parquet raw zone; 4-state scheduler; DuckDB FK guard; stale event purge |
+| Technical Depth & Robustness | 10 | ✅ DONE — fetch_with_retry() exponential backoff; INSERT OR REPLACE idempotency; GPS bounds validation; logging (no print); Parquet raw zone; 7-state adaptive scheduler; DuckDB FK guard; stale event purge |
 | Presentation & Explanation | 30 | ⏳ VIDEO PENDING — docs/video_script.html script ready; Docker is Section 9 (11:00–12:00) |
 
 **Only remaining task: record the 15-minute video.** docs/video_script.html has the full script including a "Start All Services" setup section and timed sections for all 4 demo tools.
@@ -64,7 +64,7 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `requirements.txt` | Complete — `>=` pins for Python 3.14 compat; `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Updated 2026-06-28 — Station D5 unlocked (GPU/Triton/BI/Technology Selection Exercise). All 12 stations complete. |
-| `docs/AI_HANDOFF.md` | This file — updated 2026-06-28 |
+| `docs/AI_HANDOFF.md` | This file — updated 2026-06-30 |
 | `docs/video_script.html` | Updated 2026-06-28 — "Start All Services" setup section at top; Docker is Section 9 (11:00–12:00); Q3 4th paragraph covers Day 5 GPU/Triton/Metabase rationale; RUNBOOK.md merged in |
 | `docs/ARCHITECTURE.md` | Updated 2026-06-28 — session 9 changes: correct Airflow chain, Docker scheduler.py, serve.py connection fix, all 6 FastAPI endpoints |
 | `docs/DECISIONS.md` | Complete — D01–D38 (D38 = Day 5 Technology Selection: why no GPU/Triton/Metabase) |
@@ -75,7 +75,7 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `scripts/model.py` | Done (session 8) — `--train`, `--predict` (all 3 routes, `{option_id}_pred`), `--evaluate` (7-day MAE), `--backfill` (mode-aware) |
 | `scripts/serve.py` | Done — **session 9 critical fix: removed `@st.cache_resource` from `get_connection()`** — was caching stale DuckDB connection; now opens fresh read-only connection every 60s rerun. |
 | `scripts/api.py` | **Done (session 9)** — FastAPI, 6 endpoints. Per-request `contextmanager get_db()` opens+closes read-only DuckDB connection. `/recommendation/next` defined before `/{event_id}` (FastAPI routing order). Swagger at `http://localhost:8000/docs`. |
-| `scripts/scheduler.py` | **Done (session 9)** — 4-state machine: NO_EVENT (60s day / 1hr night) → WATCHING (sleep to leave_by - 30 min) → IMMINENT (1s poll, cached geocode) → EXPIRED. Group 1: `calendar-check` every tick. Group 2: `routes` only on key change. Group 3: `weather` every 30 min. Replaces shell loop in docker-compose.yml. |
+| `scripts/scheduler.py` | **Done (session 9, updated session 10)** — 7-state adaptive machine: NO_EVENT → EVENT_DETECTED_BURST (5×30s stability) → WATCHING (10 min) → LEAVE_WINDOW (60s burst then 30s) → IN_TRANSIT (10 min) → ARRIVAL_VERIFY (5×30s) → POST_ARRIVAL_COOLDOWN (10 min). Group 1: `calendar-check` every tick (cached geocode). Group 2: `routes` only on key/dest change. Group 3: `weather` every 30 min. Replaces shell loop in docker-compose.yml. |
 | `dags/__init__.py` | Done (session 9) — empty, required for Airflow imports |
 | `dags/commute_pipeline_dag.py` | Done (session 9) — 7-task chain: `schema_check >> ingest >> transform >> predict_commute >> backfill_actuals >> gate_evaluate >> evaluate_model`. `gate_evaluate` = `ShortCircuitOperator` (passes only at 8 AM SGT). Schedule `*/30 * * * *`. |
 | `Dockerfile` | Done (session 9) — `python:3.12-slim` + `libgomp1` + pip install + `mkdir -p db data/raw models` |
@@ -108,6 +108,8 @@ View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_fo
 ---
 
 ## Day 4 MLOps Additions (unlocked 2026-06-25)
+
+> **Production Extension — not in submitted model.py.** The submitted `model.py` uses `joblib` for model persistence and the 4-mode CLI (`--train`/`--predict`/`--evaluate`/`--backfill`). The MLflow, Model Registry, drift detection, and canary deployment patterns below are documented Day 4 curriculum content — they represent the production path, not what is integrated in the submitted code. In the video, describe them as "the production-scale MLOps pattern I would add if this system scaled beyond a single user."
 
 **MLflow Experiment Tracking** — wrap `train_model()` in `mlflow.start_run()`:
 - `mlflow.log_param("n_estimators", 100)` + `feature_count` + `training_rows`
@@ -203,22 +205,25 @@ Run: `uvicorn scripts.api:app --reload --port 8000` → Swagger at `http://local
 
 ---
 
-## scheduler.py — BUILT (session 9)
+## scheduler.py — BUILT (session 9, updated session 10)
 
-Replaces the fixed `sleep 1800` shell loop in docker-compose.yml. Pure Python state machine.
+Replaces the fixed `sleep 1800` shell loop in docker-compose.yml. Pure Python 7-state adaptive machine.
 
 **3 groups:**
-- Group 1 (`--mode calendar-check`): every tick. Cached geocode — no OneMap during IMMINENT.
-- Group 2 (`--mode routes`): fires only when `new_key != prev_key` (event or dest changed >10m). Calls OneMap + LTA + transform + predict + backfill.
+- Group 1 (`--mode calendar-check`): every tick. Cached geocode — no OneMap call unless event or location actually changed.
+- Group 2 (`--mode routes`): fires only when `new_key != stable_key`. Calls ip-api + OneMap + LTA + transform + predict + backfill. Never called every second.
 - Group 3 (`--mode weather`): every 30 min regardless of state. Calls weather + transform.
 
-**4 states:**
+**7 states:**
 | State | Condition | Sleep |
 |---|---|---|
 | NO_EVENT | no event key returned | 60s (6am–midnight) · 1hr (midnight–6am) |
-| WATCHING | leave_by > 30 min away | sleep until `leave_by - 30 min` (max 1hr) |
-| IMMINENT | ≤ 30 min to leave_by | 1s — fastest response, geocode fully cached |
-| EXPIRED | start_time < now | 5s then reset `prev_key=""` |
+| EVENT_DETECTED_BURST | new event; confirming stability | 30s × 5 checks before routes are fetched |
+| WATCHING | stable event; monitoring for changes | 600s (10 min) |
+| LEAVE_WINDOW | ≤ 10 min to leave_by | 1s burst for 60s, then 30s backoff; bus refresh every 60s |
+| IN_TRANSIT | past leave_by; trip in progress | 600s (10 min); routes refresh for origin shift |
+| ARRIVAL_VERIFY | past estimated_arrival; looking for next event | 30s × 5 checks |
+| POST_ARRIVAL_COOLDOWN | trip complete; brief hold before idle | 60s × 10 min cooldown |
 
 ---
 
@@ -335,7 +340,7 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 - **`serve.py` `@st.cache_resource` removed:** the decorator cached the DuckDB connection at startup. Every 60s rerun saw the same stale connection — new rows written by the pipeline never appeared. Fix: removed decorator, now opens fresh `read_only=True` connection every rerun. Restart Streamlit to clear old cached connection.
 - **`api.py` FastAPI routing order:** `/api/v1/recommendation/next` must be defined BEFORE `/{event_id}`. FastAPI matches routes top-to-bottom; "next" would be captured as an event_id parameter if order is wrong.
 - **`api.py` per-request DuckDB connection:** `contextmanager get_db()` opens `read_only=True`, yields, closes in `finally`. Multiple simultaneous read-only connections to DuckDB are safe.
-- **`scheduler.py` no ip-api during IMMINENT:** ip-api.com free tier limit is 45 req/min. During IMMINENT 1s polling, Group 1 uses cached geocode — no ip-api call. ip-api is only called in Group 2 (`run_routes()`) which fires at most once per cycle when event/dest changes.
+- **`scheduler.py` no ip-api during LEAVE_WINDOW 1s burst:** ip-api.com free tier limit is 45 req/min. During the LEAVE_WINDOW 1s burst, Group 1 uses cached geocode — no ip-api call per second. ip-api is only called in Group 2 (`run_routes()`) which fires at most once per 60s cycle when event/dest changes.
 - **`ingest.py` `_fetch_raw_calendar_event()`:** lightweight Google Calendar only — no geocoding, no ip-api. Returns `(event_id, location_raw, start_dt_str)`. Used in `run_calendar_check()` to skip OneMap when event_id and location string are unchanged.
 - **Airflow DAG `gate_evaluate`:** `ShortCircuitOperator` returns `True` only when `datetime.now(SGT).hour == 8`. Skips `evaluate_model` on all other runs without failing the DAG.
 - **DuckDB WAL lock in Docker named volume:** killed pipeline container leaves stale `.duckdb.wal` in `db_data`. Fix: `docker compose down -v` then `docker compose up --build`. Data lost — repopulate by triggering pipeline once.

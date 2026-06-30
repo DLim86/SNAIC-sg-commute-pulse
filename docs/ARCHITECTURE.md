@@ -1,6 +1,6 @@
 # Architecture — SNAIC-sg-commute-pulse
 
-**Last updated: 2026-06-28 (session 9 — api.py, Airflow DAG, Docker, scheduler.py; Day 5 docs)**
+**Last updated: 2026-06-30 (7-state adaptive scheduler refactor)**
 
 ---
 
@@ -104,11 +104,13 @@
 │                    INFRASTRUCTURE (Docker)                  │
 │                                                             │
 │  Service: pipeline   → python scripts/scheduler.py          │
-│    4-state machine: NO_EVENT (60s/1hr) → WATCHING           │
-│    → IMMINENT (1s, cached geocode) → EXPIRED                │
-│    Group 1: calendar-check every tick                       │
-│    Group 2: routes only when event/dest changes             │
-│    Group 3: weather every 30 min                            │
+│    7-state adaptive machine:                                │
+│      NO_EVENT → EVENT_DETECTED_BURST → WATCHING             │
+│      → LEAVE_WINDOW → IN_TRANSIT                           │
+│      → ARRIVAL_VERIFY → POST_ARRIVAL_COOLDOWN              │
+│    Calendar-check every tick (cheap, cached geocode)        │
+│    Routes only on event/location change (OneMap + LTA)      │
+│    Weather every 30 min, independent of state               │
 │                                                             │
 │  Service: api        → uvicorn scripts.api:app :8000        │
 │  Service: dashboard  → streamlit run scripts/serve.py :8501 │
@@ -384,7 +386,7 @@ e:\SNAIC\Week 2\Assessment\
 │   ├── serve.py                     ✓ DONE — fresh connection per rerun (session 9 fix)
 │   ├── model.py                     ✓ DONE — --train/--predict/--evaluate/--backfill
 │   ├── api.py                       ✓ DONE — 6 FastAPI endpoints (session 9)
-│   └── scheduler.py                 ✓ DONE — 4-state machine (session 9)
+│   └── scheduler.py                 ✓ DONE — 7-state adaptive machine
 │
 ├── dags/
 │   ├── __init__.py                  ✓ DONE (session 9)

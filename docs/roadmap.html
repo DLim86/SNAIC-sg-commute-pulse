@@ -186,12 +186,12 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
     <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Predict</span><span class="pipe-arrow">→</span>
     <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Evaluate (8 AM daily)</span>
   </div>
-  <div style="margin-top:10px;margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#67E8F9">Phase 4 — MLOps (Day 4)</div>
+  <div style="margin-top:10px;margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#67E8F9">Phase 4 — MLOps (Day 4) · Documented Production Extension · Not in submitted code</div>
   <div class="pipeline-mini">
-    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">MLflow Tracking</span><span class="pipe-arrow">→</span>
-    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">Model Registry</span><span class="pipe-arrow">→</span>
-    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">Drift Detection</span><span class="pipe-arrow">→</span>
-    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9">Canary Deploy</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">MLflow Tracking</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">Model Registry</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">Drift Detection</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">Canary Deploy</span>
   </div>
 </header>
 
@@ -1107,7 +1107,7 @@ http://localhost:8080
       <div class="station-card">
         <div class="card-eyebrow">Infrastructure · Day 2</div>
         <div class="card-title">Docker Compose — One Command Start</div>
-        <div class="card-desc">Package the entire system into three Docker containers: the pipeline, the FastAPI server, and the Streamlit dashboard. With a single <code>docker compose up</code>, anyone can run the full system on any machine without installing Python or configuring anything. The DuckDB file is volume-mounted so data persists across restarts. The pipeline service runs <code>scripts/scheduler.py</code> — a 4-state adaptive state machine (NO_EVENT → WATCHING → IMMINENT → EXPIRED) that polls every 1 second near departure time using a cached geocode, and sleeps up to 1 hour when an event is far away. This replaces the old fixed 30-minute sleep loop.</div>
+        <div class="card-desc">Package the entire system into three Docker containers: the pipeline, the FastAPI server, and the Streamlit dashboard. With a single <code>docker compose up</code>, anyone can run the full system on any machine without installing Python or configuring anything. The DuckDB file is volume-mounted so data persists across restarts. The pipeline service runs <code>scripts/scheduler.py</code> — a 7-state adaptive machine (NO_EVENT → EVENT_DETECTED_BURST → WATCHING → LEAVE_WINDOW → IN_TRANSIT → ARRIVAL_VERIFY → POST_ARRIVAL_COOLDOWN) that bounds every polling burst, never calls expensive APIs every second, and sleeps up to 1 hour when there is no upcoming event. This replaces the old fixed 30-minute sleep loop.</div>
 
         <div class="chip-row">
           <span class="chip chip-navy">Docker</span>
@@ -1116,7 +1116,7 @@ http://localhost:8080
           <span class="chip chip-navy">service networking</span>
           <span class="chip chip-navy">port mapping</span>
           <span class="chip chip-navy">scheduler.py</span>
-          <span class="chip chip-navy">4-state machine</span>
+          <span class="chip chip-navy">7-state adaptive machine</span>
         </div>
 
         <div class="code-block">
@@ -1193,7 +1193,7 @@ docker compose down</pre>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I containerised the system with Docker Compose — three services: pipeline, API, and dashboard. The DuckDB file is in a named volume so data persists between container restarts. The pipeline service runs a custom scheduler — a 4-state state machine that polls every second when you're close to your departure time, and sleeps up to an hour when the next event is still far away. That's smarter than a fixed timer — it reduces API calls when there's nothing imminent, and catches last-minute calendar changes immediately before you need to leave. Anyone reviewing my project can clone the repo, add their API keys, and run docker compose up."</p>
+          <p>"I containerised the system with Docker Compose — three services: pipeline, API, and dashboard. The DuckDB file is in a named volume so data persists between container restarts. The pipeline service runs a custom scheduler — a 7-state adaptive machine. When a new event appears, it confirms stability over five 30-second checks before calling OneMap — so editing the calendar while walking doesn't trigger wasted route fetches. Near departure it runs a bounded 60-second burst, then backs off. Once you've left it monitors lightly, then verifies arrival and holds a cooldown before going back to idle. Weather refreshes every 30 minutes in any state. Expensive APIs are never called every second. Anyone reviewing my project can clone the repo, add their API keys, and run docker compose up."</p>
         </div>
       </div>
     </div>
@@ -1735,7 +1735,7 @@ Slow ML training (training bottleneck) cuML / GPU XGBoost        ❌ NO — trai
             </li>
             <li>
               <strong>Orchestration & Infrastructure</strong>
-              Orchestrated the pipeline with an Apache Airflow DAG (7 tasks, 30-minute schedule, gate_evaluate ShortCircuitOperator for daily 8 AM ML evaluation); containerised the full stack with Docker Compose — pipeline, API, and dashboard as three services with volume-mounted persistent storage. The Docker pipeline service uses a custom scheduler.py (4-state machine) instead of a fixed sleep loop.
+              Orchestrated the pipeline with an Apache Airflow DAG (7 tasks, 30-minute schedule, gate_evaluate ShortCircuitOperator for daily 8 AM ML evaluation); containerised the full stack with Docker Compose — pipeline, API, and dashboard as three services with volume-mounted persistent storage. The Docker pipeline service uses a custom scheduler.py with a 7-state adaptive machine (NO_EVENT → EVENT_DETECTED_BURST → WATCHING → LEAVE_WINDOW → IN_TRANSIT → ARRIVAL_VERIFY → POST_ARRIVAL_COOLDOWN) instead of a fixed sleep loop.
             </li>
             <li>
               <strong>Data Architecture</strong>

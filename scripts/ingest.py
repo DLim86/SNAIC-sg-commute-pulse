@@ -726,7 +726,7 @@ def _fetch_raw_calendar_event():
 def run_calendar_check():
     """Group 1: smart calendar check. Prints event key to stdout; empty string if no event.
 
-    During IMMINENT state (1s polling): cache hit skips OneMap geocode entirely.
+    During LEAVE_WINDOW burst (1s polling): cache hit skips OneMap geocode entirely.
     Only calls OneMap when event or location string actually changes.
     """
     con = duckdb.connect(str(DB_PATH))
