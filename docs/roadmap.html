@@ -256,8 +256,8 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
       <div class="arch-cell-label">Orchestration</div>
       <div class="arch-cell-items">
         <div class="arch-item new">Airflow DAG</div>
-        <div class="arch-item new">7 tasks / 10-min schedule</div>
-        <div class="arch-item new">Parallel fetch tasks</div>
+        <div class="arch-item new">7 tasks / 30-min schedule</div>
+        <div class="arch-item new">Sequential chain + ShortCircuit gate</div>
         <div class="arch-item new">evaluate_model (daily 8AM)</div>
         <div class="arch-item new">Airflow UI</div>
       </div>
@@ -1017,8 +1017,9 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
         <div class="chip-row">
           <span class="chip chip-green">Apache Airflow</span>
           <span class="chip chip-green">DAG</span>
-          <span class="chip chip-green">PythonOperator</span>
-          <span class="chip chip-green">task dependencies</span>
+          <span class="chip chip-green">BashOperator</span>
+          <span class="chip chip-green">ShortCircuitOperator</span>
+          <span class="chip chip-green">7-task sequential chain</span>
           <span class="chip chip-green">airflow standalone</span>
         </div>
 
@@ -1071,24 +1072,28 @@ http://localhost:8080
             </div>
           </div>
           <div class="card-block">
-            <div class="block-label">Task graph (7 tasks)</div>
+            <div class="block-label">Task graph (7 tasks — sequential)</div>
             <div class="block-content" style="font-family:monospace;font-size:12px;line-height:2.1;color:#6EE7B7;padding-top:4px">
-              fetch_calendar<br>
+              schema_check<br>
               &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-              geocode_destination<br>
-              &nbsp;&nbsp;↙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘<br>
-              <span style="color:#A8C4DC">weather&nbsp;&nbsp;&nbsp;bus&nbsp;&nbsp;&nbsp;alerts</span><br>
-              &nbsp;&nbsp;&nbsp;↘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↙<br>
-              sql_transform<br>
+              ingest<br>
               &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-              <span style="color:#FCA5A5">predict_commute</span>
+              transform<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+              predict_commute<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+              backfill_actuals<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+              gate_evaluate <span style="color:#FCD34D">(8 AM only)</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+              <span style="color:#FCA5A5">evaluate_model</span>
             </div>
           </div>
         </div>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"Instead of running scripts manually, I defined a DAG in Airflow that orchestrates the entire pipeline. Fetch calendar first, geocode the destination, then fetch weather, bus arrivals, and train alerts in parallel — those three don't depend on each other — then run the SQL transformation once all three complete. I can show the Airflow UI where each task is green for success, with full logs if anything fails."</p>
+          <p>"Instead of running scripts manually, I defined a DAG in Airflow that orchestrates the entire pipeline as a 7-task sequential chain: schema_check → ingest → transform → predict_commute → backfill_actuals → gate_evaluate → evaluate_model. The gate_evaluate task is a ShortCircuitOperator — it only passes when the hour is 8 AM Singapore time, so evaluate_model runs once a day without a separate schedule. I can show the Airflow UI where each task is green for success, with full logs if anything fails."</p>
         </div>
       </div>
     </div>
@@ -1208,7 +1213,7 @@ docker compose down</pre>
   <div class="route-wrapper">
 
     <!-- STATION D3 — Data Architecture -->
-    <div class="station s4">
+    <div class="station s4 done">
       <div class="station-rail">
         <div class="station-dot">D3</div>
         <div class="route-line"></div>
@@ -1445,7 +1450,7 @@ def evaluate_model(con):
   <div class="route-wrapper">
 
     <!-- STATION D4 — MLOps -->
-    <div class="station s7">
+    <div class="station s7 done">
       <div class="station-rail">
         <div class="station-dot">D4</div>
         <div class="route-line"></div>
@@ -1575,7 +1580,7 @@ def evaluate_model(con):
     </div>
 
     <!-- STATION D5 — GPU Acceleration & BI -->
-    <div class="station s7">
+    <div class="station s7 done">
       <div class="station-rail">
         <div class="station-dot">D5</div>
         <div class="route-line"></div>

@@ -373,21 +373,22 @@ e:\SNAIC\Week 2\Assessment\
 ├── config_example.py                ← credential template (committed)
 ├── config.py                        ← real credentials (GITIGNORED)
 ├── requirements.txt                 ← add scikit-learn>=1.4.0, joblib>=1.3.0
-├── Dockerfile                       ← to create
-├── docker-compose.yml               ← to create
+├── Dockerfile                       ✓ DONE (session 9) — python:3.12-slim + libgomp1
+├── docker-compose.yml               ✓ DONE (session 9) — 3 services + scheduler.py
 │
 ├── scripts/
 │   ├── __init__.py                  ✓ DONE
-│   ├── schema.py                    ✓ DONE (add predictions table)
-│   ├── ingest.py                    ✓ DONE
-│   ├── transform.py                 ✓ DONE
-│   ├── serve.py                     ← NEXT
-│   ├── model.py                     ← CRITICAL (30-mark criterion)
-│   └── api.py                       ← TODO
+│   ├── schema.py                    ✓ DONE — 9 tables + v_enriched_routes view
+│   ├── ingest.py                    ✓ DONE — 3 argparse modes (session 9)
+│   ├── transform.py                 ✓ DONE — clock-time arrivals, walk-only, alt routes
+│   ├── serve.py                     ✓ DONE — fresh connection per rerun (session 9 fix)
+│   ├── model.py                     ✓ DONE — --train/--predict/--evaluate/--backfill
+│   ├── api.py                       ✓ DONE — 6 FastAPI endpoints (session 9)
+│   └── scheduler.py                 ✓ DONE — 4-state machine (session 9)
 │
 ├── dags/
-│   ├── __init__.py                  ← to create
-│   └── commute_pipeline_dag.py      ← to create (7 tasks)
+│   ├── __init__.py                  ✓ DONE (session 9)
+│   └── commute_pipeline_dag.py      ✓ DONE — 7-task sequential chain (session 9)
 │
 ├── models/
 │   ├── .gitkeep                     ← commit this (folder placeholder)
