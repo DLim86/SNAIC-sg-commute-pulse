@@ -131,7 +131,7 @@ st.title("🚇 SG Commute Pulse")
 last_run = con.execute(PIPELINE_RUN_QUERY).fetchone()
 if last_run:
     ran_at, status, rows = last_run
-    status_icon = "✅" if status == "ok" else "⚠️"
+    status_icon = "✅" if status in ("ok", "success") else "⚠️"
     st.caption(f"{status_icon} Last pipeline run: {fmt_sgt(ran_at)} · {rows} rows · {status}")
 else:
     st.caption("Pipeline has not run yet — run `python scripts/ingest.py` then `python scripts/transform.py`")
@@ -177,21 +177,22 @@ with col3:
 if recommendation_reason:
     st.info(f"**Why chosen:** {recommendation_reason}")
 
+legs = con.execute(LEGS_QUERY, [option_id]).fetchall()
+
 # --- Warnings ---
 if is_rainy and weather_forecast:
     st.warning(f"🌧️ {weather_forecast}")
 if alert_msg:
     active_alerts = con.execute(ACTIVE_ALERTS_QUERY).fetchall()
-    if active_alerts:
-        for line, msg in active_alerts:
-            st.error(f"🚨 {line}: {msg}")
+    route_rail_lines = {leg[2] for leg in legs if leg[1] in ("MRT", "LRT") and leg[2]}
+    relevant_alerts = [a for a in active_alerts if a[0] in route_rail_lines]
+    for line, msg in relevant_alerts:
+        st.error(f"🚨 {line}: {msg}")
 
 st.divider()
 
 # --- Step-by-step legs ---
 st.subheader("🗺️ Journey steps")
-
-legs = con.execute(LEGS_QUERY, [option_id]).fetchall()
 
 if legs:
     ft_mode = None

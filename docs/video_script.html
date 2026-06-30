@@ -222,7 +222,7 @@
       <div class="do">
         <div class="do-label">Open 5 terminals — commands listed per terminal below</div>
         <ul>
-          <li><strong>Terminal 1 — Ingest (refresh data):</strong> <code>python scripts/ingest.py</code> then <code>python scripts/transform.py</code> then <code>python scripts/model.py --predict</code></li>
+          <li><strong>Terminal 1 — Ingest (refresh data):</strong> <code>python scripts/ingest.py</code> then <code>python scripts/transform.py</code> then <code>python scripts/model.py --train</code> <em>(first time or new machine — skip if .pkl models already exist)</em> then <code>python scripts/model.py --predict</code></li>
           <li><strong>Terminal 2 — Streamlit:</strong> <code>streamlit run scripts/serve.py</code> → <a href="http://localhost:8501" style="color:#58A6FF">http://localhost:8501</a></li>
           <li><strong>Terminal 3 — FastAPI:</strong> <code>uvicorn scripts.api:app --reload --port 8000</code> → <a href="http://localhost:8000/docs" style="color:#58A6FF">http://localhost:8000/docs</a></li>
           <li><strong>Terminal 4 — Airflow:</strong> <code>airflow standalone</code> → <a href="http://localhost:8080" style="color:#58A6FF">http://localhost:8080</a> (user: admin, password: in terminal output)</li>

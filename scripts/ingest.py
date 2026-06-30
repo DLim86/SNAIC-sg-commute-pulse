@@ -400,7 +400,7 @@ def ingest_bus_arrivals(con, origin_lat, origin_lng):
     stops_df = fetch_all_bus_stops()
     candidates = nearest_bus_stops(origin_lat, origin_lng, stops_df, n=5)
 
-    # Try each candidate stop; some stops exist in BusStops but not in BusArrivalv2
+    # Try each candidate stop; some stops exist in BusStops but not in v3/BusArrival
     data = None
     stop_code = None
     for code, dist_m in candidates:
@@ -419,13 +419,13 @@ def ingest_bus_arrivals(con, origin_lat, origin_lng):
             break
         except requests.exceptions.HTTPError as exc:
             if exc.response is not None and exc.response.status_code == 404:
-                log.warning("Stop %s not in BusArrivalv2 — trying next nearest", code)
+                log.warning("Stop %s not in v3/BusArrival — trying next nearest", code)
                 continue
             raise
 
     if data is None:
-        log.warning("None of the 5 nearest stops returned BusArrivalv2 data")
-        log_run(con, "lta_bus", 0, int((time.time() - t0) * 1000), "success", "no BusArrivalv2 stops nearby")
+        log.warning("None of the 5 nearest stops returned v3/BusArrival data")
+        log_run(con, "lta_bus", 0, int((time.time() - t0) * 1000), "success", "no v3/BusArrival stops nearby")
         return
 
     fetched_at = datetime.now(timezone.utc).replace(tzinfo=None)

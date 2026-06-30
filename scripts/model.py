@@ -170,7 +170,7 @@ def train(con):
                w.is_rainy
         FROM predictions p
         JOIN calendar_events e ON p.event_id = e.event_id
-        JOIN route_options r ON r.event_id = p.event_id
+        JOIN route_options r ON r.option_id = p.option_id
         LEFT JOIN bus_arrivals b ON b.fetched_at = (
             SELECT MAX(fetched_at) FROM bus_arrivals ba
             WHERE ba.fetched_at <= e.start_time
@@ -179,6 +179,7 @@ def train(con):
             SELECT MAX(fetched_at) FROM weather_forecast
         )
         WHERE p.actual_min IS NOT NULL
+          AND p.option_id IS NOT NULL
     """).df()
 
     synth_dur = _bootstrap_synthetic_duration(n=500)

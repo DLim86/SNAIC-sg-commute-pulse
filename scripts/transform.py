@@ -40,7 +40,7 @@ MRT_LINE_NAMES = {
 
 BEST_ROUTE_QUERY = """
 SELECT
-    event_id, title, start_time, leave_by,
+    option_id, event_id, title, start_time, leave_by,
     total_duration_min, walk_distance_m, num_transfers, fare,
     weather_forecast, is_rainy, alert_msg, recommendation_reason,
     dest_lat, dest_lng
@@ -232,7 +232,7 @@ def main():
 
         for row in results:
             r = dict(zip(cols, row))
-            option_id = f"{r['event_id']}_ROUTE_1"
+            option_id = r["option_id"]
 
             # ── Legs ──────────────────────────────────────────────────────────
             legs = con.execute(LEGS_QUERY, [option_id]).fetchall()

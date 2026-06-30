@@ -162,8 +162,12 @@ SELECT
     ) AS route_rank
 FROM route_options r
 JOIN calendar_events e ON r.event_id = e.event_id
-LEFT JOIN weather_forecast w
-    ON w.fetched_at = (SELECT MAX(fetched_at) FROM weather_forecast)
+LEFT JOIN (
+    SELECT is_rainy, forecast, fetched_at
+    FROM weather_forecast
+    WHERE fetched_at = (SELECT MAX(fetched_at) FROM weather_forecast)
+    LIMIT 1
+) w ON TRUE
 LEFT JOIN train_alerts ta
     ON ta.severity = 'HEAVY'
    AND ta.fetched_at > NOW() - INTERVAL '30 minutes'
