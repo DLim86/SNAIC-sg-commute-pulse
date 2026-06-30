@@ -10,13 +10,14 @@ DB_PATH = Path(__file__).parent.parent / "db" / "commute.duckdb"
 TABLES = [
     """
     CREATE TABLE IF NOT EXISTS calendar_events (
-        event_id     VARCHAR PRIMARY KEY,
-        title        VARCHAR,
-        start_time   TIMESTAMPTZ,
-        location_raw VARCHAR,
-        dest_lat     DOUBLE,
-        dest_lng     DOUBLE,
-        ingested_at  TIMESTAMP DEFAULT now()
+        event_id              VARCHAR PRIMARY KEY,
+        title                 VARCHAR,
+        start_time            TIMESTAMPTZ,
+        location_raw          VARCHAR,
+        dest_lat              DOUBLE,
+        dest_lng              DOUBLE,
+        nearest_weather_area  VARCHAR,
+        ingested_at           TIMESTAMP DEFAULT now()
     )
     """,
     """
@@ -162,12 +163,12 @@ SELECT
     ) AS route_rank
 FROM route_options r
 JOIN calendar_events e ON r.event_id = e.event_id
-LEFT JOIN (
-    SELECT is_rainy, forecast, fetched_at
-    FROM weather_forecast
-    WHERE fetched_at = (SELECT MAX(fetched_at) FROM weather_forecast)
-    LIMIT 1
-) w ON TRUE
+LEFT JOIN weather_forecast w
+    ON w.area = e.nearest_weather_area
+   AND w.fetched_at = (
+       SELECT MAX(fetched_at) FROM weather_forecast ww
+       WHERE ww.area = e.nearest_weather_area
+   )
 LEFT JOIN train_alerts ta
     ON ta.severity = 'HEAVY'
    AND ta.fetched_at > NOW() - INTERVAL '30 minutes'
@@ -183,6 +184,7 @@ MIGRATIONS = [
     "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS boarding_stop_code VARCHAR",
     "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS alighting_stop_code VARCHAR",
     "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS transit_service_no VARCHAR",
+    "ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS nearest_weather_area VARCHAR",
 ]
 
 
@@ -193,11 +195,11 @@ def main():
         for sql in TABLES:
             con.execute(sql)
         log.info("9 tables created")
-        con.execute(VIEW)
-        log.info("v_enriched_routes view created")
         for sql in MIGRATIONS:
             con.execute(sql)
         log.info("migrations applied")
+        con.execute(VIEW)
+        log.info("v_enriched_routes view created")
     finally:
         con.close()
     log.info("Schema ready — %s", DB_PATH)

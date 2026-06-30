@@ -192,7 +192,7 @@ ML Pipeline (model.py):
        note: bus_headway_gap = next_bus2_mins - next_bus_mins (large gap → crowd builds at stop)
   → --predict: score ALL 3 route options individually — each gets its own crowd prediction
      prediction_id = "{option_id}_pred"; weather scalar subquery avoids 47-area cross-join
-  → --evaluate: compute 7-day MAE (predicted_min vs actual_min), log to pipeline_runs
+  → --evaluate: compute 7-day MAE (predicted_min vs actual_min), store in predictions.mae_7day, log to pipeline_runs with mae summary
 
 Serving:
   → Streamlit: fresh read_only=True connection every 60s rerun (no cache decorator)

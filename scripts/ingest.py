@@ -511,7 +511,7 @@ def ingest_train_alerts(con):
 
 # ── Weather ───────────────────────────────────────────────────────────────────
 
-def ingest_weather(con, dest_lat, dest_lng):
+def ingest_weather(con, dest_lat, dest_lng, event_id=None):
     t0 = time.time()
     data = fetch_with_retry("https://api.data.gov.sg/v1/environment/2-hour-weather-forecast")
 
@@ -550,7 +550,7 @@ def ingest_weather(con, dest_lat, dest_lng):
     if records:
         save_parquet(records, "weather")
 
-    # Log the forecast for the area nearest to destination (informational only)
+    # Find area nearest to destination; store it so the view can join weather correctly
     geo_records = [r for r in records if r["area_lat"] and r["area_lng"]]
     if geo_records:
         nearest = min(
@@ -561,6 +561,11 @@ def ingest_weather(con, dest_lat, dest_lng):
             "Weather near destination (%s): %s | rainy=%s",
             nearest["area"], nearest["forecast"], nearest["is_rainy"],
         )
+        if event_id:
+            con.execute(
+                "UPDATE calendar_events SET nearest_weather_area = ? WHERE event_id = ?",
+                [nearest["area"], event_id],
+            )
 
     log_run(con, "weather", len(records), int((time.time() - t0) * 1000), "success")
     log.info("Weather areas upserted: %d", len(records))
@@ -683,7 +688,7 @@ def main():
                 log.info("📍 Destination updated (%.0f m shift) — will re-fetch routes", shift_m)
 
         for name, fn, kwargs in [
-            ("weather",      ingest_weather,      {"dest_lat": dest_lat, "dest_lng": dest_lng}),
+            ("weather",      ingest_weather,      {"dest_lat": dest_lat, "dest_lng": dest_lng, "event_id": event_id}),
             ("routes",       ingest_routes,       {"event_id": event_id, "dest_lat": dest_lat, "dest_lng": dest_lng, "token": token, "origin_lat": origin_lat, "origin_lng": origin_lng}),
             ("bus_arrivals", ingest_bus_arrivals,  {"origin_lat": origin_lat, "origin_lng": origin_lng}),
             ("train_alerts", ingest_train_alerts, {}),
@@ -789,13 +794,13 @@ def run_weather():
     con = duckdb.connect(str(DB_PATH))
     try:
         row = con.execute(
-            "SELECT dest_lat, dest_lng FROM calendar_events "
+            "SELECT event_id, dest_lat, dest_lng FROM calendar_events "
             "WHERE start_time > NOW() ORDER BY start_time LIMIT 1"
         ).fetchone()
         if not row:
             log.warning("No stored event — skipping weather refresh")
             return
-        ingest_weather(con, row[0], row[1])
+        ingest_weather(con, row[1], row[2], event_id=row[0])
         log.info("=== Weather refreshed ===")
     finally:
         con.close()

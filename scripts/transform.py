@@ -309,7 +309,7 @@ def main():
                         )
 
             # ── Write recommendation ───────────────────────────────────────────
-            disruption_warning = r["alert_msg"] or (alerts[0][1] if alerts else None)
+            disruption_warning = relevant_alerts[0][1] if relevant_alerts else None
             weather_warning = rainy_walk_warnings[0] if rainy_walk_warnings else None
 
             con.execute(

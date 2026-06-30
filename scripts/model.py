@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+import uuid
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -171,10 +172,15 @@ def train(con):
         FROM predictions p
         JOIN calendar_events e ON p.event_id = e.event_id
         JOIN route_options r ON r.option_id = p.option_id
-        LEFT JOIN bus_arrivals b ON b.fetched_at = (
-            SELECT MAX(fetched_at) FROM bus_arrivals ba
-            WHERE ba.fetched_at <= e.start_time
-        )
+        LEFT JOIN bus_arrivals b
+               ON b.bus_stop_code = p.boarding_stop_code
+              AND b.service_no    = p.transit_service_no
+              AND b.fetched_at    = (
+                  SELECT MAX(fetched_at) FROM bus_arrivals ba
+                  WHERE ba.bus_stop_code = p.boarding_stop_code
+                    AND ba.service_no    = p.transit_service_no
+                    AND ba.fetched_at   <= e.start_time
+              )
         LEFT JOIN weather_forecast w ON w.fetched_at = (
             SELECT MAX(fetched_at) FROM weather_forecast
         )
@@ -523,6 +529,9 @@ def backfill(con):
 
 
 def evaluate(con):
+    import time as _time
+    t0 = _time.time()
+
     rows = con.execute("""
         SELECT predicted_min, actual_min, predicted_crowd, actual_crowd
         FROM predictions
@@ -558,6 +567,16 @@ def evaluate(con):
         )
     if crowd_acc is not None:
         log.info("7-day crowd accuracy: %.0f%% over %d events", crowd_acc * 100, len(crowd_rows))
+
+    summary = f"mae={mae:.2f}min"
+    if crowd_acc is not None:
+        summary += f" crowd_acc={crowd_acc * 100:.0f}%"
+    con.execute(
+        """INSERT INTO pipeline_runs
+           (run_id, source, rows_upserted, duration_ms, status, error_msg)
+           VALUES (?, 'model_evaluate', ?, ?, 'success', ?)""",
+        [str(uuid.uuid4()), len(rows), int((_time.time() - t0) * 1000), summary],
+    )
 
 
 def main():
