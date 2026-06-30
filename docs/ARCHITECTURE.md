@@ -443,7 +443,7 @@ shapely>=2.0.4         # GPS validation (>= for Python 3.14)
 pytz>=2024.1           # timezone handling for Singapore +08:00
 pyarrow>=16.0.0        # Parquet write (>= for Python 3.14)
 garminconnect>=0.2.0   # optional fitness integration
-scikit-learn>=1.4.0    # ML model training (RandomForestRegressor)
+scikit-learn>=1.4.0    # ML model training (RandomForestRegressor + RandomForestClassifier)
 joblib>=1.3.0          # model serialization (.pkl save/load)
 # apache-airflow — install separately, not pinned in requirements.txt
 ```

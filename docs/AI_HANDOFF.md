@@ -16,7 +16,7 @@ Given a user's next Google Calendar event, the pipeline:
 2. Fetches routing options (OneMap), real-time bus arrivals (LTA), train alerts (LTA), and weather (data.gov.sg)
 3. Stores everything in DuckDB using a lake-warehouse pattern
 4. Runs SQL transformation to rank routes, calculate leave-by time, apply weather/disruption penalties
-5. Runs an ML model (Random Forest) to predict journey duration and stores prediction vs actual
+5. Runs two scikit-learn Random Forest models: a regressor for journey duration and a classifier for crowd level. Predictions are stored per route option, then backfilled with observed/proxy actuals for evaluation.
 6. Serves results via Streamlit dashboard + FastAPI REST endpoint
 
 **Output:** "Leave by 09:23 AM — take Bus 65 then EWL. Predicted 38 min. ⚠ Rain — avoid 600m walk."

@@ -274,7 +274,7 @@ for attempt in range(max_retries):
 
 ## D18 — Batch Scheduling (Airflow) Over Streaming (Kafka)
 
-**Decision:** Use Airflow on a 10-minute cron schedule instead of a Kafka event stream.
+**Decision:** Use Airflow on a 30-minute cron schedule instead of a Kafka event stream.
 
 **Why:**
 - LTA bus arrival data updates every 1–2 minutes. Weather updates every 2 hours. There is no data source in this pipeline that changes faster than once per minute — polling every 30 minutes via the Airflow DAG captures all meaningful updates.
@@ -688,3 +688,17 @@ model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
 **Feature Store:** Useful at scale for sharing engineered features across multiple models and teams. With one model and one engineer, features are computed inline in the SQL query. A Feature Store adds indirection without value at this project's size.
 
 **Trade-off accepted:** If the project scaled to a multi-user commute recommendation service (thousands of concurrent users, multiple city deployments), the choices would change: Triton for high-throughput batched inference, Dask-cuDF for GPU-accelerated batch processing, Metabase for analyst dashboards. Knowing when to scale up — and when not to — is the skill the Day 5 exercise teaches.
+
+---
+
+## D39 — Batch Orchestration plus Adaptive Polling instead of Kafka
+
+**Decision:** Use Airflow for 30-minute batch orchestration and daily evaluation, and use `scripts/scheduler.py` for adaptive polling of low-velocity live API snapshots.
+
+**Why:**
+- The sources are low volume: calendar events, weather snapshots, LTA arrivals, and train alerts.
+- A Kafka broker would add unnecessary infrastructure for this assessment.
+- Airflow handles the repeatable batch pipeline with a web UI showing task success, retries, and logs.
+- The Docker scheduler handles adaptive live checks without hammering expensive APIs (OneMap, LTA, ip-api).
+
+**Trade-off:** This is near-real-time polling, not Kafka-style streaming. The pipeline may be up to 30 minutes stale for Airflow-scheduled runs; the Docker scheduler reduces latency for live commute checks by adapting poll frequency to commute state.

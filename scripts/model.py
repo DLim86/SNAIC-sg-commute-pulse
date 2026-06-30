@@ -32,6 +32,7 @@ FEATURE_COLS_CRD = [
 ]
 CROWD_MAP = {"SEA": 0, "SDA": 1, "LSD": 2}
 CROWD_INV = {0: "SEA", 1: "SDA", 2: "LSD"}
+DRIFT_THRESHOLD_MIN = 10
 
 
 def _rush_hour(hour, dow):
@@ -548,6 +549,12 @@ def evaluate(con):
     """, [mae])
 
     log.info("7-day MAE (duration): %.1f min over %d events", mae, len(rows))
+    if mae > DRIFT_THRESHOLD_MIN:
+        log.warning(
+            "Model drift warning: 7-day MAE %.1f min exceeds %.1f min threshold",
+            mae,
+            DRIFT_THRESHOLD_MIN,
+        )
     if crowd_acc is not None:
         log.info("7-day crowd accuracy: %.0f%% over %d events", crowd_acc * 100, len(crowd_rows))
 

@@ -300,7 +300,7 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
         <div class="card-desc">Before you write a single API call, get your environment right. A clean folder structure now saves hours of confusion later. You also need to register for two APIs — this takes a day, so do it first.</div>
 
         <div class="chip-row">
-          <span class="chip chip-grey">Python 3.11+</span>
+          <span class="chip chip-grey">Python 3.12+</span>
           <span class="chip chip-grey">venv</span>
           <span class="chip chip-grey">VSCode</span>
           <span class="chip chip-grey">pip</span>
@@ -989,7 +989,8 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
             <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
               <div><span style="color:var(--dim)">Before:</span> <span style="font-family:monospace;color:#A8C4DC">Streamlit → DuckDB</span></div>
               <div style="margin-top:8px"><span style="color:var(--text)">After:</span><br>
-              <span style="font-family:monospace;color:#93B4F8">Streamlit → FastAPI → DuckDB</span><br>
+              <span style="font-family:monospace;color:#93B4F8">Streamlit → DuckDB (direct, read-only)</span><br>
+              <span style="font-family:monospace;color:#93B4F8">FastAPI → DuckDB (read-only)</span><br>
               <span style="font-family:monospace;color:#6EE7B7">Mobile app → FastAPI → DuckDB</span><br>
               <span style="font-family:monospace;color:#6EE7B7">Telegram bot → FastAPI → DuckDB</span></div>
             </div>
@@ -998,7 +999,7 @@ http://localhost:8000/api/v1/recommendation/E001</pre>
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"I separated the serving layer from the storage layer by adding FastAPI between my dashboard and the database. My Streamlit dashboard is just one consumer — another team could build a mobile app calling the same endpoint without touching DuckDB. FastAPI also auto-generates this Swagger UI — which is exactly how production APIs are documented and tested. In my video I'll click 'Try it out' live and show the API returning a recommendation."</p>
+          <p>"I separated the serving layer from the storage layer by adding a FastAPI REST layer alongside the Streamlit dashboard. Streamlit reads DuckDB directly with a read-only connection for the dashboard. FastAPI exposes the same data as machine-readable REST endpoints — so a mobile app or Telegram bot can call the same recommendation data without knowing anything about DuckDB. FastAPI also auto-generates this Swagger UI — which is exactly how production APIs are documented and tested. In my video I'll click 'Try it out' live and show the API returning a recommendation."</p>
         </div>
       </div>
     </div>
@@ -1162,7 +1163,7 @@ http://localhost:8080
           <div class="card-block">
             <div class="block-label">Dockerfile (shared by all 3 services)</div>
             <div class="block-content">
-<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">FROM python:3.11-slim
+<pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
@@ -1270,7 +1271,7 @@ INSERT OR REPLACE written by hand    materialization: table / incremental</pre>
           <div class="card-block">
             <div class="block-label">Why NOT Kafka / Flink here</div>
             <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
-              <div style="margin-bottom:8px"><strong style="color:#C4B5FD">Kafka</strong> is for data that changes every second — click streams, payments, IoT sensors. Bus arrival data refreshes every 2 minutes; weather every 2 hours. A 10-minute Airflow batch schedule is perfectly adequate.</div>
+              <div style="margin-bottom:8px"><strong style="color:#C4B5FD">Kafka</strong> is for data that changes every second — click streams, payments, IoT sensors. Bus arrival data refreshes every 2 minutes; weather every 2 hours. A 30-minute Airflow batch schedule is perfectly adequate.</div>
               <div><strong style="color:#C4B5FD">Flink</strong> processes Kafka streams with stateful windowing. No Kafka stream → no Flink. Airflow covers our orchestration needs entirely.</div>
             </div>
           </div>
@@ -1304,7 +1305,7 @@ data.gov.sg    →  weather_forecast       ──┘         ↓
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"My architecture follows the lake-warehouse pattern from Day 3. Raw API responses land in a date-partitioned Parquet zone — that's the data lake layer. Cleaned, typed data lives in DuckDB — that's the data warehouse. My DuckDB schema is a star schema: route_options is the fact table with measurable values like duration and fare, and weather, bus arrivals, and train alerts are dimension tables that join to it. I chose DuckDB over Spark because my dataset is small — tens of rows per run, not terabytes. And I chose Airflow batch scheduling over Kafka streaming because bus data only refreshes every two minutes anyway, so polling every ten minutes is perfectly sufficient."</p>
+          <p>"My architecture follows the lake-warehouse pattern from Day 3. Raw API responses land in a date-partitioned Parquet zone — that's the data lake layer. Cleaned, typed data lives in DuckDB — that's the data warehouse. My DuckDB schema is a star schema: route_options is the fact table with measurable values like duration and fare, and weather, bus arrivals, and train alerts are dimension tables that join to it. I chose DuckDB over Spark because my dataset is small — tens of rows per run, not terabytes. And I chose Airflow batch scheduling over Kafka streaming because bus data only refreshes every two minutes anyway, so polling every thirty minutes is perfectly sufficient."</p>
         </div>
       </div>
     </div>
@@ -1333,7 +1334,7 @@ data.gov.sg    →  weather_forecast       ──┘         ↓
           <div class="card-block">
             <div class="block-label">What the rubric requires (30 marks)</div>
             <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
-              <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Batch processing</strong> ✅ Airflow runs every 10 min.</div>
+              <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Batch processing</strong> ✅ Airflow runs every 30 min.</div>
               <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Model training</strong> ✅ <code>scripts/model.py --train</code> trains <code>RandomForestRegressor</code> (duration, 11 features) + <code>RandomForestClassifier</code> (crowd, 10 features including <code>bus_headway_gap</code> + route context). Saves to <code>models/</code>. Crowd is predicted per route option — each option gets its own label.</div>
               <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Inference</strong> ✅ <code>--predict</code> scores ALL 3 route options, stores <code>prediction_id = "{option_id}_pred"</code>. Alt routes [2]/[3] in dashboard each show "🤖 ML: ~X min · crowd: 🟡 Standing".</div>
               <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Evaluation / MLOps</strong> ✅ <code>--evaluate</code> computes 7-day MAE. <code>--backfill</code> fills actuals: BUS → LTA API at alighting stop; MRT/LRT → headway ± disruption penalty; WALK → deterministic.</div>
@@ -1430,7 +1431,7 @@ def evaluate_model(con):
 
         <div class="video-tip">
           <div class="video-tip-label">▶ In your video, say this</div>
-          <p>"The second rubric criterion requires ML and real-time output. I added a commute time predictor using scikit-learn — a Random Forest Regressor for journey duration and a Gradient Boosting Classifier for crowd level. Features are hour of day, day of week, rain conditions, walking distance, transfers, and next bus wait time. Unlike a simple system that scores only the recommended route, my predict task scores all three route options individually — so the dashboard shows an ML prediction for the recommended route and also for each alternative in the expanders, keyed by option_id. A daily Airflow evaluate task computes 7-day MAE. The backfill task fills in actual_min per transit mode: for bus routes it calls LTA's real-time API at the alighting stop; for MRT and LRT it uses a headway estimate adjusted for any active disruption; for walk-only routes it's deterministic. The Streamlit dashboard shows predicted versus actual for every route option so users can see whether the model is improving."</p>
+          <p>"The second rubric criterion requires ML and real-time output. I added a commute time predictor using scikit-learn — a RandomForestRegressor for journey duration and a RandomForestClassifier for crowd level. LTA provides observed load snapshots; my model predicts crowd from arrival timing and route context. Features are hour of day, day of week, rain conditions, walking distance, transfers, and next bus wait time. Unlike a simple system that scores only the recommended route, my predict task scores all three route options individually — so the dashboard shows an ML prediction for the recommended route and also for each alternative in the expanders, keyed by option_id. A daily Airflow evaluate task computes 7-day MAE. The backfill task fills in actual_min per transit mode: for bus routes it calls LTA's real-time API at the alighting stop; for MRT and LRT it uses a headway estimate adjusted for any active disruption; for walk-only routes it's deterministic. The Streamlit dashboard shows predicted versus actual for every route option so users can see whether the model is improving."</p>
         </div>
       </div>
     </div>
@@ -1574,7 +1575,7 @@ def evaluate_model(con):
           <div class="video-tip-label">▶ In your video, say this</div>
           <p>"Day 4 adds the full MLOps lifecycle around my model. I integrated MLflow — every <code>--train</code> run logs parameters, validation MAE, and saves the model as a tracked artifact. The model registry uses an <code>@champion</code> alias so inference code never hard-codes a version number. I can roll back to any past version in one command.</p>
           <p>Day 4 also taught me three ways a model can degrade in production: data drift — where input distributions change, for example my commute schedule shifts from 8am to 10am starts. Concept drift — where the feature-to-target relationship changes, like a new MRT line opening. And training-serving skew — where the same feature is computed differently in training versus production.</p>
-          <p>For monitoring, system metrics like latency and error rates go to Prometheus and Grafana. Model accuracy is tracked by the daily 8am Airflow evaluate_model task — if 7-day MAE crosses 10 minutes, it logs a drift warning. New model versions go through shadow deployment first — same live inputs, predictions logged but never shown to users — then canary deployment at 5% traffic before full promotion."</p>
+          <p>For monitoring, model accuracy is tracked by the daily 8am Airflow evaluate_model task — in the submitted model.py, if 7-day MAE crosses 10 minutes, it logs a drift warning. I do not automatically retrain in this assessment version; the warning is the monitoring signal. Shadow deployment, canary deployment, MLflow, Prometheus, and Grafana are production extensions documented in Day 4 but not implemented in this assessment version."</p>
         </div>
       </div>
     </div>
@@ -1689,7 +1690,7 @@ Slow ML training (training bottleneck) cuML / GPU XGBoost        ❌ NO — trai
             </div>
             <div class="vt-row">
               <div class="vt-time">03:00</div>
-              <div class="vt-content"><strong>Airflow DAG UI (2 min)</strong><p>Open Airflow at localhost:8080. Show the commute_pipeline DAG graph. Point out the parallel branch (weather + bus + alerts). Trigger a run and watch tasks go green. Explain the 10-minute schedule.</p></div>
+              <div class="vt-content"><strong>Airflow DAG UI (2 min)</strong><p>Open Airflow at localhost:8080. Show the commute_pipeline DAG graph. Point out the sequential task chain (schema_check → ingest → transform → predict_commute → backfill_actuals → gate_evaluate → evaluate_model). Trigger a run and watch tasks go green. Explain the 30-minute schedule.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">05:00</div>
@@ -1732,6 +1733,10 @@ Slow ML training (training bottleneck) cuML / GPU XGBoost        ❌ NO — trai
             <li>
               <strong>Data Serving API</strong>
               Designed a REST API serving layer with FastAPI exposing commute recommendations as a queryable endpoint with auto-generated Swagger documentation — decoupling the recommendation engine from any specific frontend.
+            </li>
+            <li>
+              <strong>ML Models</strong>
+              Built scikit-learn Random Forest models for commute duration and crowd prediction, scoring all route options per event using engineered weather, route, and bus-arrival timing features; predictions are stored per route, backfilled with observed/proxy actuals, and evaluated with 7-day MAE.
             </li>
             <li>
               <strong>Orchestration & Infrastructure</strong>
