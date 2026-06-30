@@ -60,6 +60,7 @@
   }
   .section-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 
+  /* SAY — blue, main spoken script */
   .say {
     background: #0D2137;
     border-left: 3px solid #1F6FEB;
@@ -73,6 +74,7 @@
   .say p { color: #C9D1D9; font-size: 14.5px; }
   .say p + p { margin-top: 8px; }
 
+  /* DO — green, screen actions */
   .do {
     background: #0D2F1A;
     border-left: 3px solid #3FB950;
@@ -86,6 +88,7 @@
   .do ul { padding-left: 18px; }
   .do li { color: #C9D1D9; font-size: 14px; margin-bottom: 5px; }
 
+  /* NOTE — amber, informational */
   .note {
     background: #2D2000;
     border-left: 3px solid #D29922;
@@ -97,7 +100,9 @@
     letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
   }
   .note p { color: #C9D1D9; font-size: 13.5px; }
+  .note p + p { margin-top: 6px; }
 
+  /* RUBRIC ALERT — red */
   .rubric-alert {
     background: #2D0F0F;
     border-left: 3px solid #DA3633;
@@ -109,6 +114,47 @@
     letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
   }
   .rubric-alert p { color: #C9D1D9; font-size: 13.5px; }
+
+  /* OPTIONAL — dim lime, extra detail if ahead */
+  .optional {
+    background: #141F0F;
+    border-left: 3px solid #56A33A;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+  }
+  .optional-label {
+    font-size: 10px; font-weight: 700; color: #7EE787;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .optional p { color: #C9D1D9; font-size: 13.5px; }
+  .optional p + p { margin-top: 6px; }
+
+  /* SKIP — pale red, do not say */
+  .skip {
+    background: #1F0D0D;
+    border-left: 3px solid #C23B2A;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+  }
+  .skip-label {
+    font-size: 10px; font-weight: 700; color: #F85149;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .skip ul { padding-left: 18px; }
+  .skip li { color: #C9D1D9; font-size: 13.5px; margin-bottom: 4px; }
+
+  /* FALLBACK — purple, if service not loading */
+  .fallback {
+    background: #1A1040;
+    border-left: 3px solid #A371F7;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+  }
+  .fallback-label {
+    font-size: 10px; font-weight: 700; color: #C4B5FD;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .fallback p { color: #C9D1D9; font-size: 13.5px; }
 
   code {
     background: #21262D;
@@ -139,10 +185,10 @@
     font-size: 11px; padding: 3px 10px;
     border-radius: 12px; font-weight: 600;
   }
-  .chip-blue  { background: #1F3A5F; color: #58A6FF; border: 1px solid #1F6FEB; }
-  .chip-green { background: #0D2F1A; color: #3FB950; border: 1px solid #238636; }
-  .chip-amber { background: #2D2000; color: #D29922; border: 1px solid #9E6A03; }
-  .chip-red   { background: #2D0F0F; color: #F85149; border: 1px solid #DA3633; }
+  .chip-blue   { background: #1F3A5F; color: #58A6FF; border: 1px solid #1F6FEB; }
+  .chip-green  { background: #0D2F1A; color: #3FB950; border: 1px solid #238636; }
+  .chip-amber  { background: #2D2000; color: #D29922; border: 1px solid #9E6A03; }
+  .chip-red    { background: #2D0F0F; color: #F85149; border: 1px solid #DA3633; }
   .chip-purple { background: #21103A; color: #C4B5FD; border: 1px solid #7C3AED; }
 
   .total-time {
@@ -166,6 +212,31 @@
   .rubric-marks.depth    { color: #3FB950; }
   .rubric-marks.pres     { color: #D29922; }
   .rubric-note { font-size: 11px; color: #8B949E; margin-top: 3px; }
+
+  details {
+    border: 1px solid #30363D;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  details summary {
+    cursor: pointer;
+    padding: 14px 20px;
+    background: #1C2128;
+    font-weight: 600;
+    font-size: 15px;
+    color: #E6EDF3;
+    list-style: none;
+    user-select: none;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "▶  "; color: #8B949E; font-size: 11px; }
+  details[open] summary::before { content: "▼  "; }
+  details .qa-body {
+    padding: 20px;
+    background: #161B22;
+    display: flex; flex-direction: column; gap: 14px;
+  }
 </style>
 </head>
 <body>
@@ -180,11 +251,10 @@
   </div>
 
   <div class="total-time">
-    <div class="big">~14 min 30 sec</div>
-    <div class="label">Target runtime — leaves ~30 sec buffer in your 15-minute slot</div>
+    <div class="big">~12:30 SAY</div>
+    <div class="label">Add ~2:30 for navigation, loading, and transitions → total ≈ 15:00 · SAY ≈ 1,620 words at 130 wpm</div>
   </div>
 
-  <!-- Rubric summary -->
   <div class="rubric-bar">
     <div class="rubric-cell">
       <div class="rubric-criterion">End-to-End Pipeline</div>
@@ -208,7 +278,7 @@
     </div>
   </div>
 
-  <div class="progress-label"><span>Start</span><span>7:30 — ML</span><span>12:00 — Reflection</span><span>15:00</span></div>
+  <div class="progress-label"><span>Start</span><span>7:10 — ML</span><span>10:15 — Reflection</span><span>15:00</span></div>
   <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
 
   <!-- ─── SETUP ─── -->
@@ -216,32 +286,32 @@
     <div class="section-header">
       <div class="section-num ok">⚙</div>
       <div class="section-title">Start All Services — Do This Before Recording</div>
-      <div class="timer">Prep (not recorded)</div>
+      <div class="timer">Prep · not recorded</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Open 5 terminals — commands listed per terminal below</div>
+        <div class="do-label">Open 5 terminals — commands per terminal</div>
         <ul>
-          <li><strong>Terminal 1 — Ingest (refresh data):</strong> <code>python scripts/ingest.py</code> then <code>python scripts/transform.py</code> then <code>python scripts/model.py --train</code> <em>(first time or new machine — skip if .pkl models already exist)</em> then <code>python scripts/model.py --predict</code></li>
+          <li><strong>Terminal 1 — Data:</strong> <code>python scripts/ingest.py</code> → <code>python scripts/transform.py</code> → <code>python scripts/model.py --train</code> <em>(first time or new machine — skip if .pkl files already exist)</em> → <code>python scripts/model.py --predict</code></li>
           <li><strong>Terminal 2 — Streamlit:</strong> <code>streamlit run scripts/serve.py</code> → <a href="http://localhost:8501" style="color:#58A6FF">http://localhost:8501</a></li>
           <li><strong>Terminal 3 — FastAPI:</strong> <code>uvicorn scripts.api:app --reload --port 8000</code> → <a href="http://localhost:8000/docs" style="color:#58A6FF">http://localhost:8000/docs</a></li>
           <li><strong>Terminal 4 — Airflow:</strong> <code>airflow standalone</code> → <a href="http://localhost:8080" style="color:#58A6FF">http://localhost:8080</a> (user: admin, password: in terminal output)</li>
-          <li><strong>Terminal 5 — Docker (for Section 9):</strong> <code>docker compose up</code> — keep this ready but start it just before Section 9 so it's freshly launching on screen</li>
+          <li><strong>Terminal 5 — Docker (Section 9 only):</strong> <code>docker compose up</code> — start just before Section 9 so it's freshly launching on screen</li>
         </ul>
       </div>
       <div style="background:#0D2137;border-left:3px solid #1F6FEB;border-radius:0 6px 6px 0;padding:14px 16px">
-        <div style="font-size:10px;font-weight:700;color:#58A6FF;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">All URLs at a glance</div>
+        <div style="font-size:10px;font-weight:700;color:#58A6FF;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">All URLs</div>
         <table style="font-family:monospace;font-size:13px;border-collapse:collapse;width:100%">
           <tr><td style="color:#3FB950;padding:3px 16px 3px 0">Streamlit dashboard</td><td style="color:#C9D1D9">http://localhost:8501</td></tr>
           <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI Swagger UI</td><td style="color:#C9D1D9">http://localhost:8000/docs</td></tr>
-          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI health check</td><td style="color:#C9D1D9">http://localhost:8000/health</td></tr>
+          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI health</td><td style="color:#C9D1D9">http://localhost:8000/health</td></tr>
           <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI next recommendation</td><td style="color:#C9D1D9">http://localhost:8000/api/v1/recommendation/next</td></tr>
           <tr><td style="color:#3FB950;padding:3px 16px 3px 0">Airflow UI</td><td style="color:#C9D1D9">http://localhost:8080</td></tr>
         </table>
       </div>
       <div class="note">
-        <div class="note-label">Order of operations if starting from scratch</div>
-        <p><code>python scripts/schema.py</code> → <code>python scripts/ingest.py</code> → <code>python scripts/transform.py</code> → <code>python scripts/model.py --train</code> (first time only) → <code>python scripts/model.py --predict</code> → then start Streamlit, FastAPI, Airflow in separate terminals. DuckDB will have data by the time the dashboard opens.</p>
+        <div class="note-label">Starting from scratch</div>
+        <p><code>python scripts/schema.py</code> → <code>python scripts/ingest.py</code> → <code>python scripts/transform.py</code> → <code>python scripts/model.py --train</code> (first time only) → <code>python scripts/model.py --predict</code> → then start Streamlit, FastAPI, Airflow.</p>
       </div>
       <div style="background:#2D0F0F;border-left:3px solid #DA3633;border-radius:0 6px 6px 0;padding:12px 16px">
         <div style="font-size:10px;font-weight:700;color:#F85149;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Never show on screen</div>
@@ -255,22 +325,28 @@
     <div class="section-header">
       <div class="section-num">1</div>
       <div class="section-title">Opening — Problem &amp; What I Built</div>
-      <div class="timer">0:00 – 1:30</div>
+      <div class="timer">0:00 → 1:10 · ~150 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
           <li>Show GitHub repo: <code>github.com/DLim86/SNAIC-sg-commute-pulse</code></li>
-          <li>Camera on face for first 10 seconds if allowed, then switch to screen</li>
+          <li>Camera on face for the first 10 seconds if allowed, then switch to screen</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
+        <div class="say-label">Say</div>
         <p>Hi, I'm a Data Engineering student at SIT. This is my Week 2 assessment — SNAIC SG Commute Pulse.</p>
-        <p>The problem: I look at my Google Calendar, see a meeting at 10am somewhere in Singapore, and I have no idea which bus or MRT to take, whether there are disruptions, or if I need to leave earlier because of rain. I'm checking three different apps to answer one question: when do I leave?</p>
-        <p>This system answers that question automatically. It reads my next calendar event, fetches real-time bus arrivals, train disruption alerts, and weather from government APIs, runs a SQL transformation to rank route options, predicts how long the journey will take, and serves the result on a live dashboard and REST API.</p>
-        <p>The output is one sentence: "Leave by 09:23 AM — take Bus 65 then East-West Line. Predicted 38 min. ⚠ Rain expected during 600m walk."</p>
+        <p>The problem: I have a Google Calendar event at 10 AM somewhere in Singapore. I don't know which bus or MRT to take, whether there are disruptions, or if I need to leave earlier because of rain. I'm checking three different apps to answer one question: when do I leave?</p>
+        <p>This system answers that automatically. It reads my next calendar event, fetches real-time bus arrivals, train alerts, and weather from government APIs, runs a SQL transformation to rank route options, predicts the journey time, and serves the result on a live dashboard and REST API.</p>
+        <p>The output: "Leave by 09:23 AM — take Bus 65 then East-West Line. Predicted 38 min. ⚠ Rain expected during 600m walk."</p>
+      </div>
+      <div class="skip">
+        <div class="skip-label">Skip / Do Not Say</div>
+        <ul>
+          <li>Don't describe the GitHub folder structure — just show the repo and move on</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -280,23 +356,31 @@
     <div class="section-header">
       <div class="section-num">2</div>
       <div class="section-title">System Architecture — 3 Layers</div>
-      <div class="timer">1:30 – 3:00</div>
+      <div class="timer">1:10 → 2:20 · ~150 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Open <code>docs/roadmap.html</code> — show the 3-phase pipeline diagram at the top</li>
-          <li>Point at each phase as you name it</li>
+          <li>Open <code>docs/roadmap.html</code> in browser</li>
+          <li>Point at each of the 3 phases as you name them</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>The system has three layers, each mapped to a rubric criterion.</p>
-        <p><strong>Layer 1 — Batch pipeline.</strong> An Airflow DAG runs every 30 minutes. It fetches four data sources, cleans and stores data in DuckDB, and runs a SQL transformation. This is the core data engineering pipeline.</p>
-        <p><strong>Layer 2 — ML predictions.</strong> After each transformation, a Random Forest model predicts the commute duration for the next event and compares it with what actually happened. A daily Airflow task evaluates 7-day prediction accuracy. This satisfies the ML and real-time output criterion.</p>
-        <p><strong>Layer 3 — Live serving.</strong> A Streamlit dashboard auto-refreshes every 60 seconds showing the current recommendation, the ML prediction, and weather and disruption warnings. A FastAPI layer exposes the same data as a REST endpoint so any client can consume it.</p>
-        <p>My architecture follows the <strong>lake-warehouse pattern</strong>. Raw API responses land in date-partitioned Parquet files — that's the data lake. Cleaned, typed data lives in DuckDB — that's the data warehouse, modelled as a star schema with route_options as the fact table.</p>
+        <div class="say-label">Say</div>
+        <p>The system has three layers.</p>
+        <p><strong>Layer 1 — Batch pipeline.</strong> An Airflow DAG runs every 30 minutes. It fetches four data sources, stores them in DuckDB, and runs a SQL transformation. This is the core data engineering pipeline.</p>
+        <p><strong>Layer 2 — ML predictions.</strong> A Random Forest model predicts commute duration and bus crowding for the next event. A daily Airflow task evaluates 7-day accuracy against actual outcomes.</p>
+        <p><strong>Layer 3 — Live serving.</strong> A Streamlit dashboard auto-refreshes every 60 seconds. A FastAPI layer exposes the same data as REST endpoints for any external client.</p>
+        <p>The architecture follows the lake-warehouse pattern. Raw API responses land in date-partitioned Parquet files — the data lake. Cleaned, typed data lives in DuckDB — the data warehouse, with <code>route_options</code> as the fact table of a star schema.</p>
+      </div>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p>The star schema: <code>route_options</code> is the centre — duration, fare, walk distance. <code>weather_forecast</code>, <code>bus_arrivals</code>, and <code>train_alerts</code> are dimensions that join to it. The data lake is for replayability; the warehouse is for fast SQL querying.</p>
+      </div>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if roadmap.html is slow</div>
+        <p>"The roadmap is in docs/roadmap.html — I'll describe the three layers while it loads."</p>
       </div>
     </div>
   </div>
@@ -306,28 +390,40 @@
     <div class="section-header">
       <div class="section-num">3</div>
       <div class="section-title">Data Sources — Where the Data Comes From</div>
-      <div class="timer">3:00 – 4:30</div>
+      <div class="timer">2:20 → 3:30 · ~145 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Open <code>config_example.py</code> in VS Code — show the placeholder structure, never real keys</li>
-          <li>Show your LTA DataMall approval email briefly (blur or cover the actual key)</li>
+          <li>Open <code>config_example.py</code> in VS Code — show the placeholder structure only, never real values</li>
+          <li>Point to <code>LTA_API_KEY</code>, <code>ONEMAP_EMAIL</code>, <code>ONEMAP_PASSWORD</code> placeholders</li>
+          <li>Show LTA DataMall approval email briefly (cover or blur the actual key value)</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>I have five data sources — all real, all live.</p>
-        <p><strong>Google Calendar via OAuth2.</strong> This is the pipeline's entry point. I use the Calendar API to scan my next 10 upcoming events and find the first one that has a location field. OAuth2 handles authentication — on first run it opens a browser for consent, then auto-refreshes the token. The location string is geocoded into GPS coordinates by OneMap. If no calendar event is found, a time-of-day heuristic kicks in: 8 to 10 AM routes to my configured school address, after 4 PM routes home, and after 6 PM it checks my IP location — if I'm already within 3 km of home, the pipeline skips cleanly.</p>
-        <p><strong>OneMap Singapore.</strong> Two endpoints: geocoding — turning an address into GPS coordinates — and public transport routing, which gives me up to 3 route options with duration, walking distance, transfers, and estimated fare. The geocoder uses a progressive fallback: before anything else, it scans the calendar location string for a 6-digit Singapore postal code using a regex — if found, it tries the postal code first, because postal codes geocode with near-perfect accuracy on OneMap. If no postal code is found, it tries the full address, then strips ", Singapore", then just the first comma-delimited token — because users type locations in many formats. The OneMap JWT token expires every 3 days — the pipeline always calls for a fresh one at startup, never caches it to disk.</p>
-        <p><strong>LTA DataMall.</strong> Two endpoints: real-time bus arrivals by stop code — next arrival time and how crowded the bus is — and active MRT disruption alerts with severity levels. I registered for this API and got approval. The key lives in <code>config.py</code> which is gitignored — it never goes to GitHub.</p>
-        <p><strong>data.gov.sg weather.</strong> Open API, no registration needed. Returns a 2-hour forecast broken down by area across Singapore. I flag any area with "rain" or "shower" in the forecast as <code>is_rainy = TRUE</code> at ingest time.</p>
-        <p><strong>ip-api.com.</strong> Free geolocation API. Used to detect where I currently am — my routing origin — without needing GPS access from a Python script.</p>
+        <div class="say-label">Say</div>
+        <p>I have five data sources.</p>
+        <p><strong>Google Calendar via OAuth2</strong> — the pipeline's entry point. It scans my next 10 upcoming events and geocodes the first one with a location using OneMap. If no event is found, a time-of-day fallback routes to school in the morning or home in the afternoon.</p>
+        <p><strong>OneMap Singapore</strong> — geocoding and public transport routing, returning up to 3 route options with duration, walking distance, and fare. The geocoder uses a progressive fallback, starting with any 6-digit postal code in the address.</p>
+        <p><strong>LTA DataMall</strong> — real-time bus arrivals and active MRT disruption alerts. I registered for API access. The key lives in gitignored <code>config.py</code>.</p>
+        <p><strong>data.gov.sg weather</strong> — open API, no registration. Area forecasts; I flag any rain or shower as <code>is_rainy = TRUE</code> at ingest time.</p>
+        <p><strong>ip-api.com</strong> — free geolocation for my current routing origin, no GPS required.</p>
       </div>
-      <div class="note">
-        <div class="note-label">If Asked About Security</div>
-        <p>All API keys live in <code>config.py</code> which is in <code>.gitignore</code>. The template is <code>config_example.py</code> — only placeholders, committed to the repo. Running <code>git status</code> confirms config.py doesn't appear as a tracked file. Google's OAuth token and credentials files are also gitignored.</p>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p>The geocoder fallback chain: 6-digit postal code → full address → strip ", Singapore" → first comma token. OneMap's JWT expires every 3 days — the pipeline always calls for a fresh token at startup, never caches it to disk.</p>
+      </div>
+      <div class="skip">
+        <div class="skip-label">Skip / Do Not Say</div>
+        <ul>
+          <li>Don't describe the 8–10 AM / 4–6 PM / after-6 PM heuristic in detail — say "time-of-day fallback" only</li>
+          <li>Don't explain what OAuth2 is — just name it</li>
+        </ul>
+      </div>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if asked about security</div>
+        <p>"All API keys live in <code>config.py</code> which is in <code>.gitignore</code>. The template is <code>config_example.py</code> — placeholders only, committed to the repo. Running <code>git status</code> confirms config.py is not tracked."</p>
       </div>
     </div>
   </div>
@@ -336,30 +432,40 @@
   <div class="section">
     <div class="section-header">
       <div class="section-num">4</div>
-      <div class="section-title">Batch Pipeline — What We Did to the Data</div>
-      <div class="timer">4:30 – 6:30</div>
+      <div class="section-title">Batch Pipeline — Ingestion, Retry, Parquet, Idempotency</div>
+      <div class="timer">3:30 → 5:05 · ~200 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Open Airflow UI at <code>http://localhost:8080</code> — show the commute_pipeline DAG</li>
-          <li>Show the task graph: calendar → geocode → [weather, bus, alerts] → transform → predict</li>
-          <li>Click on one completed task run — show the green success state and click Logs</li>
-          <li>Briefly show a Parquet file in <code>data/raw/</code> in VS Code Explorer</li>
+          <li>Open Airflow UI at <code>http://localhost:8080</code></li>
+          <li>Show the <code>commute_pipeline</code> DAG — point at the 7-task sequential chain in the graph view</li>
+          <li>Click one completed task run → show green success → click Logs</li>
+          <li>Show a Parquet file in <code>data/raw/</code> in VS Code Explorer</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>The Airflow DAG runs every 30 minutes on a cron schedule — <code>*/30 * * * *</code>. It has 7 tasks in a sequential chain: schema_check, ingest, transform, predict_commute, backfill_actuals, then a ShortCircuitOperator called gate_evaluate that only passes at 8 AM Singapore time, and finally evaluate_model. The gate means the ML evaluation only runs once a day even though the DAG fires every 30 minutes.</p>
-        <p>I used Airflow instead of a cron job because it gives me this UI — I can see every task run, whether it succeeded or failed, and click into the logs to debug. A cron job has no visibility. The Airflow setup is for demonstration — in Docker production, a custom scheduler.py handles orchestration with an adaptive state machine, which I'll show in a moment.</p>
-        <p>Now let me show what the pipeline actually does to the data. Every API call goes through a retry wrapper — 3 attempts, exponential backoff of 1 second, 2 seconds, 4 seconds. LTA's API returns errors during rush hour. Without retry, one blip at 8am kills the whole run.</p>
-        <p>Before loading to DuckDB, raw responses are saved as Parquet files in a date-partitioned folder — you can see them here in <code>data/raw/</code>. That's the data lake layer. The reason is replayability: if I find a bug in my SQL transformation, I can fix it and re-run from the raw files without calling the APIs again.</p>
-        <p>Every insert uses <code>INSERT OR REPLACE</code> — never a bare INSERT. If the pipeline crashes halfway and restarts, it produces the same result as a clean run. No duplicate rows. That property is called idempotency and it's essential for any scheduled pipeline.</p>
+        <div class="say-label">Say</div>
+        <p>The Airflow DAG runs every 30 minutes — <code>*/30 * * * *</code>. Seven tasks in a sequential chain: schema_check, ingest, transform, predict_commute, backfill_actuals, a ShortCircuitOperator called gate_evaluate that only passes at 8 AM Singapore time, and evaluate_model. The gate means ML evaluation runs once a day even though the DAG fires every 30 minutes.</p>
+        <p>Airflow gives me full task visibility — green successes, red failures, clickable logs. A cron job can't do that.</p>
+        <p>Every API call goes through a retry wrapper: 3 attempts, exponential backoff of 1, 2, then 4 seconds. LTA's API returns errors during rush hour — without retry, one blip at 8 AM kills the whole run.</p>
+        <p>Before loading to DuckDB, raw responses are saved as date-partitioned Parquet files under <code>data/raw/</code>. That's the data lake layer. If I find a bug in my SQL transformation, I can fix it and re-run from the raw files without calling the APIs again.</p>
+        <p>Every insert uses <code>INSERT OR REPLACE</code> — never a bare INSERT. If the pipeline crashes and restarts, it produces the same result. That property is called idempotency and it's essential for any scheduled pipeline.</p>
       </div>
-      <div class="note">
-        <div class="note-label">If Asked: What is the star schema?</div>
-        <p><code>route_options</code> is the fact table — each row is one commute option, with measurable values: duration, fare, walk distance. <code>weather_forecast</code>, <code>bus_arrivals</code>, and <code>train_alerts</code> are dimension tables that join to routes. <code>route_options</code> is the centre of the star, dimensions radiate outward.</p>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p><code>route_options</code> is the fact table — duration, fare, walk distance. <code>weather_forecast</code>, <code>bus_arrivals</code>, <code>train_alerts</code> are dimension tables. That's the star schema centred on routes.</p>
+      </div>
+      <div class="skip">
+        <div class="skip-label">Skip / Do Not Say</div>
+        <ul>
+          <li>Don't preview the scheduler.py state machine here — save it for Section 9</li>
+        </ul>
+      </div>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if Airflow is loading</div>
+        <p>"Airflow takes a few seconds — you can already see the 7-task graph here while the run history loads."</p>
       </div>
     </div>
   </div>
@@ -369,28 +475,39 @@
     <div class="section-header">
       <div class="section-num">5</div>
       <div class="section-title">SQL Transformation — Ranking Routes &amp; Leave-By Time</div>
-      <div class="timer">6:30 – 7:30</div>
+      <div class="timer">5:05 → 6:00 · ~115 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Open <code>scripts/transform.py</code> in VS Code — scroll to the <code>BEST_ROUTE_QUERY</code> at line 40</li>
-          <li>Show the <code>v_enriched_routes</code> view definition in <code>scripts/schema.py</code></li>
-          <li>Run <code>python scripts/transform.py</code> in terminal — show the output with LEAVE LATEST, LEAVE NOW, step-by-step legs</li>
+          <li>Open <code>scripts/schema.py</code> in VS Code — scroll to the <code>v_enriched_routes</code> VIEW definition</li>
+          <li>Point at the <code>ROW_NUMBER() OVER (PARTITION BY event_id ...)</code> window function</li>
+          <li>Run <code>python scripts/transform.py</code> in terminal — show LEAVE LATEST, LEAVE NOW, step-by-step legs in output</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>The transformation layer is a SQL view called <code>v_enriched_routes</code>. It joins route options with the latest weather and any active MRT alerts. The key logic is in two places.</p>
-        <p>First: leave-by time. <code>start_time MINUS INTERVAL (duration + 10) MINUTES</code>. The 10-minute buffer accounts for walking from home to the bus stop — that's a documented business rule, not a magic number.</p>
-        <p>Second: route ranking. I use a window function — <code>ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY penalty, duration)</code>. If it's raining and a route has more than 400 metres of walking, that route gets a penalty and drops in the ranking. The fastest route wins unless rain makes it impractical. The dashboard always shows rank 1.</p>
-        <p>The output shows two departure times: leave latest — the last safe departure to arrive 10 minutes early — and leave now — what happens if you left at this exact second. Step-by-step legs show each walk, bus, and MRT segment with duration and stop names.</p>
-        <p>The "Why chosen:" reason is dynamic — the SQL view produces 9 distinct labels using <code>MIN() OVER (PARTITION BY event_id)</code> window functions: "✓ Fastest + direct (no transfers)", "✓ Fewest transfers (N)", "✓ Least walking (Xm)", "⚠ Rain — Xm exposed walk", and others — the label reflects what actually makes each route special, not a hardcoded string.</p>
-        <p>Weather and disruption warnings appear directly under "Why chosen:" for the recommended route. Disruption status is filtered to the actual rail lines in the route — a bus-only route shows no disruption section, an MRT-only route shows "No active MRT disruptions", not "MRT/LRT".</p>
-        <p>Immediately after the step-by-step legs, an <strong>inline first-transit live arrival</strong> shows the next vehicle to board. Arrivals are shown as actual clock times — for example "next at 09:34 (~4 min from now) | if missed → 09:39 (~9 min from now)" — not just a vague relative wait. For bus routes it shows X1 and X2 plus crowding level (seated / standing / full). For MRT or LRT, it shows a headway estimate — Singapore does not publish a public real-time MRT arrival API for developers, so the system uses fixed estimates of ~4 min for MRT and ~7 min for LRT.</p>
-        <p>When the recommended route consists entirely of walking legs — for example the destination is just across the street — walk details appear directly in the recommendation section itself, not as a separate alternative below. The inline walk block shows distance, estimated time, step count, calories, and heart-rate zone guidance. It always appears when walking is the actual recommendation, regardless of distance or weather.</p>
-        <p>Below that, an alt routes section labelled "Other route options (sorted by arrival time)" shows [2] and [3] — always exactly two alternatives because OneMap's routing API hard-caps at 3 total itineraries. Each alt shows compact legs with stop counts, its own first-transit X1 live arrival, and disruption or delay notes filtered to that route's specific rail lines. Consecutive MRT and LRT legs are grouped into one token. Note: alt routes query <code>route_options</code> directly — using <code>v_enriched_routes WHERE route_rank &gt; 1</code> would return 47 copies of each alternative because the view cross-joins 47 weather areas.</p>
+        <div class="say-label">Say</div>
+        <p>The transformation layer is a SQL view — <code>v_enriched_routes</code> — that joins route options with the latest weather and active train alerts.</p>
+        <p>Leave-by time: <code>start_time MINUS INTERVAL (duration + 10) MINUTES</code>. The 10-minute buffer accounts for walking to the bus stop — a documented business rule.</p>
+        <p>Route ranking: <code>ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY penalty, duration)</code>. Rain plus more than 400 metres of walking adds a penalty and drops a route in the ranking.</p>
+        <p>The "Why chosen" reason is dynamic — nine distinct labels produced by <code>MIN() OVER (PARTITION BY event_id)</code> window functions: fastest, direct, fewest transfers, least walking, cheapest fare, rain warnings. Not hardcoded.</p>
+        <p>Disruption warnings are filtered to the route's actual rail lines — a bus-only route shows no disruption section at all.</p>
+      </div>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p>Live bus arrivals show actual clock times — "09:34 (~4 min)" — not a relative wait. MRT headways use fixed estimates: ~4 min MRT, ~7 min LRT — Singapore does not publish a public real-time MRT arrival API for developers. Alt routes always show two alternatives: OneMap hard-caps at 3 total itineraries. Alt routes query <code>route_options</code> directly — not the enriched view — because the view's weather join and ranking aren't needed for the alternatives.</p>
+      </div>
+      <div class="skip">
+        <div class="skip-label">Skip / Do Not Say</div>
+        <ul>
+          <li>Don't describe the walk-only inline display in detail — mention it only if the demo happens to show a walk route</li>
+          <li>Don't say the view cross-joins 47 weather areas — the view uses <code>nearest_weather_area</code> (destination-specific) after the Round 2 fix</li>
+        </ul>
+      </div>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if transform.py is running</div>
+        <p>"I'll run transform.py now — the SQL output appears in the terminal as it completes."</p>
       </div>
     </div>
   </div>
@@ -400,24 +517,38 @@
     <div class="section-header">
       <div class="section-num">6</div>
       <div class="section-title">Live Dashboard — Streamlit Real-Time Output</div>
-      <div class="timer">7:30 – 8:30</div>
+      <div class="timer">6:00 → 6:55 · ~115 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
           <li>Open Streamlit at <code>http://localhost:8501</code></li>
-          <li>Point at: event title, leave-by metric, ML prediction metric, fare, weather warning</li>
-          <li>Show the step-by-step legs table</li>
-          <li>Show the "last refreshed" timestamp — explain the 60-second auto-refresh</li>
-          <li>If possible: briefly update weather data to rainy and show the warning appear</li>
+          <li>Point at: event title, leave-by metric, ML prediction, fare, weather warning if shown</li>
+          <li>Show the step-by-step legs section</li>
+          <li>Point at the "Running…" spinner or the auto-refresh caption at the bottom</li>
+          <li>Expand alt route [2] or [3] — show the "🤖 ML:" caption at the bottom of the expander</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>The Streamlit dashboard is the live output layer. It auto-refreshes every 60 seconds using <code>time.sleep(60); st.rerun()</code> — the page shows a "Running" spinner for 60 seconds, then reloads. This does not re-trigger any API calls — it only re-queries DuckDB. That's the "regularly refreshed dashboard" the rubric asks for.</p>
-        <p>The dashboard connects to DuckDB with <code>read_only=True</code> — it never writes, which avoids lock conflicts with the pipeline. A fresh connection is opened on every 60-second rerun — I intentionally removed the <code>@st.cache_resource</code> decorator because caching the connection caused a bug where the dashboard showed stale data even after the pipeline had written new rows. Opening a fresh read-only connection every rerun costs almost nothing and ensures the display is always current.</p>
-        <p>Three metrics appear prominently: the leave-by time, the journey duration, and the fare. Below that, any weather or disruption warnings appear from the SQL layer — the dashboard just displays what the transformation already decided. Bus arrival times are shown as actual clock times — 09:34 and 09:39 — so the user knows exactly when to board. Alternative routes appear in expandable sections labelled [2] and [3]. At the bottom of each alt expander, a "🤖 ML: ~X min · crowd: 🟡 Standing" caption shows the ML prediction specific to that route option — the model scores all three routes, not just the recommended one. The main ML prediction panel below the recommended route shows predicted duration, crowd level, actual from last run, and 7-day MAE.</p>
+        <div class="say-label">Say</div>
+        <p>The Streamlit dashboard is the live output layer. It auto-refreshes every 60 seconds using <code>time.sleep(60); st.rerun()</code>. It only re-queries DuckDB on refresh — no API calls. That's the regularly refreshed dashboard the rubric requires.</p>
+        <p>DuckDB connects with <code>read_only=True</code> on every rerun. I removed the <code>@st.cache_resource</code> decorator because it was caching the connection at startup — the dashboard never saw new rows from the pipeline. A fresh connection every rerun costs almost nothing.</p>
+        <p>Three metrics show prominently: leave-by time, journey duration, and fare. Weather and disruption warnings come from the SQL layer. The ML panel shows predicted duration, crowd level, and 7-day MAE. Alt routes [2] and [3] expand inline — each with its own ML prediction caption.</p>
+      </div>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p>The <code>@st.cache_resource</code> bug: Streamlit caches the return value of the decorated function across all reruns in the same process. Removing the decorator forces a new <code>duckdb.connect(read_only=True)</code> call each time, so the dashboard always reads the latest data.</p>
+      </div>
+      <div class="skip">
+        <div class="skip-label">Skip / Do Not Say</div>
+        <ul>
+          <li>Don't describe the alt route ML panel in detail here — it's covered in Section 7</li>
+        </ul>
+      </div>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if dashboard is loading</div>
+        <p>"The dashboard opens a fresh read-only DuckDB connection on every rerun — it may take a moment on first load."</p>
       </div>
     </div>
   </div>
@@ -426,45 +557,48 @@
   <div class="section">
     <div class="section-header">
       <div class="section-num ml">ML</div>
-      <div class="section-title">ML Predictions — Train, Predict, Evaluate</div>
-      <div class="timer">8:30 – 10:00</div>
+      <div class="section-title">ML Predictions — Train, Predict, Backfill, Evaluate</div>
+      <div class="timer">7:10 → 8:35 · ~185 words</div>
     </div>
     <div class="section-body">
       <div class="rubric-alert">
         <div class="rubric-alert-label">Rubric — ML and Real-Time Output (30 marks)</div>
-        <p>This section covers the batch processing ✅ + model training/inference ✅ + live refreshed dashboard ✅ needed for the 30-mark criterion. Explain all three clearly.</p>
+        <p>Cover all four steps: training ✅ · prediction ✅ · backfill actual ✅ · evaluation ✅. Also confirm: live refreshed dashboard ✅ · batch processing ✅. This section earns the 30-mark ML criterion.</p>
       </div>
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Open <code>scripts/model.py</code> in VS Code — show the <code>train()</code> function and the <code>predict()</code> loop over all route options</li>
-          <li>Show <code>models/commute_predictor.pkl</code> and <code>models/crowd_predictor.pkl</code> exist in Explorer</li>
-          <li>Run <code>python scripts/model.py --predict</code> in terminal — show 3 lines logged, one per route option</li>
-          <li>Switch to Streamlit — show recommended route ML panel ("Predicted: 38 min | crowd: 🟢 Seats available | 7-day MAE: 4.2 min")</li>
-          <li>Expand alt route [2] or [3] — show "🤖 ML: ~41 min · crowd: 🟡 Standing" caption at the bottom</li>
+          <li>Open <code>scripts/model.py</code> — show the <code>train()</code> function header and the <code>predict()</code> loop over all route options</li>
+          <li>Show <code>models/commute_predictor.pkl</code> and <code>models/crowd_predictor.pkl</code> in Explorer</li>
+          <li>Run <code>python scripts/model.py --predict</code> in terminal — show 3 log lines, one per route option</li>
+          <li>Switch to Streamlit — point at the ML panel: "Predicted: 38 min | crowd: 🟢 Seats available | 7-day MAE: 4.2 min"</li>
+          <li>Expand alt route [2] or [3] — show "🤖 ML: ~41 min · crowd: 🟡 Standing"</li>
           <li>Switch to Airflow — show the <code>predict_commute</code> task and the daily <code>evaluate_model</code> task</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>This is the ML component. I have two models: a Random Forest Regressor that predicts journey duration, and a Random Forest Classifier that predicts bus crowding level — Seats Available, Standing, or Very Full.</p>
-        <p>Features for the duration model are: base duration, next bus wait, walk distance, transfers, is_rainy, rain exposure, rush hour, weekend flag, hour of day, and bus crowd score — 11 features in total. The target is total journey duration in minutes. Training data starts with 500 synthetic historical rows using known Singapore commute patterns — rush hour adds 15%, rain adds 8%, weekends subtract 20% — so the model works from day one without needing weeks of real data first.</p>
-        <p>LTA provides observed load snapshots — SEA, SDA, or LSD — that the pipeline stores as <code>actual_crowd</code> labels for training. My model predicts crowd from arrival timing and route context. The 5-nearest-stop layer is my reliability layer: it finds a usable live arrival feed instead of trusting one nearest stop. From that feed, I engineer features like next bus timing, second bus timing, headway gap, weather, rush hour, and route properties — 10 features total. The classifier then predicts SEA, SDA, or LSD per route option — so routes 1, 2, and 3 can each receive a different crowd prediction even at the same departure time, because they have different headways and route characteristics.</p>
-        <p>What makes this design more interesting than a basic implementation: the predict task scores all three route options individually, not just the recommended one. Each prediction is stored with a <code>prediction_id</code> keyed to the specific route — <code>{option_id}_pred</code> — so the dashboard can show ML context for every alternative. Scroll down to alt routes [2] and [3] — each expander shows a "🤖 ML: ~X min · crowd: 🟡 Standing" caption. The user can see not just which route is recommended but what the model thinks about each option.</p>
-        <p>The backfill system is also mode-aware. After the event time passes, the pipeline calls <code>--backfill</code> to fill in actual journey times. For bus routes, it calls LTA's live bus arrival API at the alighting stop — the stop where you get off — within a 3-hour window after the event. That is the strongest available live signal, with proxy fallback if the live alighting-stop lookup is unavailable. I describe <code>actual_min</code> as observed/proxy actual, because not every transport mode exposes perfect ground-truth arrival time. For MRT and LRT, there's no public real-time arrival API in Singapore, so actual_min is total_duration_min plus a headway estimate — adjusted upward by 20 minutes if a HEAVY disruption was active in the train_alerts table during the commute window. Walk routes are deterministic — walking time doesn't vary.</p>
-        <p>Evaluation: a daily Airflow task at 8am computes 7-day Mean Absolute Error and stores it in <code>predictions.mae_7day</code>. If MAE crosses 10 minutes, model.py logs a drift warning. I do not automatically retrain in this assessment version; the warning is the monitoring signal. This is the full MLOps feedback loop: train → predict → backfill actual → evaluate → drift check → retrain.</p>
+        <div class="say-label">Say</div>
+        <p>Two models: a Random Forest Regressor for journey duration and a Random Forest Classifier for bus crowding — Seats Available, Standing, or Very Full.</p>
+        <p>The duration model uses 11 features — timing, weather, route properties, and bus arrival context. Training starts with 500 synthetic rows, labeled as synthetic, using known Singapore commute patterns: rush hour plus 15%, rain plus 8%, weekends minus 20%. The model works from day one before enough real data accumulates.</p>
+        <p>The crowd model uses 10 features per route, including bus headway gap and arrival timing from the 5-nearest-stop lookup.</p>
+        <p>Both models score all three route options individually — not just the recommended one. Each prediction is stored as <code>{option_id}_pred</code> — so the dashboard shows an ML caption for every alternative, not just the top route.</p>
+        <p>After the event, <code>--backfill</code> fills in actual journey times. <code>--evaluate</code> runs daily at 8 AM via Airflow: 7-day MAE stored in <code>predictions.mae_7day</code>, and a row written to <code>pipeline_runs</code>. If MAE exceeds 10 minutes, a drift warning is logged.</p>
+        <p>The full MLOps loop: train → predict → backfill actual → evaluate → drift check.</p>
       </div>
-      <div class="note">
-        <div class="note-label">If Asked: What is model drift? How do you detect it?</div>
-        <p>Day 4 taught three types: <strong>Data drift</strong> — input feature distributions change (e.g. my commute hour shifts from 8am to 10am after starting a new job). <strong>Concept drift</strong> — the relationship between features and the target changes (e.g. a new MRT line opens and the same hour_of_day now predicts a shorter journey time). <strong>Training-serving skew</strong> — the feature is computed differently in training versus production (e.g. is_rainy was encoded as True/False during training but 1/0 in the pipeline). My primary drift signal is the 7-day MAE threshold — rising MAE is a symptom of all three types regardless of root cause. Statistical tests like PSI or KS-test per feature can be added later once enough data accumulates.</p>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p>Duration features: base_duration, next_bus_mins, walk_distance_m, num_transfers, is_rainy, rain_exposure_score, is_rush_hour, is_weekend, hour_of_day, bus_crowd_score, base_duration × is_rush_hour. For BUS backfill: LTA v3/BusArrival at the alighting stop within 3 hours of the event. For MRT/LRT: total_duration_min + headway; +20 min if a HEAVY disruption was active. Walk routes are deterministic.</p>
       </div>
-      <div class="note">
-        <div class="note-label">If Asked: Why Random Forest and not Linear Regression?</div>
-        <p>Random Forest handles non-linear interactions between features — rush hour combined with rain has a different effect than either alone. Linear Regression would require manual feature engineering for that. RF also handles small datasets gracefully, which matters because I'm bootstrapping with synthetic historical data until enough real runs accumulate.</p>
+      <div class="skip">
+        <div class="skip-label">Skip / Do Not Say</div>
+        <ul>
+          <li>Don't name all 11 features individually in the SAY — say "11 features including timing, weather, and route properties"</li>
+          <li>Don't mention MLflow — the models are saved as <code>.pkl</code> files via joblib; MLflow is a future production enhancement only</li>
+        </ul>
       </div>
-      <div class="note">
-        <div class="note-label">If Asked: Why batch and not real-time streaming (Kafka)?</div>
-        <p>Bus arrival data refreshes every 2 minutes. Weather updates every 2 hours. Airflow runs the batch DAG every 30 minutes, while the Docker scheduler performs adaptive polling for live API snapshots — there's no event happening faster than that which would require a Kafka stream. Kafka would add infrastructure complexity (brokers, consumer groups, partitions) with no benefit for this data velocity.</p>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if --predict is running slowly</div>
+        <p>"The .pkl files are in models/ — I can show them in Explorer while the predict run completes."</p>
       </div>
     </div>
   </div>
@@ -474,25 +608,31 @@
     <div class="section-header">
       <div class="section-num">8</div>
       <div class="section-title">FastAPI — REST Endpoint &amp; Swagger UI</div>
-      <div class="timer">10:00 – 11:00</div>
+      <div class="timer">8:35 → 9:25 · ~100 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
           <li>Open <code>http://localhost:8000/docs</code> — Swagger UI</li>
-          <li>Expand <code>GET /api/v1/recommendation/{event_id}</code> — click "Try it out"</li>
-          <li>Paste a real event_id — click Execute — show the JSON response</li>
-          <li>Show <code>GET /api/v1/pipeline/status</code> — click Execute — show recent pipeline runs</li>
-          <li>Show <code>GET /api/v1/prediction/{event_id}</code> — show the ML prediction endpoint</li>
+          <li>Expand <code>GET /api/v1/recommendation/next</code> — click "Try it out" → Execute — show JSON response</li>
+          <li>Show <code>GET /api/v1/pipeline/status</code> — Execute — show recent pipeline run rows</li>
+          <li>Point to the 6 endpoints listed in the sidebar</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>Streamlit is the dashboard client and reads DuckDB directly with <code>read_only=True</code> — it doesn't need to go through an API for its own display. FastAPI exposes the same recommendation data as REST endpoints for any other client — a mobile app, a Telegram bot, a teammate's script — without those clients needing to know anything about DuckDB or how the data is structured internally.</p>
-        <p>FastAPI auto-generates this Swagger UI at <code>/docs</code>. I can click "Try it out" right now and execute a live API call. The response includes <code>leave_by</code>, <code>total_duration_min</code>, <code>fare</code>, <code>weather_forecast</code>, and <code>recommendation_reason</code> — all the fields the Streamlit dashboard also shows.</p>
-        <p>The pipeline status endpoint reads from the <code>pipeline_runs</code> monitoring table — so I can see the last 10 pipeline runs, whether each succeeded, how many rows were upserted, and how long it took. This is operational monitoring exposed as an API.</p>
-        <p>All FastAPI connections to DuckDB open with <code>read_only=True</code> — FastAPI never writes to the database. Only the Airflow pipeline writes.</p>
+        <div class="say-label">Say</div>
+        <p>Streamlit reads DuckDB directly — it doesn't need an API. FastAPI exposes the same data for any external client: a mobile app, a Telegram bot, a teammate's script.</p>
+        <p>Six endpoints: <code>/health</code>, <code>/recommendation/next</code>, <code>/recommendation/{event_id}</code>, <code>/prediction/{event_id}</code>, <code>/pipeline/status</code>, and <code>/alerts</code>. FastAPI auto-generates this Swagger UI — I can click Try it out right now and execute a live call.</p>
+        <p>The pipeline/status endpoint reads from the <code>pipeline_runs</code> monitoring table — last runs, status, rows upserted, duration. All FastAPI connections open with <code>read_only=True</code> — only the pipeline writes to DuckDB.</p>
+      </div>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p>FastAPI uses a <code>contextmanager get_db()</code> — opens a fresh <code>read_only=True</code> DuckDB connection per request and closes it in the finally block. Multiple simultaneous read-only connections are safe in DuckDB.</p>
+      </div>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if Swagger is loading</div>
+        <p>"While Swagger loads, I'll hit <code>localhost:8000/health</code> directly to show the API is live."</p>
       </div>
     </div>
   </div>
@@ -502,25 +642,32 @@
     <div class="section-header">
       <div class="section-num">9</div>
       <div class="section-title">Docker Compose — One Command to Start Everything</div>
-      <div class="timer">11:00 – 12:00</div>
+      <div class="timer">9:25 → 10:15 · ~115 words</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Open <code>docker-compose.yml</code> in VS Code — point out the 3 services and the <code>scheduler.py</code> command for the pipeline service</li>
-          <li>Open <code>scripts/scheduler.py</code> briefly — show the 7 state constants at the top of the file and the state variable names in <code>main()</code></li>
+          <li>Open <code>docker-compose.yml</code> in VS Code — point at the 3 services and the <code>python scripts/scheduler.py</code> command on the pipeline service</li>
+          <li>Open <code>scripts/scheduler.py</code> briefly — show the 7 state constant names at the top</li>
           <li>Run <code>docker compose up</code> in terminal (or show it already running)</li>
-          <li>Show all 3 services starting — pipeline, api, dashboard</li>
-          <li>Show <code>docker compose logs pipeline -f</code> streaming scheduler state transitions</li>
-          <li>Show that <code>localhost:8501</code> (dashboard) and <code>localhost:8000/docs</code> (API) are both accessible</li>
+          <li>Show <code>docker compose logs pipeline -f</code> — scheduler state transitions in the log stream</li>
+          <li>Confirm <code>localhost:8501</code> and <code>localhost:8000/docs</code> are still accessible</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Say This</div>
-        <p>Docker Compose packages the entire system into 3 containers. <code>docker compose up</code> — one command — starts everything. Anyone can clone the repo, add their API keys, and run the full system. No Python installation, no virtual environment setup. That's the point of containerisation.</p>
-        <p>The pipeline container runs <code>scripts/scheduler.py</code> — a 7-state adaptive machine. It separates cheap checks from expensive API calls. Calendar is checked cheaply on every tick using a cached geocode. When a new event appears, it's confirmed stable over five 30-second checks before OneMap is called — this avoids wasted route fetches if you're still editing the event. During the stable WATCHING phase, calendar is polled every 10 minutes, not every second. Near departure it enters a 60-second 1-second burst to catch last-minute changes, then backs off to 30-second checks. Once you've left, it monitors lightly every 10 minutes. Near the expected arrival time it checks a few more times to look for the next event, then holds a 10-minute cooldown before returning to idle. Weather refreshes every 30 minutes independently of all states. OneMap, LTA, and ip-api are never called every second.</p>
-        <p>The DuckDB file is in a named Docker volume so data persists across container restarts. The pipeline, API, and dashboard share this one file as their common data store. All three services use a single Dockerfile built from the same <code>requirements.txt</code> — each service just overrides the <code>command</code> field.</p>
+        <div class="say-label">Say</div>
+        <p><code>docker compose up</code> — one command — starts 3 containers: pipeline, API, and dashboard. Anyone can clone the repo, add their API keys, and run the full system without installing Python or setting up a virtual environment.</p>
+        <p>The pipeline container runs <code>scripts/scheduler.py</code> — a 7-state adaptive machine: NO_EVENT, EVENT_DETECTED_BURST, WATCHING, LEAVE_WINDOW, IN_TRANSIT, ARRIVAL_VERIFY, POST_ARRIVAL_COOLDOWN. It separates cheap calendar checks from expensive API calls — OneMap and LTA are never called every second.</p>
+        <p>All three services share a single named Docker volume for the DuckDB file — data persists across restarts. One Dockerfile builds all three services; each overrides only the <code>command</code> field.</p>
+      </div>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time</div>
+        <p>EVENT_DETECTED_BURST: confirms a new event is stable over five 30-second checks before calling OneMap — avoids wasted API calls if you're still editing the event. LEAVE_WINDOW: 1-second burst for the first 60 seconds, then 30-second backoff. Weather refreshes every 30 minutes independent of all states.</p>
+      </div>
+      <div class="fallback">
+        <div class="fallback-label">Fallback — if Docker is starting up</div>
+        <p>"Docker is pulling images on first run — the scheduler state transition logs will appear once the pipeline container starts."</p>
       </div>
     </div>
   </div>
@@ -530,31 +677,33 @@
     <div class="section-header">
       <div class="section-num ref">R</div>
       <div class="section-title">Reflection — 3 Mandatory Questions</div>
-      <div class="timer">12:00 – 14:00</div>
+      <div class="timer">10:15 → 12:15 · ~255 words</div>
     </div>
     <div class="section-body">
       <div class="rubric-alert">
-        <div class="rubric-alert-label">Rubric requirement — Required, not optional</div>
-        <p>A short reflection is required as part of the presentation. Answer all 3 questions.</p>
+        <div class="rubric-alert-label">Required — answer all 3 questions</div>
+        <p>A short reflection is part of the rubric. Don't skip any question. Keep each answer tight — the timings here assume ~100 words per question at a natural pace.</p>
       </div>
       <div class="say">
         <div class="say-label">Question 1 — Most Challenging Part</div>
-        <p>The most challenging part was a silent API deprecation. The LTA DataMall Bus Arrival endpoint changed from <code>BusArrivalv2</code> to <code>v3/BusArrival</code> in August 2024 — but there was no obvious error message. Every bus stop code returned HTTP 404 with "The requested API was not found", which I initially thought meant the stop code was wrong. I tried multiple known-active stops and they all failed. Only when I checked the official LTA DataMall API PDF v6.8 did I see that the URL itself had changed. The fix was a single line. The lesson: always check the latest API documentation, not just the URL you were given originally.</p>
-        <p>The second challenge was the OneMap routing response. Each route leg has a <code>route</code> field that sometimes returns a dictionary — with a <code>shortName</code> key for the MRT line — and sometimes returns a plain string. Calling <code>.get("shortName")</code> on a string crashes Python. I had to add an <code>isinstance(route_field, dict)</code> guard — a defensive check that only becomes obvious when you see the raw API data vary between requests.</p>
-        <p>A third edge case: Parquet promotes integer bus stop code columns to float64 when any NaN rows exist, turning "65721" into "65721.0". LTA's API rejects codes with a decimal point. The fix was stripping the suffix with <code>str(code).split(".")[0]</code>.</p>
-        <p>A fourth challenge: after rescheduling two calendar events, the pipeline kept showing the wrong destination. The root cause was three bugs acting together. First, the routing origin was being geocoded from HOME_ADDRESS — when the event destination was also home, origin equalled destination and OneMap returned a 404 with no route. Fix: origin is always IP geolocation, never HOME_ADDRESS. Second, rescheduling a calendar event does not remove the old version from DuckDB — <code>INSERT OR REPLACE</code> upserts by primary key only, so the old start_time remained in <code>calendar_events</code> and transform picked whichever future event it found first. Fix: <code>_purge_stale_events()</code> deletes all future events that don't match the current active <code>event_id</code> after every ingest. Third, DuckDB's <code>INSERT OR REPLACE</code> on <code>route_options</code> first deletes the existing row, but that delete fails because <code>route_legs</code> still holds a foreign key reference to it. Fix: pre-delete all <code>route_legs</code> for the event before upserting <code>route_options</code>.</p>
+        <p>The most challenging part was a silent API deprecation. LTA's Bus Arrival endpoint changed from <code>BusArrivalv2</code> to <code>v3/BusArrival</code> in August 2024 — but every stop code returned HTTP 404 with "The requested API was not found". I thought the stop codes were wrong. I tried multiple known-active stops. They all failed. Only when I checked the official LTA DataMall API PDF v6.8 did I see the URL had changed. The fix was a single line. Lesson: always check the latest API documentation, not just the URL you started with.</p>
+        <p>A second edge case: Parquet promotes bus stop code columns to float64 when any NaN rows exist, turning "65721" into "65721.0". LTA rejects codes with a decimal point. Fix: <code>str(code).split(".")[0]</code>.</p>
       </div>
       <div class="say">
         <div class="say-label">Question 2 — Most Proud Of</div>
-        <p>The part I'm most proud of is the end-to-end live data integration. Real Google Calendar events drive real API calls — every 30 minutes, Airflow ingests live LTA bus arrivals, live MRT alerts, live weather — and produces a genuine, actionable recommendation that is specific to my actual next meeting and current conditions. This is not a demo with mock data; it's a system I use.</p>
-        <p>The walk alternative feature with Zone 1 and Zone 2 heart rate context is also something I'm proud of, because it makes the pipeline genuinely personal — it's not just the fastest route, it's the right route for your health and your schedule together.</p>
+        <p>The part I'm most proud of is the live data integration. Real Google Calendar events drive real API calls — live LTA arrivals, live MRT alerts, live weather — producing a genuine, actionable recommendation specific to my actual next meeting. The pipeline runs on live data. The ML model bootstraps with 500 synthetic rows so it works from day one, then improves as real predictions and actuals accumulate. The walk feature with heart-rate zone context is also something personal — it makes the recommendation relevant to health, not just schedule.</p>
       </div>
       <div class="say">
         <div class="say-label">Question 3 — If I Had More Time</div>
-        <p>Three improvements. First, I'd add Kafka streaming for bus arrivals. Right now Airflow runs the batch DAG every 30 minutes, and the Docker scheduler adapts its polling frequency based on commute state. With Kafka, LTA could push arrival updates as they happen and the dashboard would update in seconds, not minutes. This would also let me demonstrate Flink for windowed stream processing.</p>
-        <p>Second, I'd accumulate more historical data for the ML model. The Random Forest performs better with more training examples. With 30 days of real commute data, the prediction accuracy would be meaningfully better than the synthetic bootstrap I'm using today.</p>
-        <p>Third, a Telegram bot that pushes the recommendation to my phone 30 minutes before each calendar event. Right now I have to open the dashboard to check — a push notification would make it genuinely zero-friction.</p>
-        <p>Fourth, and this is something Day 5 taught me to think about explicitly: if this system scaled from one user to thousands of simultaneous commuters, the technology choices would change. I'd replace FastAPI with NVIDIA Triton Inference Server for high-throughput batched ML inference, replace pandas with cuDF from the RAPIDS ecosystem for GPU-accelerated data processing, and add Metabase as a BI dashboard for non-technical operations staff. But right now, those tools would be overkill — the Day 5 Technology Selection Exercise maps "low traffic prediction API" to FastAPI and "100MB daily data" to pandas and Parquet, which is exactly what I built. Knowing when not to use a tool is just as important as knowing when to use one.</p>
+        <p>Three improvements. First, Kafka streaming for bus arrivals — LTA pushes updates every 2 minutes; a stream would cut dashboard latency from 30 minutes to seconds. Second, more historical data — 30 days of real commutes would meaningfully improve model accuracy over the synthetic bootstrap. Third, a Telegram bot that pushes the recommendation 30 minutes before each calendar event — zero friction, no need to open the dashboard.</p>
+      </div>
+      <div class="optional">
+        <div class="optional-label">Optional — only if ahead of time (Q3 extension)</div>
+        <p>If this scaled to thousands of simultaneous commuters: replace FastAPI with NVIDIA Triton Inference Server for batched ML inference, replace pandas with cuDF from the RAPIDS ecosystem. But the Day 5 Technology Selection Exercise maps "low-traffic prediction API" to FastAPI and "100MB daily data" to pandas — which is exactly what I built. Knowing when not to use a technology is as important as knowing how to use it.</p>
+      </div>
+      <div class="optional">
+        <div class="optional-label">Optional — stale event bug (Q1 extension if time)</div>
+        <p>After rescheduling calendar events, the pipeline kept showing the wrong destination. Three bugs acting together: routing origin was geocoded from HOME_ADDRESS (fix: always IP geolocation); rescheduling doesn't remove old DB rows (fix: <code>_purge_stale_events()</code>); DuckDB's INSERT OR REPLACE on route_options failed because route_legs held a FK reference (fix: pre-delete route_legs before upserting route_options).</p>
       </div>
     </div>
   </div>
@@ -564,18 +713,22 @@
     <div class="section-header">
       <div class="section-num ok">✓</div>
       <div class="section-title">Wrap-Up — Resume Bullets</div>
-      <div class="timer">14:00 – 14:30</div>
+      <div class="timer">12:15 → 12:45 · ~30 words spoken + show bullets</div>
     </div>
     <div class="section-body">
       <div class="do">
-        <div class="do-label">Screen Action</div>
+        <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Return to GitHub repo for the final shot</li>
-          <li>Read the resume bullets slowly — these go in your submitted PDF</li>
+          <li>Return to GitHub repo page for the final shot</li>
+          <li>Show the README or this section on screen — point at the 5 bullets as you name them</li>
         </ul>
       </div>
       <div class="say">
-        <div class="say-label">Resume Bullets — Read These (also submit as PDF)</div>
+        <div class="say-label">Say</div>
+        <p>That's the system. These five resume bullets summarise what I built — I'm also submitting them as a PDF. They cover: pipeline design, ML and real-time output, production robustness, data serving API, and orchestration and infrastructure. Thanks for watching.</p>
+      </div>
+      <div class="note">
+        <div class="note-label">Resume Bullets — Submit as PDF</div>
         <p><strong>Pipeline Design.</strong> Built an end-to-end data pipeline driven by Google Calendar OAuth2 — ingesting real-time transport data from LTA DataMall (v3/BusArrival endpoint), OneMap routing, and data.gov.sg weather APIs into DuckDB using a lake-warehouse pattern: date-partitioned Parquet raw zone feeding a typed 9-table star schema.</p>
         <p><strong>ML and Real-Time Output.</strong> Built scikit-learn Random Forest models for commute duration and crowd prediction, scoring all route options per event using engineered weather, route, and bus-arrival timing features; predictions are stored per route, backfilled with observed/proxy actuals, and evaluated with 7-day MAE via a daily Airflow task. Results are served on a live Streamlit dashboard refreshed every 60 seconds.</p>
         <p><strong>Production Robustness.</strong> Implemented exponential backoff retry on all API calls, idempotent INSERT OR REPLACE, GPS coordinate validation rejecting non-Singapore coordinates, and a pipeline_runs monitoring table — making the pipeline safe to run in production without supervision.</p>
@@ -596,7 +749,7 @@
       <div class="chips">
         <span class="chip chip-green">Airflow UI at localhost:8080 — DAG visible with all 7 tasks</span>
         <span class="chip chip-green">Streamlit at localhost:8501 — shows leave-by, prediction, fare</span>
-        <span class="chip chip-green">FastAPI at localhost:8000/docs — try it out works live</span>
+        <span class="chip chip-green">FastAPI at localhost:8000/docs — Try it out works live</span>
         <span class="chip chip-green">docker compose up starts all 3 services cleanly</span>
         <span class="chip chip-green">python scripts/model.py --predict logs 3 lines (one per route option)</span>
         <span class="chip chip-green">python scripts/transform.py shows LEAVE LATEST + LEAVE NOW + legs</span>
@@ -604,13 +757,56 @@
         <span class="chip chip-green">config.py NOT in git status output</span>
         <span class="chip chip-amber">Terminal font size ≥ 16px for screen recording readability</span>
         <span class="chip chip-amber">LTA approval email ready to show (blur the key value)</span>
-        <span class="chip chip-amber">Have a calendar event with a Singapore location set for next week</span>
+        <span class="chip chip-amber">Calendar event with a Singapore location set for next week</span>
         <span class="chip chip-amber">Resume PDF prepared with the 5 bullets from Section 11</span>
         <span class="chip chip-red">NEVER show config.py contents on screen</span>
         <span class="chip chip-red">NEVER show credentials.json or token.json on screen</span>
       </div>
     </div>
   </div>
+
+  <!-- ─── Q&A REFERENCE ─── -->
+  <details>
+    <summary>Q&amp;A Reference — Not part of the recording script · expand for backup answers</summary>
+    <div class="qa-body">
+
+      <div class="note">
+        <div class="note-label">If asked: What is the star schema?</div>
+        <p><code>route_options</code> is the fact table — each row is one commute option with measurable values: duration, fare, walk distance. <code>weather_forecast</code>, <code>bus_arrivals</code>, and <code>train_alerts</code> are dimension tables that join to routes. <code>route_options</code> is the centre of the star; dimensions radiate outward.</p>
+      </div>
+
+      <div class="note">
+        <div class="note-label">If asked: What is model drift? How do you detect it?</div>
+        <p>Three types from Day 4: <strong>Data drift</strong> — input feature distributions change (e.g. my commute hour shifts from 8 AM to 10 AM). <strong>Concept drift</strong> — the relationship between features and target changes (e.g. a new MRT line opens; same hour now predicts shorter journey). <strong>Training-serving skew</strong> — a feature is computed differently in training vs. production (e.g. <code>is_rainy</code> encoded as True/False in training but 1/0 in the pipeline). My primary signal is the 7-day MAE threshold — rising MAE is a symptom of all three regardless of root cause. Statistical tests like PSI or KS-test per feature can be added later.</p>
+      </div>
+
+      <div class="note">
+        <div class="note-label">If asked: Why Random Forest and not Linear Regression?</div>
+        <p>Random Forest handles non-linear interactions — rush hour combined with rain has a different effect than either alone. Linear Regression would require manual feature engineering for that. RF also handles small datasets gracefully, which matters because I'm bootstrapping with synthetic data until enough real runs accumulate.</p>
+      </div>
+
+      <div class="note">
+        <div class="note-label">If asked: Why batch processing and not real-time streaming (Kafka)?</div>
+        <p>Bus arrival data refreshes every 2 minutes. Weather updates every 2 hours. Airflow runs the batch DAG every 30 minutes; the Docker scheduler adaptively polls for live snapshots — nothing changes faster than that. Kafka would add infrastructure complexity (brokers, consumer groups, partitions) with no benefit at this data velocity.</p>
+      </div>
+
+      <div class="note">
+        <div class="note-label">If asked: What would you do differently if the system scaled to many users?</div>
+        <p>Replace FastAPI with NVIDIA Triton Inference Server for high-throughput batched ML inference; replace pandas with cuDF from the RAPIDS ecosystem for GPU-accelerated data processing; add Metabase as a BI dashboard for non-technical staff. But the Day 5 Technology Selection Exercise maps "low-traffic prediction API" to FastAPI and "100MB daily data" to pandas — which is exactly what I built. Knowing when not to use a tool is as important as knowing how to use one.</p>
+      </div>
+
+      <div class="note">
+        <div class="note-label">If asked: How does the geocoder handle varied address formats?</div>
+        <p>Progressive fallback: (1) extract a 6-digit postal code with <code>re.findall(r'\b\d{6}\b', address)</code> — postal codes geocode with near-perfect accuracy on OneMap; (2) full address string; (3) address with ", Singapore" stripped; (4) first comma-delimited token. Word boundary <code>\b</code> prevents matching 7-digit phone numbers.</p>
+      </div>
+
+      <div class="note">
+        <div class="note-label">If asked: How does the stale event fix work?</div>
+        <p>After ingest, <code>_purge_stale_events(con, event_id)</code> deletes all future <code>calendar_events</code> rows whose primary key is not the current active <code>event_id</code>, along with their <code>route_options</code> and <code>route_legs</code> children. Cascading delete order: route_legs first (FK child), then route_options, then calendar_events. Without this, a rescheduled event leaves both the old and new start_time in the DB and transform picks whichever appears first.</p>
+      </div>
+
+    </div>
+  </details>
 
 </div>
 </body>
