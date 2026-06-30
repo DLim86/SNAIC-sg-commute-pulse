@@ -163,9 +163,12 @@ Day 5 covers GPU acceleration (RAPIDS ecosystem) and Business Intelligence. **No
 **Purpose:** Satisfy the 30-mark "ML and Real-Time Output" rubric criterion.
 
 **Models:**
-- `RandomForestRegressor` → `models/commute_predictor.pkl` — predicts `total_duration_min`
-- `GradientBoostingClassifier` → `models/crowd_classifier.pkl` — predicts crowd level (SEA/SDA/LSD)
-- **Features:** `hour_of_day`, `day_of_week`, `is_rainy`, `walk_distance_m`, `num_transfers`, `next_bus_mins`
+- `RandomForestRegressor` → `models/commute_predictor.pkl` — predicts `total_duration_min` (11 features)
+- `RandomForestClassifier` → `models/crowd_predictor.pkl` — predicts crowd level (SEA/SDA/LSD) **per route option** (10 features)
+- **Duration features (11):** `base_duration`, `next_bus_mins`, `walk_distance_m`, `num_transfers`, `is_rainy`, `rain_exposure`, `rush_hour`, `is_weekend`, `hour_of_day`, `day_of_week`, `bus_crowd_score`
+- **Crowd features (10):** `leave_hour`, `day_of_week`, `is_rainy`, `rush_hour`, `next_bus_mins`, `next_bus2_mins`, `bus_headway_gap`, `walk_distance_m`, `num_transfers`, `base_duration`
+- LTA `load` snapshots (SEA/SDA/LSD) are stored as `actual_crowd` labels — they are NOT the crowd prediction. The model predicts crowd from engineered arrival-timing + route-context features.
+- `is_rainy` and `rain_exposure` are engineered features from data.gov.sg raw forecasts — weather is not predicted. `actual_min` is not rain-adjusted; rain is a model input feature only.
 
 **Four CLI modes:**
 - `python scripts/model.py --train` — trains both models on synthetic + real data, saves .pkl
@@ -295,7 +298,7 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 ### Core pipeline
 - **OneMap token TTL:** expires every 3 days — call `get_onemap_token()` on every pipeline run, never cache to disk
 - **LTA Bus Arrival URL changed:** correct endpoint is `https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival` — the old `BusArrivalv2` path was retired in LTA DataMall API v6.0 (August 2024). Calling `BusArrivalv2` returns 404 "The requested API was not found" for ALL stop codes regardless of whether buses exist. Fixed in `ingest.py` session 4.
-- **5-nearest-stop bus fallback:** `ingest_bus_arrivals` tries the 5 nearest bus stops (Haversine from origin) in order, using a single request per stop with no retry on 404. Many 65xxx Punggol/Sengkang stops are in the BusStops database but not in the real-time v3/BusArrival system.
+- **5-nearest-stop bus fallback:** `ingest_bus_arrivals` tries the 5 nearest bus stops (Haversine from origin) in order, using a single request per stop with no retry on 404. Many 65xxx Punggol/Sengkang stops are in the BusStops database but not in the real-time v3/BusArrival system. **This is a reliability layer for finding a usable live feed — it does NOT track the same bus across downstream stops.** Future improvement: track the same service across upstream/downstream stops to build a dwell/progress-delay proxy for crowd prediction.
 - **BusStopCode float suffix:** Parquet promotes integer BusStopCode to float64 if any NaN rows exist → "65721.0" is rejected by LTA. Fix: `str(code).split(".")[0]` strips the suffix.
 - **v3/BusArrival still returns 404 for stops with genuinely no active services** — distinct from the endpoint-not-found 404. Log a warning and continue to the next candidate.
 - **OneMap `leg.get("route")` returns string or dict:** always check `isinstance(route_field, dict)` before calling `.get("shortName")` — fixed in ingest.py

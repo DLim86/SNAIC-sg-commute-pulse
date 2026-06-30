@@ -179,12 +179,19 @@ SQL Transformation (v_enriched_routes view):
   → route_rank = 1 is the recommended option
 
 ML Pipeline (model.py):
-  → --train: load historical route_options + calendar_events + weather
-     → features: hour, dow, is_rainy, walk_distance_m, num_transfers
-     → target: total_duration_min
-     → fit RandomForestRegressor, save models/commute_predictor.pkl
-  → --predict: load pkl, score ALL 3 route options → prediction_id = "{option_id}_pred"
-     weather cross-join fix: scalar subquery (SELECT is_rainy FROM weather ORDER BY fetched_at DESC LIMIT 1)
+  → --train:
+     Duration model: RandomForestRegressor (11 features) → models/commute_predictor.pkl
+       features: base_duration, next_bus_mins, walk_distance_m, num_transfers,
+                 is_rainy, rain_exposure, rush_hour, is_weekend, hour_of_day, day_of_week, bus_crowd_score
+       target: total_duration_min
+     Crowd model: RandomForestClassifier (10 features) → models/crowd_predictor.pkl
+       features: leave_hour, day_of_week, is_rainy, rush_hour,
+                 next_bus_mins, next_bus2_mins, bus_headway_gap,
+                 walk_distance_m, num_transfers, base_duration
+       target: actual_crowd (SEA/SDA/LSD labels from LTA load snapshots — NOT the prediction itself)
+       note: bus_headway_gap = next_bus2_mins - next_bus_mins (large gap → crowd builds at stop)
+  → --predict: score ALL 3 route options individually — each gets its own crowd prediction
+     prediction_id = "{option_id}_pred"; weather scalar subquery avoids 47-area cross-join
   → --evaluate: compute 7-day MAE (predicted_min vs actual_min), log to pipeline_runs
 
 Serving:

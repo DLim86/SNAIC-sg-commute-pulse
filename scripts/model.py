@@ -27,6 +27,8 @@ FEATURE_COLS_DUR = [
 ]
 FEATURE_COLS_CRD = [
     "leave_hour", "day_of_week", "is_rainy", "rush_hour",
+    "next_bus_mins", "next_bus2_mins", "bus_headway_gap",
+    "walk_distance_m", "num_transfers", "base_duration",
 ]
 CROWD_MAP = {"SEA": 0, "SDA": 1, "LSD": 2}
 CROWD_INV = {0: "SEA", 1: "SDA", 2: "LSD"}
@@ -46,8 +48,13 @@ def _build_duration_row(base_duration, next_bus_mins, walk_m, transfers,
             rain, rain_exposure, rush, weekend, hour, dow, crowd_score]
 
 
-def _build_crowd_row(leave_hour, dow, is_rainy, rush_hour_flag):
-    return [leave_hour, dow, int(bool(is_rainy)), rush_hour_flag]
+def _build_crowd_row(leave_hour, dow, is_rainy, rush_hour_flag,
+                     next_bus_mins=5, next_bus2_mins=5,
+                     walk_m=0, transfers=0, base_dur=30):
+    gap = max(0, (next_bus2_mins or 0) - (next_bus_mins or 0))
+    return [leave_hour, dow, int(bool(is_rainy)), rush_hour_flag,
+            next_bus_mins or 5, next_bus2_mins or 5, gap,
+            walk_m or 0, transfers or 0, base_dur or 30]
 
 
 def _match_stop_name(to_name: str, stops_df: pd.DataFrame):
@@ -118,20 +125,34 @@ def _bootstrap_synthetic_crowd(n=500, seed=43):
         dow = rng.integers(0, 7)
         is_rainy = rng.random() < 0.25
         rush = _rush_hour(hour, dow)
+        next_bus = int(rng.integers(1, 20))
+        next_bus2 = int(next_bus + rng.integers(3, 15))
+        gap = next_bus2 - next_bus
+        large_gap = gap > 8
+        walk_m = int(rng.integers(0, 1200))
+        transfers = int(rng.integers(0, 3))
+        base_dur = int(rng.integers(15, 60))
 
         if rush and is_rainy:
             crowd = rng.choice([0, 1, 2], p=[0.10, 0.40, 0.50])
+        elif rush and large_gap:
+            crowd = rng.choice([0, 1, 2], p=[0.05, 0.45, 0.50])
         elif rush:
             crowd = rng.choice([0, 1, 2], p=[0.10, 0.70, 0.20])
         elif is_rainy:
             crowd = rng.choice([0, 1, 2], p=[0.30, 0.50, 0.20])
+        elif large_gap:
+            crowd = rng.choice([0, 1, 2], p=[0.30, 0.45, 0.25])
         else:
             crowd = rng.choice([0, 1, 2], p=[0.80, 0.15, 0.05])
 
         rows.append({
             "leave_hour": hour, "day_of_week": dow,
             "is_rainy": int(is_rainy), "rush_hour": rush,
-            "actual_crowd_int": crowd,
+            "next_bus_mins": next_bus, "next_bus2_mins": next_bus2,
+            "bus_headway_gap": gap,
+            "walk_distance_m": walk_m, "num_transfers": transfers,
+            "base_duration": base_dur, "actual_crowd_int": int(crowd),
         })
     return pd.DataFrame(rows)
 
@@ -186,10 +207,25 @@ def train(con):
         SELECT p.actual_crowd,
                CAST(EXTRACT(HOUR FROM rec.leave_by AT TIME ZONE 'Asia/Singapore') AS INTEGER) AS leave_hour,
                CAST(EXTRACT(DOW FROM e.start_time AT TIME ZONE 'Asia/Singapore') AS INTEGER) AS day_of_week,
-               w.is_rainy
+               w.is_rainy,
+               COALESCE(b.next_bus_mins, 5)       AS next_bus_mins,
+               COALESCE(b.next_bus2_mins, 5)      AS next_bus2_mins,
+               COALESCE(r.walk_distance_m, 0)     AS walk_distance_m,
+               COALESCE(r.num_transfers, 0)       AS num_transfers,
+               COALESCE(r.total_duration_min, 30) AS base_duration
         FROM predictions p
-        JOIN calendar_events e ON p.event_id = e.event_id
+        JOIN calendar_events e   ON p.event_id = e.event_id
         JOIN recommendations rec ON rec.event_id = p.event_id
+        LEFT JOIN route_options r ON r.option_id = p.option_id
+        LEFT JOIN bus_arrivals b
+               ON b.bus_stop_code = p.boarding_stop_code
+              AND b.service_no    = p.transit_service_no
+              AND b.fetched_at    = (
+                  SELECT MAX(fetched_at) FROM bus_arrivals ba
+                  WHERE ba.bus_stop_code = p.boarding_stop_code
+                    AND ba.service_no    = p.transit_service_no
+                    AND ba.fetched_at   <= e.start_time
+              )
         LEFT JOIN weather_forecast w ON w.fetched_at = (
             SELECT MAX(fetched_at) FROM weather_forecast
         )
@@ -203,6 +239,9 @@ def train(con):
         real_crd_rows["actual_crowd_int"] = real_crd_rows["actual_crowd"].map(CROWD_MAP).fillna(0).astype(int)
         real_crd_rows["rush_hour"] = real_crd_rows.apply(lambda r: _rush_hour(r["leave_hour"], r["day_of_week"]), axis=1)
         real_crd_rows["is_rainy"] = real_crd_rows["is_rainy"].fillna(False).astype(int)
+        real_crd_rows["bus_headway_gap"] = (
+            real_crd_rows["next_bus2_mins"] - real_crd_rows["next_bus_mins"]
+        ).clip(lower=0)
         X_crd = pd.concat([real_crd_rows[FEATURE_COLS_CRD], synth_crd[FEATURE_COLS_CRD]], ignore_index=True)
         y_crd = pd.concat([real_crd_rows["actual_crowd_int"], synth_crd["actual_crowd_int"]], ignore_index=True)
     else:
@@ -245,27 +284,13 @@ def predict(con):
         log.warning("No upcoming event found — run ingest.py first")
         return
 
-    # Crowd prediction is the same for all routes (same departure time context)
-    first = rows[0]
-    hour0, dow0, is_rainy0, leave_by0 = first[5], first[6], first[7], first[8]
-    is_rainy_int0 = int(bool(is_rainy0))
-    leave_hour0 = hour0
-    if leave_by0 is not None:
-        try:
-            lb = leave_by0.astimezone(SGT) if hasattr(leave_by0, "astimezone") else leave_by0
-            leave_hour0 = lb.hour
-        except Exception:
-            pass
-    rush0 = _rush_hour(leave_hour0, dow0)
-    X_crd = pd.DataFrame([_build_crowd_row(leave_hour0, dow0, is_rainy_int0, rush0)], columns=FEATURE_COLS_CRD)
-    predicted_crowd = CROWD_INV[int(crd_model.predict(X_crd)[0])]
-
     for row in rows:
         (option_id, event_id, base_dur, walk_m, transfers,
          hour, dow, is_rainy, leave_by) = row
 
         is_rainy_int = int(bool(is_rainy))
         next_bus_mins = 5
+        next_bus2_mins_val = 5
         crowd_score = 0
         boarding_stop_code = None
         transit_service_no = None
@@ -281,14 +306,15 @@ def predict(con):
             transit_mode, transit_service_no, from_name, to_name = leg
             if transit_mode == "BUS":
                 ba = con.execute("""
-                    SELECT next_bus_mins, load, bus_stop_code FROM bus_arrivals
+                    SELECT next_bus_mins, next_bus2_mins, load, bus_stop_code FROM bus_arrivals
                     WHERE service_no = ?
                     ORDER BY fetched_at DESC LIMIT 1
                 """, [transit_service_no]).fetchone()
                 if ba:
-                    next_bus_mins = ba[0] or 5
-                    crowd_score = CROWD_MAP.get(ba[1] or "SEA", 0)
-                    boarding_stop_code = ba[2]
+                    next_bus_mins      = ba[0] or 5
+                    next_bus2_mins_val = ba[1] or 5
+                    crowd_score        = CROWD_MAP.get(ba[2] or "SEA", 0)
+                    boarding_stop_code = ba[3]
                 alighting_stop_code = _match_stop_name(to_name, stops_df)
 
         dur_vals = _build_duration_row(
@@ -297,6 +323,22 @@ def predict(con):
         )
         X_dur = pd.DataFrame([dur_vals], columns=FEATURE_COLS_DUR)
         predicted_min = int(round(dur_model.predict(X_dur)[0]))
+
+        leave_hour_val = hour
+        if leave_by is not None:
+            try:
+                lb = leave_by.astimezone(SGT) if hasattr(leave_by, "astimezone") else leave_by
+                leave_hour_val = lb.hour
+            except Exception:
+                pass
+        rush_flag = _rush_hour(leave_hour_val, dow)
+        X_crd = pd.DataFrame(
+            [_build_crowd_row(leave_hour_val, dow, is_rainy_int, rush_flag,
+                              next_bus_mins, next_bus2_mins_val,
+                              walk_m or 0, transfers or 0, base_dur)],
+            columns=FEATURE_COLS_CRD,
+        )
+        predicted_crowd = CROWD_INV[int(crd_model.predict(X_crd)[0])]
 
         prediction_id = f"{option_id}_pred"
         con.execute("""

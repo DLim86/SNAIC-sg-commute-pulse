@@ -325,6 +325,8 @@ for attempt in range(max_retries):
 
 **Trade-off:** The model is only as good as its training data. With limited real history, predictions will have higher error. The `mae_7day` metric shown in the dashboard makes this honest — users can see how accurate the model actually is.
 
+**Crowd model (added session 11):** A second model — `RandomForestClassifier` → `models/crowd_predictor.pkl` — predicts crowd level (SEA/SDA/LSD) **per route option**. LTA `bus_arrivals.load` snapshots (SEA/SDA/LSD) serve as `actual_crowd` training labels — they are observed data, not predictions. The 10-feature crowd model uses arrival timing + route context: `leave_hour`, `day_of_week`, `is_rainy`, `rush_hour`, `next_bus_mins`, `next_bus2_mins`, `bus_headway_gap` (= `next_bus2_mins − next_bus_mins`; large gap → more passengers accumulate → fuller bus), `walk_distance_m`, `num_transfers`, `base_duration`. The key design point: crowd is predicted **per route option individually**, not once for all routes — routes with different headways and distances receive different crowd predictions even at the same departure time. The 5-nearest-stop layer is a reliability layer to find a usable live feed; it does NOT track buses across downstream stops. Future improvement: track the same service across stops as a dwell/progress-delay proxy for crowd.
+
 ---
 
 ## D25 — LTA Bus Arrival API v3 Migration
