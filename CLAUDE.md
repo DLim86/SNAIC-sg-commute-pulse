@@ -72,7 +72,7 @@ Given a next calendar event, the pipeline:
 | `.gitignore` | Complete |
 | `config_example.py` | Complete — template includes HOME_ADDRESS, WORK_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN |
 | `config.py` | Exists locally, gitignored — real credentials + GARMIN_EMAIL/PASSWORD/WHOOP_ACCESS_TOKEN added as `""` (optional, skip by leaving blank) |
-| `requirements.txt` | Complete — `>=` pins for C-extension compat; includes `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` |
+| `pyproject.toml` / `uv.lock` | Complete — **session 12: migrated from pip/requirements.txt to uv.** `>=` pins for C-extension compat; includes `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0`. `requirements.txt` deleted — `uv.lock` is now the single source of truth. Install with `uv sync`. |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Complete — 12-station roadmap. **2026-06-28: Station D5 unlocked** (GPU/Triton/BI/Technology Selection Exercise). Phase 4 divider updated. |
 | `docs/AI_HANDOFF.md` | Complete — full handoff context. **2026-06-28: rubric table updated to ALL DONE, Day 5 section added, file list updated to D38** |
@@ -87,7 +87,7 @@ Given a next calendar event, the pipeline:
 | `scripts/scheduler.py` | **DONE** (session 9, updated session 10) — Smart 7-state adaptive pipeline manager replacing the fixed shell loop in docker-compose.yml. States: **NO_EVENT** (60s day / 1hr midnight–6am) → **EVENT_DETECTED_BURST** (5×30s stability before routes fetched) → **WATCHING** (10 min check interval) → **LEAVE_WINDOW** (60s 1s burst then 30s backoff; bus refresh every 60s) → **IN_TRANSIT** (10 min; routes refresh for origin shift) → **ARRIVAL_VERIFY** (5×30s; looking for next event) → **POST_ARRIVAL_COOLDOWN** (10 min cooldown). **Group 1** (`--mode calendar-check`): runs every tick, cached geocode — no OneMap during LEAVE_WINDOW burst. **Group 2** (`--mode routes`): fires only when key changes or event/dest shifts >10m — ip-api + OneMap routing + LTA bus/train + transform + predict + backfill. **Group 3** (`--mode weather`): fires every 30 min regardless of state — weather + transform. |
 | `dags/__init__.py` | **DONE** (session 9) — Empty file, required so Airflow can import from `dags/` as a package |
 | `dags/commute_pipeline_dag.py` | **DONE** (session 9) — 7-task sequential chain: `schema_check >> ingest >> transform >> predict_commute >> backfill_actuals >> gate_evaluate >> evaluate_model`. `gate_evaluate` is `ShortCircuitOperator` — passes only when `datetime.now(SGT).hour == 8`. Schedule: `*/30 * * * *`. `catchup=False`. Uses `BashOperator` with absolute `PROJECT_DIR` path. Run: `airflow standalone` → UI at `http://localhost:8080` |
-| `Dockerfile` | **DONE** (session 9) — `python:3.12-slim` + `libgomp1` (scikit-learn parallel trees) + `pip install -r requirements.txt` + `mkdir -p db data/raw models`. Default CMD: `python scripts/ingest.py` (overridden per service in docker-compose.yml) |
+| `Dockerfile` | **DONE** (session 9, updated session 12) — `python:3.12-slim` + `libgomp1` (scikit-learn parallel trees) + `uv sync --locked --no-install-project` (copies the `uv` binary from `ghcr.io/astral-sh/uv`, installs from `uv.lock`) + `mkdir -p db data/raw models`. Default CMD: `python scripts/ingest.py` (overridden per service in docker-compose.yml) |
 | `.dockerignore` | **DONE** (session 9) — excludes `.git/`, `__pycache__/`, `*.duckdb`, `models/*.pkl`, `LTA/`, `OneMap/`, `Prompt.txt`, `*.log`, `docs/` |
 | `docker-compose.yml` | **DONE** (session 9) — 3 services sharing `db_data` named volume. pipeline: `python scripts/scheduler.py` (state machine). api: `uvicorn scripts.api:app --host 0.0.0.0 --port 8000 --workers 1`. dashboard: `streamlit run scripts/serve.py --server.headless=true`. Volume mounts: `db_data:/app/db`, `./token.json`, `./credentials.json`. **IMPORTANT: `docker compose down -v` needed to wipe stale WAL lock if pipeline container was killed mid-write.** |
 | `db/commute.duckdb` | Exists locally, gitignored — populated by real Google Calendar events |
@@ -183,35 +183,35 @@ Full `CREATE TABLE` statements are in `docs/ARCHITECTURE.md`.
 ## Important Commands
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (uv creates .venv and installs from uv.lock)
+uv sync
 
 # Create DuckDB schema (run once)
-python scripts/schema.py
+uv run python scripts/schema.py
 
 # Run ingestion
-python scripts/ingest.py
+uv run python scripts/ingest.py
 
 # Run transformation
-python scripts/transform.py
+uv run python scripts/transform.py
 
 # Train ML model (first time, or after enough new data accumulates)
-python scripts/model.py --train
+uv run python scripts/model.py --train
 
 # Run prediction for next event
-python scripts/model.py --predict
+uv run python scripts/model.py --predict
 
 # Evaluate model (compare predictions vs actuals)
-python scripts/model.py --evaluate
+uv run python scripts/model.py --evaluate
 
 # Run Streamlit dashboard
-streamlit run scripts/serve.py
+uv run streamlit run scripts/serve.py
 
 # Run FastAPI server
-uvicorn scripts.api:app --reload --port 8000
+uv run uvicorn scripts.api:app --reload --port 8000
 
 # Run Airflow locally
-airflow standalone
+uv run airflow standalone
 # → UI at http://localhost:8080
 
 # Run full stack with Docker
@@ -254,7 +254,7 @@ git push
 - **IP geolocation (`ip-api.com`):** returns city-level accuracy (~1–5 km), free, no API key. Returns non-SG coords if user is on a VPN — falls back to Bishan (1.3521, 103.8198) with a warning. HTTP not HTTPS on free tier.
 - **Walk suggestion (transit route):** only shown when `is_rainy = False` AND Haversine distance from origin to dest < 5 km. Uses `_detect_origin()` in transform.py (IP geolocation — does NOT call OneMap, no token needed there).
 - **Walk-only route inline display (session 7):** when `is_walk_only = bool(legs) and all(l["mode"] == "WALK" for l in legs)`, `_walk_metrics()` is called inline after the step-by-step legs — regardless of distance or weather. The 5km and `is_rainy` guards do NOT apply. `print_walk_suggestion()` is skipped for walk-only routes. `_walk_metrics(origin_lat, origin_lng, dest_lat, dest_lng)` is a helper extracted from `print_walk_suggestion()` and shared by both code paths.
-- **Garmin steps:** requires `pip install garminconnect` — already in requirements.txt. Uses unofficial email/password auth. Leave `GARMIN_EMAIL = ""` in config to skip silently.
+- **Garmin steps:** requires `garminconnect` — already in `pyproject.toml`/`uv.lock`, installed via `uv sync`. Uses unofficial email/password auth. Leave `GARMIN_EMAIL = ""` in config to skip silently.
 - **Whoop recovery:** requires `WHOOP_ACCESS_TOKEN` in config.py — generate from developer.whoop.com. Returns recovery score 0–100. Leave blank to skip.
 - **model.py — cold start problem:** pipeline may only have a few days of real data. Bootstrap `predictions` with 500 synthetic historical rows using known patterns (rush hour +15%, rain +8%, weekend −20%) before fitting the model. Synthetic rows can be marked with `model_version = "synthetic"` so they can be filtered out later.
 - **model.py — `scikit-learn` and `joblib` must be added to requirements.txt** — `scikit-learn>=1.4.0` and `joblib>=1.3.0`

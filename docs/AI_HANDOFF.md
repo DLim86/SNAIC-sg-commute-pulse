@@ -61,7 +61,7 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `.gitignore` | Complete |
 | `config_example.py` | Complete — template with HOME_ADDRESS, WORK_ADDRESS, GARMIN_EMAIL/PASSWORD, WHOOP_ACCESS_TOKEN, all empty strings |
 | `config.py` | Exists locally, gitignored — real credentials present |
-| `requirements.txt` | Complete — `>=` pins for Python 3.14 compat; `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0` |
+| `pyproject.toml` / `uv.lock` | Complete — **session 12: migrated from pip/requirements.txt to uv.** `>=` pins for Python 3.14 compat; `garminconnect>=0.2.0`, `scikit-learn>=1.4.0`, `joblib>=1.3.0`. Install with `uv sync`. |
 | `README.md` | Complete |
 | `docs/roadmap.html` | Updated 2026-06-28 — Station D5 unlocked (GPU/Triton/BI/Technology Selection Exercise). All 12 stations complete. |
 | `docs/AI_HANDOFF.md` | This file — updated 2026-06-30 |
@@ -78,7 +78,7 @@ The rubric example: "Generate predictions for the next two hours and compare ear
 | `scripts/scheduler.py` | **Done (session 9, updated session 10)** — 7-state adaptive machine: NO_EVENT → EVENT_DETECTED_BURST (5×30s stability) → WATCHING (10 min) → LEAVE_WINDOW (60s burst then 30s) → IN_TRANSIT (10 min) → ARRIVAL_VERIFY (5×30s) → POST_ARRIVAL_COOLDOWN (10 min). Group 1: `calendar-check` every tick (cached geocode). Group 2: `routes` only on key/dest change. Group 3: `weather` every 30 min. Replaces shell loop in docker-compose.yml. |
 | `dags/__init__.py` | Done (session 9) — empty, required for Airflow imports |
 | `dags/commute_pipeline_dag.py` | Done (session 9) — 7-task chain: `schema_check >> ingest >> transform >> predict_commute >> backfill_actuals >> gate_evaluate >> evaluate_model`. `gate_evaluate` = `ShortCircuitOperator` (passes only at 8 AM SGT). Schedule `*/30 * * * *`. |
-| `Dockerfile` | Done (session 9) — `python:3.12-slim` + `libgomp1` + pip install + `mkdir -p db data/raw models` |
+| `Dockerfile` | Done (session 9, updated session 12) — `python:3.12-slim` + `libgomp1` + `uv sync --locked` (uv binary copied from `ghcr.io/astral-sh/uv`) + `mkdir -p db data/raw models` |
 | `.dockerignore` | Done (session 9) — excludes `.git/`, `__pycache__/`, `*.duckdb`, `models/*.pkl`, `LTA/`, `OneMap/`, `Prompt.txt`, `*.log`, `docs/` |
 | `docker-compose.yml` | Done (session 9) — 3 services sharing `db_data` named volume. Pipeline: `python scripts/scheduler.py`. API on :8000. Dashboard on :8501. Volume mounts: `./token.json`, `./credentials.json`. |
 | `db/commute.duckdb` | Exists locally, gitignored — populated by real Google Calendar events |
@@ -132,7 +132,7 @@ View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_fo
 2. Run staging + production in parallel for 7 days
 3. Auto-promote if staging MAE < production by >5%; otherwise archive challenger
 
-**New dependency:** `mlflow>=2.12.0` — add to `requirements.txt`.
+**New dependency:** `mlflow>=2.12.0` — add via `uv add mlflow`.
 
 **Design decision:** See D29 (MLflow adoption) and D30 (drift detection) in `docs/DECISIONS.md`.
 
@@ -391,42 +391,38 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 git clone https://github.com/DLim86/SNAIC-sg-commute-pulse.git
 cd SNAIC-sg-commute-pulse
 
-# 2. Virtual environment
-python -m venv venv
-venv\Scripts\activate   # Windows
+# 2. Install dependencies (uv creates the virtual environment automatically)
+uv sync
 
-# 3. Install
-pip install -r requirements.txt
-
-# 4. Add credentials
+# 3. Add credentials
 copy config_example.py config.py
 # Edit config.py with real keys — NEVER commit config.py
 
-# 5. Schema (run once — or re-run after adding predictions table)
-python scripts/schema.py
+# 4. Schema (run once — or re-run after adding predictions table)
+uv run python scripts/schema.py
 
-# 6. Ingest
-python scripts/ingest.py
+# 5. Ingest
+uv run python scripts/ingest.py
 
-# 7. Transform
-python scripts/transform.py
+# 6. Transform
+uv run python scripts/transform.py
 
-# 8. ML — train, predict (all 3 routes), evaluate, backfill actuals
-python scripts/model.py --train
-python scripts/model.py --predict
-python scripts/model.py --evaluate
-python scripts/model.py --backfill
+# 7. ML — train, predict (all 3 routes), evaluate, backfill actuals
+uv run python scripts/model.py --train
+uv run python scripts/model.py --predict
+uv run python scripts/model.py --evaluate
+uv run python scripts/model.py --backfill
 
-# 9. Dashboard
-streamlit run scripts/serve.py   # → http://localhost:8501
+# 8. Dashboard
+uv run streamlit run scripts/serve.py   # → http://localhost:8501
 
-# 10. API
-uvicorn scripts.api:app --reload --port 8000   # → http://localhost:8000/docs
+# 9. API
+uv run uvicorn scripts.api:app --reload --port 8000   # → http://localhost:8000/docs
 
-# 11. Airflow (optional — for DAG demo)
-airflow standalone   # → http://localhost:8080
+# 10. Airflow (optional — for DAG demo)
+uv run airflow standalone   # → http://localhost:8080
 
-# 12. Full stack with smart scheduler
+# 11. Full stack with smart scheduler
 docker compose up          # uses scheduler.py — adaptive polling
 docker compose up --build  # rebuild after code changes
 docker compose down -v     # wipe DB volume (clears stale WAL lock)

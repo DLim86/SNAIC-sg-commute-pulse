@@ -110,7 +110,8 @@ SNAIC-sg-commute-pulse/
 │   └── commute_pipeline_dag.py # 7-task Airflow DAG
 ├── config_example.py           # ✅ Committed — template with placeholders only
 ├── config.py                   # ❌ GITIGNORED — real credentials here
-├── requirements.txt            # ✅ Complete
+├── pyproject.toml              # ✅ Complete — dependency list
+├── uv.lock                     # ✅ Complete — resolved/pinned versions
 ├── docker-compose.yml          # 3 services: pipeline, api, dashboard
 ├── Dockerfile                  # Shared — each service overrides command
 └── .gitignore                  # config.py, *.duckdb, data/raw/, models/*.pkl
@@ -144,41 +145,36 @@ Star schema: `route_options` is the fact table. `weather_forecast`, `bus_arrival
 git clone https://github.com/DLim86/SNAIC-sg-commute-pulse.git
 cd SNAIC-sg-commute-pulse
 
-# 2. Create virtual environment
-python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Mac/Linux
+# 2. Install dependencies (uv creates the virtual environment automatically)
+uv sync
 
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Add your credentials (never commit config.py)
+# 3. Add your credentials (never commit config.py)
 copy config_example.py config.py
 # Edit config.py — fill in LTA_API_KEY, ONEMAP_EMAIL, ONEMAP_PASSWORD
 # Add credentials.json from Google Cloud Console for Calendar OAuth2
 
-# 5. Create DuckDB schema (run once)
-python scripts/schema.py
+# 4. Create DuckDB schema (run once)
+uv run python scripts/schema.py
 
-# 6. Run full pipeline
-python scripts/ingest.py       # fetch all APIs → DuckDB + Parquet
-python scripts/transform.py    # SQL transformation → recommendations
+# 5. Run full pipeline
+uv run python scripts/ingest.py       # fetch all APIs → DuckDB + Parquet
+uv run python scripts/transform.py    # SQL transformation → recommendations
 
-# 7. ML pipeline
-python scripts/model.py --train    # train RandomForest on historical data
-python scripts/model.py --predict  # score next event → predictions table
-python scripts/model.py --evaluate # compute 7-day MAE
+# 6. ML pipeline
+uv run python scripts/model.py --train    # train RandomForest on historical data
+uv run python scripts/model.py --predict  # score next event → predictions table
+uv run python scripts/model.py --evaluate # compute 7-day MAE
 
-# 8. Dashboard
-streamlit run scripts/serve.py             # http://localhost:8501
+# 7. Dashboard
+uv run streamlit run scripts/serve.py             # http://localhost:8501
 
-# 9. FastAPI
-uvicorn scripts.api:app --reload --port 8000   # http://localhost:8000/docs
+# 8. FastAPI
+uv run uvicorn scripts.api:app --reload --port 8000   # http://localhost:8000/docs
 
-# 10. Airflow (orchestration)
-airflow standalone                         # http://localhost:8080
+# 9. Airflow (orchestration)
+uv run airflow standalone                         # http://localhost:8080
 
-# 11. Full Docker stack
+# 10. Full Docker stack
 docker compose up              # starts pipeline + api + dashboard
 docker compose up --build      # after code changes
 ```
