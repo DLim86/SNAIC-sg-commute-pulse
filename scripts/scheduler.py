@@ -45,6 +45,9 @@ COOLDOWN_INTERVAL_SEC   = 60     # Calendar check interval during cooldown
 WEATHER_INTERVAL_SEC    = 1800   # Weather refresh interval in all states (30 min)
 EVAL_HOUR_SGT           = 8      # Hour (SGT) for the once-daily model evaluation
 
+# Shared by the 30-min timer and the on-demand refresh in _run_routes()
+_weather_last = None
+
 
 # ── Script runners ────────────────────────────────────────────────────────────
 
@@ -64,20 +67,48 @@ def _run(*script_args):
         log.warning("Step failed: %s", " ".join(str(a) for a in script_args))
 
 
+def _dest_weather_ready():
+    """True when the next event already has a fresh forecast for its own weather area.
+
+    A brand-new event has nearest_weather_area = NULL until ingest --mode weather runs,
+    and model.py COALESCEs that miss to is_rainy = FALSE — so predict must not run first.
+    """
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=WEATHER_INTERVAL_SEC)
+    try:
+        con = duckdb.connect(DB_PATH, read_only=True)
+        row = con.execute("""
+            SELECT COUNT(*)
+            FROM calendar_events e
+            JOIN weather_forecast w ON w.area = e.nearest_weather_area
+            WHERE e.start_time > NOW() AND w.fetched_at > ?
+        """, [cutoff]).fetchone()
+        con.close()
+        return bool(row and row[0])
+    except Exception as exc:
+        # Unreadable DB is not evidence of stale weather — don't hammer data.gov.sg.
+        log.debug("Weather readiness check skipped: %s", exc)
+        return True
+
+
 def _run_routes():
     """Expensive refresh: ip-api + OneMap routing + LTA arrivals + train alerts + transform + predict."""
     log.info("Event/location changed — refreshing routes")
     _run("scripts/ingest.py", "--mode", "routes")
+    if not _dest_weather_ready():
+        log.info("Destination weather missing or stale — refreshing before prediction")
+        _run_weather(reason="destination weather not yet resolved")
     _run("scripts/transform.py")
     _run("scripts/model.py", "--predict")
     _run("scripts/model.py", "--backfill")
 
 
-def _run_weather():
-    """Weather refresh + transform re-run (independent of state)."""
-    log.info("Weather refresh due — running weather mode")
+def _run_weather(reason="refresh due"):
+    """Weather refresh + transform re-run. Stamps the shared 30-min timer."""
+    global _weather_last
+    log.info("Weather %s — running weather mode", reason)
     _run("scripts/ingest.py", "--mode", "weather")
     _run("scripts/transform.py")
+    _weather_last = datetime.now(timezone.utc)
 
 
 def _run_daily_evaluation():
@@ -132,7 +163,9 @@ def main():
     leave_burst_end = None  # datetime: when the 1s burst in LEAVE_WINDOW expires
     bus_refresh_last = now_utc - timedelta(seconds=BUS_REFRESH_SEC)
     cooldown_end    = None  # datetime: when POST_ARRIVAL_COOLDOWN ends
-    weather_last    = now_utc - timedelta(seconds=WEATHER_INTERVAL_SEC)
+
+    global _weather_last
+    _weather_last = now_utc - timedelta(seconds=WEATHER_INTERVAL_SEC)
     last_eval_date  = None  # SGT date the evaluation last ran, so it fires once per day
 
     while True:
@@ -141,9 +174,8 @@ def main():
         now_sgt_hour = now_sgt.hour
 
         # ── Weather: independent of state, every 30 min ───────────────────────
-        if (now_utc - weather_last).total_seconds() >= WEATHER_INTERVAL_SEC:
+        if (now_utc - _weather_last).total_seconds() >= WEATHER_INTERVAL_SEC:
             _run_weather()
-            weather_last = datetime.now(timezone.utc)
 
         # ── Model evaluation: once per day in the 8 AM SGT hour ───────────────
         if now_sgt_hour == EVAL_HOUR_SGT and last_eval_date != now_sgt.date():

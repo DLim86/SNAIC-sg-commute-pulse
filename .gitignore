@@ -46,3 +46,7 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 *.swp
+
+# Debug scratch scripts (contain real coordinates / one-off API probes)
+bus_service.py
+nearest_busstop.py
