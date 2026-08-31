@@ -196,13 +196,13 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
     <span class="pipe-node" style="background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.4);color:#C4B5FD">Lake vs Warehouse</span><span class="pipe-arrow">→</span>
     <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">ML Train</span><span class="pipe-arrow">→</span>
     <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Predict</span><span class="pipe-arrow">→</span>
-    <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5">Evaluate (8 AM daily)</span>
+    <span class="pipe-node" style="background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#FCA5A5" title="Implemented in submitted model.py — computes rolling 7-day MAE and raises a warning above a 10-minute threshold">Evaluate + MAE Drift Warning (8 AM daily)</span>
   </div>
   <div style="margin-top:10px;margin-bottom:6px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#67E8F9">Phase 4 — MLOps (Day 4) · Documented Production Extension · Not in submitted code</div>
   <div class="pipeline-mini">
     <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">MLflow Tracking</span><span class="pipe-arrow">→</span>
     <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">Model Registry</span><span class="pipe-arrow">→</span>
-    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">Drift Detection</span><span class="pipe-arrow">→</span>
+    <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Statistical feature-drift tests (PSI/KS) — production extension, not implemented in submitted model.py. The MAE-threshold drift warning itself IS implemented — see Phase 3.">Statistical Drift Tests (PSI/KS)</span><span class="pipe-arrow">→</span>
     <span class="pipe-node" style="background:rgba(14,116,144,.12);border-color:rgba(14,116,144,.4);color:#67E8F9;opacity:0.65" title="Production extension — not implemented in submitted model.py">Canary Deploy</span>
   </div>
 </header>
@@ -271,7 +271,7 @@ body{background:var(--ground);color:var(--text);font-family:-apple-system,BlinkM
         <div class="arch-item new">7 tasks / 30-min schedule</div>
         <div class="arch-item new">Sequential chain + ShortCircuit gate</div>
         <div class="arch-item new">evaluate_model (daily 8AM)</div>
-        <div class="arch-item new">Airflow UI</div>
+        <div class="arch-item new" title="Airflow itself is not installed on the recording machine — the DAG file is used as a fallback for the video">Airflow UI (if installed)</div>
       </div>
     </div>
     <div class="arch-cell">
@@ -531,7 +531,7 @@ SCOPES = [<span class="s">"https://www.googleapis.com/auth/calendar.readonly"</s
       <div class="station-card">
         <div class="card-eyebrow">Data Storage</div>
         <div class="card-title">DuckDB Schema Design</div>
-        <div class="card-desc">Store all cleaned data in DuckDB — an embedded analytical database that needs no server. Six tables model the domain clearly. DuckDB handles analytical SQL beautifully, stores everything in one file, and runs in-process with Python.</div>
+        <div class="card-desc">Store all cleaned data in DuckDB — an embedded analytical database that needs no server. Nine tables model the domain clearly. DuckDB handles analytical SQL beautifully, stores everything in one file, and runs in-process with Python.</div>
 
         <div class="chip-row">
           <span class="chip chip-purple">DuckDB 0.10</span>
@@ -1055,19 +1055,20 @@ EVAL_HOUR_SGT = <span class="n">8</span>
 
         <div class="card-grid">
           <div class="card-block">
-            <div class="block-label">Run Airflow locally for demo</div>
+            <div class="block-label">Run Airflow locally — setup reference (not used on the recording machine; see fallback below)</div>
             <div class="block-content">
 <pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC">pip install apache-airflow
 
 # One command: pipeline + API + dashboard (Airflow is a separate path)
 airflow standalone
 
-# Open Airflow UI:
+# If installed, open Airflow UI:
 http://localhost:8080
 # Login: admin / (shown in terminal)
 # Find: commute_pipeline
 # Click "Trigger DAG" to run manually</pre>
             </div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:8px">Airflow is not installed on the recording machine (not in <code>pyproject.toml</code>, doesn't run natively on Windows). The video instead opens <code>dags/commute_pipeline_dag.py</code> in the editor and explains the Docker scheduler as the alternative orchestrator actually running.</div>
           </div>
           <div class="card-block">
             <div class="block-label">Task graph (7 tasks — sequential)</div>
@@ -1335,7 +1336,7 @@ data.gov.sg    →  weather_forecast       ──┘         ↓
               <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Model training</strong> ✅ <code>scripts/model.py --train</code> trains <code>RandomForestRegressor</code> (predicts <em>delay over the OneMap baseline</em>, 13 features) + <code>RandomForestClassifier</code> (crowd, 10 features including <code>bus_headway_gap</code> + route context). Saves to <code>models/</code>. Crowd is predicted per route option — each option gets its own label.</div>
               <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Inference</strong> ✅ <code>--predict</code> scores ALL 3 route options, stores <code>prediction_id = "{option_id}_pred"</code>. Alt routes [2]/[3] in dashboard each show "🤖 ML: ~X min · crowd: 🟡 Standing".</div>
               <div style="margin-bottom:6px"><strong style="color:#6EE7B7">Evaluation / MLOps</strong> ✅ <code>--evaluate</code> computes 7-day MAE for the model <em>and</em> for the plain OneMap schedule with no ML, so the model's added value is measured rather than assumed; MAE above 10 min raises a drift warning. <code>--backfill</code> reconstructs the outcome: BUS → schedule + the wait genuinely observed at the <em>boarding</em> stop in the live LTA feed; MRT/LRT → schedule + published headway allowance, +20 min if a HEAVY alert was active on that line; WALK → deterministic. Every row records which path produced it in <code>actual_source</code>.</div>
-              <div><strong style="color:#6EE7B7">Live dashboard</strong> ✅ Streamlit shows predicted vs reconstructed outcome for the recommended route + per-alt ML captions.</div>
+              <div><strong style="color:#6EE7B7">Live dashboard</strong> ✅ Streamlit shows predicted vs. outcome (hand-logged observation or reconstructed estimate, per <code>actual_source</code>) for the recommended route + per-alt ML captions.</div>
             </div>
           </div>
           <div class="card-block">
@@ -1348,10 +1349,11 @@ data.gov.sg    →  weather_forecast       ──┘         ↓
     predicted_delay_min  INTEGER,  -- what the model outputs
     predicted_min        INTEGER,  -- baseline + predicted_delay_min
     predicted_crowd      VARCHAR,  -- SEA/SDA/LSD
-    actual_min           INTEGER,  -- RECONSTRUCTED outcome, not GPS truth
+    actual_min           INTEGER,  -- hand-logged observation OR reconstructed
+                                   -- estimate (see actual_source) — never GPS truth
     actual_source        VARCHAR,  -- observed_boarding_wait | headway_allowance
-                                   -- | headway_allowance_disrupted
-                                   -- | schedule_only | deterministic_walk
+                                   -- | headway_allowance_disrupted | schedule_only
+                                   -- | deterministic_walk | manual_phone_log
     actual_crowd         VARCHAR,  -- observed: LTA Load at boarding stop
     model_version        VARCHAR,  -- "rf_delay_v2"
     mae_7day             DOUBLE,
@@ -1474,7 +1476,7 @@ def evaluate(con):
             <div class="block-label">Airflow DAG — add 2 new tasks</div>
             <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
               <div style="margin-bottom:8px"><strong style="color:#6EE7B7">predict_commute</strong> — runs each pipeline cycle, immediately after the <code>transform</code> task. Scores every route option for the next event and stores one prediction row each.</div>
-              <div style="margin-bottom:8px"><strong style="color:#6EE7B7">evaluate_model</strong> — gated by a ShortCircuitOperator to the single 08:00 SGT run (checks logical hour <em>and</em> minute), so it fires once per day even though the DAG runs every 30 minutes. Computes 7-day MAE against both the reconstructed outcome and a no-ML schedule baseline; logs to pipeline_runs.</div>
+              <div style="margin-bottom:8px"><strong style="color:#6EE7B7">evaluate_model</strong> — gated by a ShortCircuitOperator to the single 08:00 SGT run (checks logical hour <em>and</em> minute), so it fires once per day even though the DAG runs every 30 minutes. Computes 7-day MAE against whatever outcome rows are available — hand-logged observations or reconstructed estimates, per <code>actual_source</code> — and against a no-ML schedule baseline; logs to pipeline_runs.</div>
               <div>Task graph addition: <code>transform → predict_commute → backfill_actuals → gate_evaluate → evaluate_model</code></div>
             </div>
           </div>
@@ -1483,10 +1485,10 @@ def evaluate(con):
         <div class="card-block" style="margin-bottom:20px">
           <div class="block-label">What to show live in your video</div>
           <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
-            <div style="margin-bottom:6px">1. Open Streamlit — show "Predicted: 38 min | 7-day MAE: 4.2 min" and the crowd label</div>
+            <div style="margin-bottom:6px">1. Open Streamlit — show the predicted journey time, the current 7-day MAE and drift-warning state (whatever they read live at recording time), and the crowd label</div>
             <div style="margin-bottom:6px">2. Open model.py — show <code>FEATURE_COLS_DUR</code> and the residual target; expand the feature sheet above for 3–5 seconds rather than reading features aloud</div>
-            <div style="margin-bottom:6px">3. Open Airflow — show <code>gate_evaluate</code> short-circuiting, and <code>evaluate_model</code> running only on the 08:00 SGT logical run</div>
-            <div>4. Open DuckDB (or dashboard) — show <code>predictions</code> with <code>predicted_delay_min</code>, <code>predicted_min</code>, and <code>actual_source</code> naming the reconstruction method used</div>
+            <div style="margin-bottom:6px">3. Airflow is not installed on the recording machine — open <code>dags/commute_pipeline_dag.py</code> in the editor instead and point at the <code>gate_evaluate</code> ShortCircuitOperator and the <code>evaluate_model</code> task in the chain; explain that the Docker scheduler runs the same daily evaluation as an alternative to Airflow</div>
+            <div>4. Open DuckDB (or dashboard) — show <code>predictions</code> with <code>predicted_delay_min</code>, <code>predicted_min</code>, and <code>actual_source</code> naming which rows are hand-logged observations vs. reconstructed estimates</div>
           </div>
         </div>
 
@@ -1502,7 +1504,7 @@ def evaluate(con):
   <div class="phase-divider-badge" style="background:rgba(14,116,144,.1);border:1px solid rgba(14,116,144,.35);color:#67E8F9">PHASE 4 · DAY 4 · MLOPS</div>
   <div class="phase-divider-line"></div>
 </div>
-<div class="phase-divider-sub">Day 4 unlocked 25 Jun 2026: MLflow experiment tracking, model registry, drift detection, and canary deployment. Day 5 unlocked 28 Jun 2026: GPU acceleration (RAPIDS/Triton), BI (Metabase), Feature Store — Technology Selection Exercise validates existing FastAPI + pandas + scikit-learn choices.</div>
+<div class="phase-divider-sub">Day 4 unlocked 25 Jun 2026: MLflow experiment tracking, model registry, statistical feature-drift tests (PSI/KS), and canary deployment — extending the MAE-threshold drift warning already implemented in Phase 3. Day 5 unlocked 28 Jun 2026: GPU acceleration (RAPIDS/Triton), BI (Metabase), Feature Store — Technology Selection Exercise validates existing FastAPI + pandas + scikit-learn choices.</div>
 
 <div class="route-map">
   <div class="route-wrapper">
@@ -1515,17 +1517,17 @@ def evaluate(con):
       </div>
       <div class="station-card">
         <div class="card-eyebrow">MLOps · Day 4</div>
-        <div class="card-title">Experiment Tracking, Model Registry &amp; Drift Detection</div>
-        <div class="card-desc">Day 4 adds the full MLOps lifecycle around the Random Forest model. MLflow tracks every training run — parameters, validation MAE, and the saved .pkl as an artifact with a unique run ID. A model registry manages version transitions (staging → <code>@champion</code> → archived) with rollback. Drift detection distinguishes three failure modes: data drift (input distributions shift), concept drift (feature–target relationship changes), and training-serving skew (feature computed differently in train vs production). Shadow deployment logs a challenger's predictions silently without showing them to users; canary deployment shifts live traffic in steps (5% → 50% → 100%) after shadow passes. Prometheus + Grafana handle system-level monitoring alongside the DuckDB-based MAE tracking.</div>
+        <div class="card-title">Experiment Tracking, Model Registry &amp; Statistical Drift Tests</div>
+        <div class="card-desc"><strong style="color:#6EE7B7">Already implemented and shipped:</strong> rolling 7-day MAE monitoring in <code>model.py</code>'s <code>evaluate()</code>, which raises a dashboard warning when MAE exceeds a 10-minute threshold — this is real, running code, not a Day 4 extension. <strong style="color:#67E8F9">Not implemented — documented Day 4 production extensions below:</strong> MLflow experiment tracking, a model registry with version lifecycle, statistical feature-drift tests (PSI/KS) that would detect drift in individual input distributions rather than just the MAE symptom, shadow/canary deployment, and Prometheus + Grafana system monitoring.</div>
 
         <div class="chip-row">
-          <span class="chip chip-teal">MLflow</span>
-          <span class="chip chip-teal">Model Registry</span>
-          <span class="chip chip-teal">Drift Detection</span>
-          <span class="chip chip-teal">Shadow → Canary</span>
-          <span class="chip chip-teal">Prometheus + Grafana</span>
-          <span class="chip chip-teal">@champion alias</span>
-          <span class="chip chip-teal">data drift · concept drift</span>
+          <span class="chip chip-teal">MLflow — not implemented</span>
+          <span class="chip chip-teal">Model Registry — not implemented</span>
+          <span class="chip chip-teal">PSI/KS Drift Tests — not implemented</span>
+          <span class="chip chip-teal">Shadow → Canary — not implemented</span>
+          <span class="chip chip-teal">Prometheus + Grafana — not implemented</span>
+          <span class="chip chip-teal">@champion alias — not implemented</span>
+          <span class="chip chip-teal">data drift · concept drift (concepts)</span>
         </div>
 
         <div class="card-grid">
@@ -1561,10 +1563,10 @@ model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
         </div>
 
         <div class="card-block" style="margin-bottom:20px">
-          <div class="block-label">Drift Detection — when to retrain</div>
+          <div class="block-label">MAE-threshold drift warning — already implemented (this is real, shipped code)</div>
           <div class="block-content">
 <pre style="font-family:monospace;font-size:11.5px;line-height:1.7;color:#A8C4DC"># Primary drift signal: rising 7-day MAE in predictions table
-# If mae_7day > 10 min threshold → log drift warning → trigger retrain
+# If mae_7day > 10 min threshold → log drift warning → dashboard shows it
 
 # Feature distributions most likely to drift in this project:
 #   hour_of_day    — if user's schedule changes (new job, WFH policy)
@@ -1593,7 +1595,7 @@ def evaluate_model(con):
             <div class="block-label">MLflow vs pipeline_runs — different concerns</div>
             <div class="block-content" style="font-size:12px;color:var(--muted);line-height:1.8">
               <div style="margin-bottom:8px"><code>pipeline_runs</code> — "ingest ran at 08:10, 47 rows, success". Tracks pipeline health, not model experiments.</div>
-              <div>MLflow — "training run #7 used n_estimators=100, mae=4.2 min, 520 rows, 2026-07-01". Tracks ML experiment history and artifact lineage. Two separate concerns, two separate tools.</div>
+              <div>MLflow (hypothetical, not implemented) — "training run #7 used n_estimators=100, validation_mae=9.1 min, 520 rows, 2026-07-01". Tracks ML experiment history and artifact lineage. Two separate concerns, two separate tools.</div>
             </div>
           </div>
         </div>
@@ -1713,7 +1715,7 @@ Slow ML training (training bottleneck) cuML / GPU XGBoost        ❌ NO — trai
       <div class="station-card">
         <div class="card-eyebrow">Assessment · 15-Minute Video</div>
         <div class="card-title">Video Presentation Guide</div>
-        <div class="card-desc">Your video is an interview answer to: "Tell me about a data engineering project you built." Structure it as a technical narrative — problem, data, pipeline, tools, live demo, challenges, and what you'd add next. With Phase 2 complete, you now have 4 distinct systems to show: the Airflow UI, the FastAPI Swagger UI, the Streamlit dashboard, and the Docker Compose stack.</div>
+        <div class="card-desc">Your video is an interview answer to: "Tell me about a data engineering project you built." Structure it as a technical narrative — problem, data, pipeline, tools, live demo, challenges, and what you'd add next. With Phase 2 complete, you have 4 distinct systems to show: the <code>dags/commute_pipeline_dag.py</code> file (Airflow itself is not installed on the recording machine — see the authoritative script's fallback framing), the FastAPI Swagger UI, the Streamlit dashboard, and the Docker Compose stack.</div>
         <div class="card-block" style="margin-bottom:20px;border-left:3px solid #D97706">
           <div class="block-label">Authoritative script</div>
           <div class="block-content" style="font-size:12.5px;color:var(--muted);line-height:1.7"><code>docs/video_script.html</code> is the current, timed, word-for-word recording script, including the pre-flight Google Calendar re-authorisation steps. The outline below is the earlier planning sketch and its timings are superseded — use it for shape, not for timing.</div>
@@ -1739,7 +1741,7 @@ Slow ML training (training bottleneck) cuML / GPU XGBoost        ❌ NO — trai
             </div>
             <div class="vt-row">
               <div class="vt-time">03:00</div>
-              <div class="vt-content"><strong>Airflow DAG UI (2 min)</strong><p>Open Airflow at localhost:8080. Show the commute_pipeline DAG graph. Point out the sequential task chain (schema_check → ingest → transform → predict_commute → backfill_actuals → gate_evaluate → evaluate_model). Trigger a run and watch tasks go green. Explain the 30-minute schedule.</p></div>
+              <div class="vt-content"><strong>Airflow DAG (2 min)</strong><p>Airflow is not installed on the recording machine, so open <code>dags/commute_pipeline_dag.py</code> in the editor instead of a live UI. Point out the sequential task chain (schema_check → ingest → transform → predict_commute → backfill_actuals → gate_evaluate → evaluate_model) and the ShortCircuitOperator gate. Explain the 30-minute schedule, and that the Docker scheduler runs the same daily evaluation as an alternative orchestrator.</p></div>
             </div>
             <div class="vt-row">
               <div class="vt-time">05:00</div>

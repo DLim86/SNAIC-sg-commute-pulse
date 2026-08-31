@@ -51,12 +51,11 @@ FastAPI endpoints every 60 seconds.
 
 **5 — Measurable evaluation and monitoring**
 
-Implemented a once-daily automated MLOps evaluation that computes 7-day mean absolute
-error against a reconstructed outcome estimate and against a no-ML schedule baseline —
-so the model's added value is measured rather than assumed — writes the result to the
-monitoring table, and raises a drift warning on the dashboard when error exceeds a
-10-minute threshold; each stored outcome records the reconstruction method used, keeping
-proxy values explicitly distinct from observed measurements.
+Implemented a once-daily automated MLOps evaluation computing rolling 7-day MAE against
+available outcome data and a no-ML OneMap baseline, with `actual_source` distinguishing
+hand-logged journey observations from reconstructed proxies; evaluation results are
+written to pipeline monitoring and trigger a dashboard warning when MAE exceeds the
+configured 10-minute threshold.
 
 ---
 

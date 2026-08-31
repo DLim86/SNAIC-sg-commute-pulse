@@ -289,8 +289,8 @@
   </div>
 
   <div class="total-time">
-    <div class="big">~22:00 SAY</div>
-    <div class="label"><strong>MEASURED 2026-08-31: the SAY blocks total 3,313 words ≈ 22 min at 150 wpm — not the 1,620 words this header used to claim.</strong> With navigation that is 24–25 min against a 15-minute limit. To land at 15:00 you must speak ~1,900 words: cut Reflection to ~110 words per question, and trim Sections 2, 3, 6 and 9. Protect Section 4 (idempotency) and Section 7 (ML redesign + <code>bus_headway_gap</code>) — those two carry the marks.</div>
+    <div class="big">~12:59–13:54 SAY</div>
+    <div class="label"><strong>TRIMMED 2026-09-01 (final recording-day pass): the SAY blocks now total 1,947 words — 12:59 at 150 wpm, 13:54 at 140 wpm.</strong> That is inside the 1,900–1,950 word target and leaves solid headroom against the 15-minute limit for navigation and pauses. Section 4 (idempotency) and Section 7 (ML redesign + <code>bus_headway_gap</code>, capped ≤400 words) were protected throughout. <strong>7-day MAE is a real, verified number:</strong> 7 days of hand-logged phone observations were backfilled and evaluated via the actual <code>model.py --evaluate</code> code path, giving MAE = 16.3 min — above the 10-minute threshold, so the dashboard's drift warning is genuinely active. Treat that as a warning signal from 7 data points, not proof of concept drift. <code>actual_source</code> distinguishes hand-logged observations from automatically reconstructed proxies — neither is GPS ground truth.</div>
   </div>
 
   <div class="rubric-bar">
@@ -394,10 +394,8 @@
       <div class="say">
         <div class="say-label">Say</div>
         <p>Hi, I&rsquo;m a Data Engineering student at SIT. This is my Week 2 assessment &mdash; SG Commute Pulse.</p>
-        <p>Here&rsquo;s the problem I actually had. I have a calendar event somewhere in Singapore. To work out when to leave, I end up checking three different apps &mdash; one for the route, one for whether the bus is really coming, one for the weather. And none of them know anything about my calendar.</p>
-        <p>So I built a pipeline that answers one question automatically: when do I need to leave?</p>
-        <p>It reads my next calendar event, geocodes the location, then fetches route options, live bus arrivals, train disruption alerts and the weather forecast. All of that goes into DuckDB. A SQL layer ranks the routes and works out the leave-by time, and a model adds a predicted delay on top of the schedule. The result goes to a live dashboard and a REST API.</p>
-        <p>The output is one line I can act on: leave by this time, take this bus then this line, this is the predicted journey time &mdash; and a warning if it&rsquo;s going to rain on a long walk.</p>
+        <p>Here&rsquo;s the problem I actually had. I have a calendar event somewhere in Singapore, and working out when to leave means checking three different apps &mdash; one for the route, one for the bus, one for the weather &mdash; and none of them know my calendar.</p>
+        <p>So I built a pipeline that answers one question: when do I need to leave? It reads my next calendar event, geocodes it, fetches routes, live bus arrivals, train alerts and weather, and stores it in DuckDB. SQL ranks the routes and works out the leave-by time, and a model adds a predicted delay on top. The result: leave by this time, take this bus then this line, and a rain warning if it applies.</p>
       </div>
       <div class="skip">
         <div class="skip-label">Skip / Do Not Say</div>
@@ -426,15 +424,15 @@
       <div class="say">
         <div class="say-label">Say</div>
         <p>The system has three layers, and I separated them because they solve different problems.</p>
-        <p>Layer one is the batch pipeline. It fetches the data sources, stores them in DuckDB, and runs a SQL transformation. That is the core data engineering work.</p>
-        <p>Layer two is the ML layer. A Random Forest predicts how much delay to add on top of the routing engine&rsquo;s schedule, and a second Random Forest predicts how crowded the bus will be. I&rsquo;ll come back to why it predicts the delay and not the whole journey.</p>
-        <p>Layer three is serving. A Streamlit dashboard refreshes every 60 seconds, and a FastAPI layer exposes the same data as REST endpoints for anything else that wants it.</p>
-        <p>For storage I use two layers. The first is a date-partitioned Parquet landing area under <code>data/raw</code> &mdash; that&rsquo;s where I keep the records I pulled from each API, one file per source per day. The second is DuckDB, which holds the cleaned and typed version. DuckDB is what the dashboard and the API actually query.</p>
-        <p>I want to be precise about the DuckDB schema. <code>route_options</code> is the central table with the measures &mdash; duration, walking distance, transfers, fare &mdash; and it has a real foreign key to the calendar event. The weather, bus arrival and train alert tables join on a natural key and a time window instead. So it&rsquo;s star-shaped around <code>route_options</code>, but I wouldn&rsquo;t call it a formal dimensional star schema. There are no surrogate keys and no date dimension.</p>
+        <p>Layer one is the batch pipeline &mdash; it fetches the data sources, stores them in DuckDB, and runs a SQL transformation. That&rsquo;s the core data engineering work.</p>
+        <p>Layer two is ML &mdash; a Random Forest predicts delay on top of the routing engine&rsquo;s schedule, and a second predicts bus crowding.</p>
+        <p>Layer three is serving &mdash; Streamlit, refreshing every 60 seconds, and a FastAPI layer exposing the same data as REST endpoints.</p>
+        <p>For storage, I land the raw pulls as partitioned Parquet under <code>data/raw</code>, then load the cleaned, typed version into DuckDB &mdash; that&rsquo;s what the dashboard and API actually query.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
         <p>Why two storage layers at all: Parquet is cheap append-only file storage that keeps what each API gave me, and DuckDB is a columnar analytical engine that makes the joins and window functions fast. Different jobs, so I kept them separate.</p>
+        <p>On the schema: <code>route_options</code> is the central table with the measures — duration, walking distance, transfers, fare — and a real foreign key to the calendar event. Weather, bus arrival and train alert tables join on a natural key and a time window instead, so it's star-shaped around <code>route_options</code> but not a formal dimensional star schema — no surrogate keys, no date dimension.</p>
       </div>
       <div class="fallback">
         <div class="fallback-label">Fallback — if roadmap.html is slow</div>
@@ -462,11 +460,11 @@
       <div class="say">
         <div class="say-label">Say</div>
         <p>I have five data sources.</p>
-        <p>Google Calendar over OAuth2 is the entry point. It scans my next ten events and geocodes the first one that has a location. One thing I had to handle: the refresh token expires, and when it did, the exception killed the whole run. Now the pipeline catches it, logs a clear message, records it in the monitoring table, and falls back to a time-of-day default &mdash; work in the morning, home in the evening. A dead token degrades the system; it doesn&rsquo;t stop it.</p>
-        <p>OneMap does the geocoding and the public transport routing, and gives me up to three route options with duration, walking distance and fare. The geocoder tries a few forms of the address in order, starting with any six-digit postal code, because postal codes resolve far more reliably than street names.</p>
-        <p>LTA DataMall gives me live bus arrivals and active MRT disruption alerts. I registered for the key, and it lives in <code>config.py</code>, which is gitignored.</p>
-        <p>data.gov.sg gives me the two-hour weather forecast for 47 areas. It&rsquo;s open, no key needed. I match the area nearest my destination and flag anything with rain, shower, thunder or drizzle in it as rainy at ingest time.</p>
-        <p>And ip-api.com gives me a routing origin without needing GPS permissions &mdash; but I caught a real problem with it on the day I recorded this. It geolocates my public IP, which belongs to my ISP, not my device. It put me in Woodlands, then twenty kilometres away in Jurong forty minutes later, while I sat in Punggol the whole time. So the origin now comes from a configured postal code first, and ip-api is only the fallback. Cheap location data is convenient until it silently becomes the wrong input.</p>
+        <p>Google Calendar over OAuth2 is the entry point &mdash; scans my next ten events, geocodes the first with a location, with a time-of-day fallback if the token expires.</p>
+        <p>OneMap geocodes and routes, returning up to three options with duration, walk distance and fare. It tries a postal code first &mdash; more reliable than street names.</p>
+        <p>LTA DataMall gives live bus arrivals and MRT disruption alerts, via a gitignored key.</p>
+        <p>data.gov.sg gives the two-hour forecast for 47 areas, open, no key needed &mdash; flagged rainy on rain, shower, thunder or drizzle in the text.</p>
+        <p>And ip-api.com gives a routing origin without GPS permissions. But on the day I recorded this, it put me in Woodlands, then twenty kilometres away in Jurong forty minutes later, while I sat in Punggol the whole time &mdash; it geolocates my ISP, not my device. So origin now comes from a configured postal code first, ip-api only as fallback.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -506,12 +504,12 @@
       </div>
       <div class="say">
         <div class="say-label">Say</div>
-        <p>This is the batch pipeline, and there is one part here I especially want to show you.</p>
-        <p>I wrote an Airflow DAG with seven tasks in a chain: schema check, ingest, transform, predict, backfill, a gate, and evaluate. The gate is a ShortCircuitOperator. The DAG fires every 30 minutes, but model evaluation should only happen once a day, so the gate checks the run&rsquo;s logical time and only lets it through for the 08:00 run. I had this wrong at first. I was only checking the hour, which meant both the 08:00 and the 08:30 run passed and evaluation ran twice a day. Checking the minute as well fixed it.</p>
+        <p>This is the batch pipeline, and there&rsquo;s one part here I especially want to show you.</p>
+        <p>I wrote an Airflow DAG with seven tasks in a chain: schema check, ingest, transform, predict, backfill, a gate, and evaluate. The gate is a ShortCircuitOperator that only lets the daily model evaluation through on the 08:00 run, not every 30-minute tick.</p>
         <p>Every API call goes through a retry wrapper with exponential backoff &mdash; three attempts, and the wait doubles each time: one second, then two, then four. LTA&rsquo;s API does return errors during rush hour, and without that, one blip at 8 AM would kill the whole run.</p>
-        <p>Now the part I want to highlight. I made the ingestion safe to rerun. If the pipeline dies halfway, I don&rsquo;t want the next run to duplicate everything. So every ingestion write is an upsert &mdash; the same record is replaced instead of being inserted twice. That&rsquo;s what makes the ingestion idempotent, and it&rsquo;s the property that lets me run this on a schedule without watching it.</p>
-        <p>I can show you that it actually holds. Here are the row counts. I run the ingestion again. Same counts. The one table that does grow is bus arrivals, and that&rsquo;s deliberate &mdash; the fetch timestamp is part of its primary key, because I want to keep those as a time series rather than overwrite them.</p>
-        <p>Before anything goes into DuckDB I also write the extracted records out to date-partitioned Parquet under <code>data/raw</code>. I&rsquo;ll be honest about what that is: it&rsquo;s the records I extracted, not the untouched API payloads, and I keep one file per source per day, so a second run on the same day replaces it. It&rsquo;s a staging layer, not a full replayable archive. Keeping every raw response so I could genuinely replay a day is on my list.</p>
+        <p>Now the part I want to highlight. I made the ingestion safe to rerun. If the pipeline dies halfway, I don&rsquo;t want the next run to duplicate everything, so every ingestion write is an upsert &mdash; the same record is replaced instead of inserted twice. That&rsquo;s what makes the ingestion idempotent, and it&rsquo;s the property that lets me run this on a schedule without watching it.</p>
+        <p>I can show you that it actually holds. Here are the row counts. I run the ingestion again &mdash; same counts. The one table that does grow is bus arrivals, and that&rsquo;s deliberate &mdash; the fetch timestamp is part of its primary key, because I want to keep those as a time series rather than overwrite them.</p>
+        <p>Before anything goes into DuckDB I also write the extracted records out to date-partitioned Parquet as a staging layer &mdash; one file per source per day, not a full replayable archive of the raw API responses. That&rsquo;s honestly on my list to fix.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -549,11 +547,11 @@
       </div>
       <div class="say">
         <div class="say-label">Say</div>
-        <p>The transformation layer is a SQL view called <code>v_enriched_routes</code>. It joins the route options to the weather for the destination area and to any active train alerts.</p>
-        <p>The leave-by time is the event start minus the journey duration, minus a 10-minute buffer. The buffer is a business rule &mdash; it covers walking to the stop and not sprinting for the door.</p>
-        <p>Ranking is a window function: <code>ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY penalty, duration)</code>. The penalty is what makes it more than just &ldquo;pick the fastest&rdquo; &mdash; if it&rsquo;s raining and a route has more than 400 metres of walking, it gets pushed down the ranking even if it&rsquo;s quicker.</p>
-        <p>The &ldquo;why chosen&rdquo; line is generated in SQL too, not hardcoded. There are nine possible reasons &mdash; fastest, direct, fewest transfers, least walking, cheapest fare, and so on &mdash; and they&rsquo;re worked out with <code>MIN() OVER (PARTITION BY event_id)</code> comparisons against the other routes for the same event.</p>
-        <p>Disruption warnings are filtered down to the rail lines this route actually uses. If the recommended route is bus-only, there&rsquo;s no disruption section at all, rather than a generic MRT warning that has nothing to do with your journey.</p>
+        <p>The transformation layer is a SQL view, <code>v_enriched_routes</code>, joining route options to destination weather and any active train alerts.</p>
+        <p>The leave-by time is event start minus journey duration minus a 10-minute walking buffer.</p>
+        <p>Ranking is a window function: <code>ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY penalty, duration)</code>. The penalty is more than just &ldquo;pick the fastest&rdquo; &mdash; a rainy route with over 400 metres of walking gets pushed down even if it&rsquo;s quicker.</p>
+        <p>The &ldquo;why chosen&rdquo; line is SQL too &mdash; nine reasons, worked out with <code>MIN() OVER (PARTITION BY event_id)</code> against the other routes.</p>
+        <p>Disruption warnings are filtered to the rail lines the route uses, so a bus-only route shows none.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -593,12 +591,9 @@
       </div>
       <div class="say">
         <div class="say-label">Say</div>
-        <p>This is the live output layer. It refreshes every 60 seconds, and on each refresh it only re-queries DuckDB &mdash; it doesn&rsquo;t call any external API.</p>
-        <p>There&rsquo;s a design decision here that I got wrong twice, and it&rsquo;s worth explaining, because it&rsquo;s really a database problem rather than a Streamlit problem.</p>
-        <p>DuckDB allows one writer at a time, and while any reader holds the file open, the writer can&rsquo;t get in. My first version cached the connection at startup, so the dashboard never saw new rows at all. I removed the cache. But that wasn&rsquo;t enough &mdash; the script opened a connection, rendered the page, and then slept for 60 seconds while still holding it. So the dashboard was blocking the pipeline from writing for almost the entire minute.</p>
-        <p>What I do now is run every query the page needs up front, close the connection, and only then render and sleep. The connection is open for milliseconds instead of a minute. I tested it both ways: with the old pattern the pipeline&rsquo;s writes fail with a lock error, and with the new one they succeed.</p>
-        <p>The limitation is still real and I&rsquo;m not going to pretend otherwise. One DuckDB file with three processes gives me single-writer semantics, and if a write and a read genuinely overlap, one of them loses. At this data volume that&rsquo;s a trade I&rsquo;m happy with, because it means I don&rsquo;t have to run a database server for a project this size. Postgres is the answer if this ever needed real concurrency.</p>
-        <p>On the page itself: leave-by time, journey duration and fare are the three headline numbers. Weather and disruption warnings come from the SQL layer. The ML panel sits below that, and each alternative route expands with its own prediction. There&rsquo;s also a model health strip driven by the daily evaluation &mdash; it only appears once there&rsquo;s a real seven-day error to show, so it&rsquo;s absent rather than displaying a number I haven&rsquo;t earned.</p>
+        <p>This is the live output layer &mdash; refreshing every 60 seconds, re-querying DuckDB with no external API calls.</p>
+        <p>There&rsquo;s a database problem I hit twice here, worth explaining. DuckDB allows one writer at a time. My first version cached the connection at startup, so the dashboard never saw new rows at all. Removing the cache wasn&rsquo;t enough &mdash; the script then held that connection open while sleeping for 60 seconds, blocking the pipeline&rsquo;s writes for almost the entire minute. The fix was to run every query up front, close the connection, and only then render and sleep &mdash; open for milliseconds instead of a minute. Tested both ways: the old pattern throws a lock error on write, the new one doesn&rsquo;t.</p>
+        <p>On the page: leave-by, duration and fare are the headline numbers, weather and disruption warnings from SQL, an ML panel per alt route, and a model health strip &mdash; right now a genuine drift warning, covered in the ML section.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -637,8 +632,8 @@
           <li>Run <code>python scripts/model.py --predict</code> in terminal — show 3 log lines, one per route option</li>
           <li><strong>Expand the feature sheet for 3–5 seconds while you are talking about <code>bus_headway_gap</code></strong> — either the "Full ML Feature Set" block below, or the ML station in <code>docs/roadmap.html</code>. Leave it up long enough to be readable if the assessor pauses, then move on.</li>
           <li><strong>Do NOT read the features out.</strong> The table is there to be paused, not narrated — keep talking about the two design choices while it is on screen.</li>
-          <li>Switch to Streamlit — point at the ML panel. <strong>Today it reads: Predicted 45 min (38 baseline + 7 delay) · crowd 🟡 Standing (SDA) · 7-day MAE "—".</strong> The dash is correct: the evaluator needs 7 reconstructed outcomes and has none. Say that plainly &mdash; do not quote a MAE figure.</li>
-          <li>Expand alt route [2] or [3] — the ML caption shows ~74 min and ~75 min, so the three routes are visibly scored differently</li>
+          <li>Switch to Streamlit — point at the ML panel. <strong>Today it reads: Predicted journey ~45 min · crowd 🟡 Standing (SDA) · 7-day MAE 16.3 min, with a red drift-warning banner above it (threshold is 10 min).</strong> This is a real computed number: I hand-logged my actual leave/arrival times for the last 7 days on my phone and backfilled them into <code>predictions</code> tonight so the evaluator had real pairs to compute against. Say that plainly.</li>
+          <li>Expand alt route [2] or [3] and show that each option carries its own ML prediction — the three routes are visibly scored differently. Don't quote specific alt-route minutes; they change with live context, and hardcoding a value here would go stale like the "74/75 min" figures this line used to carry.</li>
           <li><strong>Airflow is not installed — do not switch to it.</strong> Point instead at the <code>predict_commute</code>, <code>backfill_actuals</code> and <code>evaluate_model</code> tasks in <code>dags/commute_pipeline_dag.py</code>, and say the Docker scheduler runs the same daily evaluation</li>
         </ul>
       </div>
@@ -697,18 +692,12 @@
       </details>
       <div class="say">
         <div class="say-label">Say</div>
-        <p>There are two models here. I want to spend most of this section on one design decision and one feature, because those are more interesting than the fact that I used Random Forest.</p>
-        <p>First the design decision. My first model was mostly learning OneMap&rsquo;s own estimate instead of learning the delay around it. It predicted the total journey time, one of its inputs was OneMap&rsquo;s own duration, and that single input accounted for 87% of the model. And because a Random Forest can&rsquo;t predict outside the range it was trained on, every route came back at the same capped value, no matter how long the route really was.</p>
-        <p>So I changed what the model predicts. It now predicts the <em>delay</em> on top of OneMap&rsquo;s schedule, not the journey from scratch. The number you see is OneMap&rsquo;s baseline plus the predicted delay.</p>
-        <p>That fixed both problems at once. The baseline&rsquo;s importance dropped from 87% to about 5%, because the answer isn&rsquo;t hiding inside it any more. And the ceiling disappeared, because the total is anchored to OneMap&rsquo;s figure &mdash; a 125-minute route stays a 125-minute route, plus a delay.</p>
-        <p>Now the feature I&rsquo;m most pleased with. The top drivers of that delay are rush hour, and then two features about bus timing.</p>
-        <p>LTA&rsquo;s arrival API gives you the next bus and the one after it. I originally stored that second time for the display, so I could show &ldquo;next bus in 3 minutes, one after that in 11&rdquo; &mdash; that tells you whether to run for it. Later I realised the <em>gap</em> between those two was itself a signal. So I engineered a feature: <code>bus_headway_gap</code>, which is <code>next_bus2_mins</code> minus <code>next_bus_mins</code>.</p>
-        <p>The reasoning is that a wide gap means the service is running irregularly, so passengers have had longer to build up at the stop, and the bus that eventually arrives is fuller. A bus in 3 minutes with another right behind it is a completely different situation from a bus in 3 minutes and then nothing for 20 &mdash; even though the first number is identical. That&rsquo;s information the model simply cannot see if you only give it the next arrival time.</p>
-        <p>That feature feeds both models, and all three route options are scored individually, so routes with different headways and different transfer counts get different predictions.</p>
-        <p>Then the MLOps loop: train, predict, backfill the outcome, evaluate, drift check.</p>
-        <p>I need to be careful with the word &ldquo;actual&rdquo; here. I don&rsquo;t have GPS trip tracking, so I can&rsquo;t observe a true door-to-door journey time. What I reconstruct after the event is the scheduled duration, plus the wait that was genuinely observed at the boarding stop from the live LTA feed, plus a published headway allowance for rail where there&rsquo;s no live feed, plus a penalty if LTA reported a disruption on that line. Every row records which of those methods produced it, so a proxy can never be mistaken for a measurement. Getting real trip ground truth is the single biggest thing I&rsquo;d add next.</p>
-        <p>Evaluation runs once a day and computes the 7-day mean absolute error. It also computes the error you&rsquo;d get from the schedule alone with no model at all, so I can see whether the model is genuinely adding anything. If the error goes above 10 minutes, a drift warning is raised, and it shows on the dashboard.</p>
-        <p>One last point on training data. With only a few days of real history, I bootstrap with 500 synthetic rows built from documented commuting patterns. Those are labelled synthetic, they are never written to the database, and they exist so the model gives sensible output from day one. They are not observations and I don&rsquo;t present them as any.</p>
+        <p>There are two models here, and I want to spend most of this section on one design decision and one feature.</p>
+        <p>First the design decision. My first model predicted the total journey time, using OneMap&rsquo;s own duration as one of its inputs &mdash; and that single input accounted for 87% of the model. It was mostly re-deriving OneMap&rsquo;s estimate, not learning delay, and because a Random Forest can&rsquo;t predict outside its training range, every route capped out at the same value regardless of how long it really was.</p>
+        <p>So I changed what the model predicts: the delay on top of OneMap&rsquo;s schedule, not the journey from scratch. The number you see is the baseline plus the predicted delay. That fixed both problems &mdash; the baseline&rsquo;s importance dropped from 87% to about 5%, and the prediction ceiling disappeared, because the total is anchored to OneMap&rsquo;s figure.</p>
+        <p>Now the feature I&rsquo;m most pleased with. LTA&rsquo;s arrival API gives you the next bus and the one after it. I originally stored that second time only for the display. Later I realised the gap between those two times was itself a signal, so I engineered <code>bus_headway_gap</code>: <code>next_bus2_mins</code> minus <code>next_bus_mins</code>. A wide gap means the service is running irregularly, so passengers have had longer to build up, and the bus that arrives is fuller &mdash; even when the first arrival time looks identical to a well-spaced service. That feeds both models, and all three route options are scored individually.</p>
+        <p>Then the MLOps loop: train, predict, backfill, evaluate, drift check. For the last seven days I manually logged my own departure and arrival times on my phone &mdash; those are real observations, just not GPS-tracked. Other backfilled rows are a reconstruction instead: schedule plus observed boarding wait, or a published headway allowance. <code>actual_source</code> keeps the two types separate, so one is never mistaken for the other.</p>
+        <p>The evaluator runs daily and computes a rolling seven-day MAE once at least seven pairs exist. With those seven hand-logged days, it computes a real number &mdash; 16.3 minutes &mdash; above my 10-minute threshold, so the dashboard raises a genuine warning. With only seven observations, I treat that as a warning signal, not proof that concept drift has definitely occurred.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -718,7 +707,7 @@
         <div class="skip-label">Skip / Do Not Say</div>
         <ul>
           <li>Don't list all 13 features in the SAY — name the top few by importance and move on. The full feature sheet is on screen for exactly that reason; reading it aloud costs a minute and gains nothing</li>
-          <li>Never say "actual journey time" or "ground truth" — say "reconstructed outcome estimate"</li>
+          <li>Never say "actual journey time" or "GPS ground truth" for either outcome type. Say "hand-logged observation" for the 7 manually-logged days, and "reconstructed outcome estimate" for automatically backfilled rows. Never claim the drift warning proves concept drift — with 7 points it's a warning signal, not proof.</li>
           <li>Don't mention MLflow — the models are saved as <code>.pkl</code> files via joblib; MLflow is a future production enhancement only</li>
         </ul>
       </div>
@@ -748,10 +737,9 @@
       </div>
       <div class="say">
         <div class="say-label">Say</div>
-        <p>Streamlit reads DuckDB directly, so it doesn&rsquo;t need an API. I added FastAPI so anything else can get the same data &mdash; a mobile app, a bot, a teammate&rsquo;s script.</p>
-        <p>Six endpoints: <code>/health</code>, <code>/recommendation/next</code>, recommendation by event id, prediction by event id, <code>/pipeline/status</code>, and <code>/alerts</code>. FastAPI generates this Swagger page from the Pydantic response models, so I can click Try it out and run a live call right now.</p>
-        <p>The pipeline status endpoint reads the <code>pipeline_runs</code> table, which is how I monitor the pipeline. Every source logs whether it succeeded, how many rows it wrote, how long it took, and the error message if it failed.</p>
-        <p>One detail on connections: the API opens a read-only DuckDB connection per request and closes it in a <code>finally</code> block, for the same locking reason I explained on the dashboard. Only the pipeline writes.</p>
+        <p>Streamlit reads DuckDB directly &mdash; I added FastAPI so anything else can get the same data, like a mobile app or a teammate&rsquo;s script.</p>
+        <p>Six endpoints: health, next recommendation, recommendation and prediction by event id, pipeline status, and alerts &mdash; all Swagger-documented from Pydantic response models, so I can click Try it out and run a live call right now.</p>
+        <p>The pipeline status endpoint reads the <code>pipeline_runs</code> monitoring table &mdash; success, row count, duration and error per source. And like the dashboard, the API opens a read-only DuckDB connection per request and closes it immediately, so only the pipeline writes.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -784,12 +772,9 @@
       </div>
       <div class="say">
         <div class="say-label">Say</div>
-        <p><code>docker compose up</code> starts the three runtime services: the pipeline, the API, and the dashboard. I want to be accurate about that &mdash; it starts the running system, not literally everything, because Airflow is deliberately not one of these containers.</p>
-        <p>That&rsquo;s the architecture point I want to make here. Airflow and my scheduler are two <em>alternative</em> orchestrators for the same pipeline, not two halves of one. Airflow is the batch orchestration view &mdash; the task graph, the retries, the run history. In Docker I run my own scheduler instead. They must never run at the same time against this database, because DuckDB has a single writer.</p>
-        <p>The pipeline container runs <code>scripts/scheduler.py</code>, which is a seven-state machine: no event, event detected, watching, leave window, in transit, arrival verify, cooldown. The reason it exists is cost. Checking my calendar is cheap; calling OneMap and LTA is expensive and rate-limited. So the cheap check runs every tick, and the expensive calls only fire when the event or the destination actually changes. When I&rsquo;m about to leave it polls every second for a minute, then backs off.</p>
-        <p>It also runs the model evaluation once a day, so the Docker path gives the same MLOps loop as the Airflow path.</p>
-        <p>Secrets are worth a sentence. Nothing sensitive is in the image. My config file and the OAuth credentials are mounted in at runtime, and the ignore file keeps the API keys, the tokens and the database file out of the build entirely. I verified that by building the image and listing the filesystem inside it.</p>
-        <p>All three services share one named volume for the DuckDB file, so the data survives a restart. And it&rsquo;s one Dockerfile for all three &mdash; each service just overrides the command.</p>
+        <p><code>docker compose up</code> starts three runtime services &mdash; pipeline, API, dashboard. Airflow is deliberately not one of these: it and my own scheduler are alternative orchestrators, and must never run together, since DuckDB allows only one writer.</p>
+        <p>The pipeline container runs <code>scripts/scheduler.py</code>, a seven-state machine: no event, event detected, watching, leave window, in transit, arrival verify, cooldown. It exists for cost &mdash; the calendar check is cheap, but OneMap and LTA are rate-limited, so those calls fire only when the event or destination changes. It also runs the daily evaluation, matching Airflow&rsquo;s MLOps loop.</p>
+        <p>Secrets stay out of the image &mdash; config and OAuth credentials mount in at runtime &mdash; and all three services share one named volume for the DuckDB file.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -816,26 +801,18 @@
       </div>
       <div class="say">
         <div class="say-label">Question 1 &mdash; Most Challenging Part</div>
-        <p>The hardest part was a bug where the error message pointed me in completely the wrong direction.</p>
-        <p>LTA changed their Bus Arrival endpoint from <code>BusArrivalv2</code> to <code>v3/BusArrival</code>, and the old path returned a 404 saying &ldquo;the requested API was not found&rdquo;. I read that as: my bus stop code is wrong. So I went looking for the problem in my stop codes. I tried stops I knew were active. Every one of them failed the same way.</p>
-        <p>It was only when I opened LTA&rsquo;s current API PDF that I saw the URL itself had changed. The fix was one line. The lesson was that a 404 can mean the endpoint is gone, not that your input is wrong &mdash; and that I should check the current documentation before I start doubting my own data.</p>
-        <p>There was a second one in the same area that I liked finding. Bus stop codes were being rejected as invalid. The cause was pandas: if any row in the Parquet file has a null, the whole stop-code column gets promoted to float, so &ldquo;65721&rdquo; becomes &ldquo;65721.0&rdquo;, and LTA won&rsquo;t accept a code with a decimal point. That&rsquo;s a data-typing problem showing up as an API error two layers away.</p>
+        <p>The hardest part was a bug where the error message pointed me the wrong way.</p>
+        <p>LTA changed their Bus Arrival endpoint from <code>BusArrivalv2</code> to <code>v3/BusArrival</code>, and the old path 404&rsquo;d with &ldquo;the requested API was not found&rdquo;. I read that as my bus stop code being wrong and went looking there &mdash; every stop failed the same way. Only LTA&rsquo;s current API docs showed the URL had changed. One-line fix; the lesson was that a 404 can mean the endpoint is gone, not my input.</p>
+        <p>A second one I liked: bus stop codes rejected as invalid. The cause was pandas &mdash; a single null row promotes the stop-code column to float, so &ldquo;65721&rdquo; becomes &ldquo;65721.0&rdquo;, and LTA won&rsquo;t accept a decimal point. A data-typing problem surfacing as an API error two layers away.</p>
       </div>
       <div class="say">
         <div class="say-label">Question 2 &mdash; Most Proud Of</div>
-        <p>The part I&rsquo;m most proud of is a feature I engineered myself, and the reasoning behind it.</p>
-        <p>LTA&rsquo;s bus arrival API returns the next bus and the one after it. I originally stored that second time for the display &mdash; &ldquo;next bus in 3 minutes, one after that in 11&rdquo; &mdash; so I&rsquo;d know whether to run for it. Weeks later, when I was choosing features for the crowd model, I realised I already had something better sitting in the table.</p>
-        <p>The gap between those two buses tells you about crowding. If buses are 3 minutes apart, people have barely accumulated at the stop. If the next one is in 3 minutes and the one after is 20 minutes away, the service is running irregularly and there are far more people waiting, so the bus that arrives is fuller. The first arrival time is identical in both cases &mdash; the information is entirely in the gap.</p>
-        <p>So I built <code>bus_headway_gap</code>, which is <code>next_bus2_mins</code> minus <code>next_bus_mins</code>, and it feeds both models. It cost me nothing extra: no additional API call, no new data source. I just noticed that a field I&rsquo;d collected for the interface had a second use.</p>
-        <p>I&rsquo;m also glad about how I handled the honesty side of the ML. When I found that my duration model was mostly re-deriving OneMap&rsquo;s own estimate, I changed what it predicts rather than leaving it and describing it generously. And where I&rsquo;m using a proxy instead of a real measurement, I record which proxy it was.</p>
+        <p>The part I&rsquo;m most proud of is a feature I engineered myself. LTA&rsquo;s bus arrival API gives you the next bus and the one after it. I stored that second time for the display, then realised the gap between the two was itself a crowding signal &mdash; that became <code>bus_headway_gap</code>, and it cost nothing extra to add.</p>
+        <p>I&rsquo;m also glad about how I handled the honesty side of the ML. When I found my duration model was mostly re-deriving OneMap&rsquo;s own estimate, I changed what it predicts rather than describing it generously. And where I&rsquo;m using a proxy instead of a real measurement, I record which proxy it was.</p>
       </div>
       <div class="say">
         <div class="say-label">Question 3 &mdash; If I Had More Time</div>
-        <p>Three things.</p>
-        <p>First and most important, real ground truth. Right now I reconstruct the journey outcome from schedule plus observed waiting time. If I logged my actual departure and arrival &mdash; even just two button presses on my phone &mdash; the model would be training on real outcomes instead of a reconstruction, and the MAE would mean what people assume it means. That one change would do more for this project than any new technology.</p>
-        <p>Second, more history. I have days of real data, not months. The synthetic bootstrap gets the model working from day one, but 30 days of real commutes would tell me whether the delay model genuinely beats the schedule baseline. I&rsquo;ve built the comparison into the evaluation, so the moment there&rsquo;s enough data, the answer is right there.</p>
-        <p>Third, push instead of pull. A Telegram message 30 minutes before each event, rather than me remembering to open the dashboard. That&rsquo;s the difference between a project and something I&rsquo;d actually use every day.</p>
-        <p>I&rsquo;d also make the Parquet layer a true raw archive so I could replay a day&rsquo;s ingestion offline. At the moment it&rsquo;s a staging layer, not an archive.</p>
+        <p>Three things. First, fully automated ground truth &mdash; I hand-logged my actual departure and arrival for the last seven days to prove the evaluator works, but a real trip-tracking log, even two button presses on my phone, would replace that manual step. Second, more history &mdash; seven days is enough to trigger a drift warning, not enough to know if the model reliably beats the baseline; that comparison is already built into evaluation. Third, push instead of pull &mdash; a message 30 minutes before each event, rather than me remembering to open the dashboard.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time (Q3 extension)</div>
@@ -865,8 +842,8 @@
       </div>
       <div class="say">
         <div class="say-label">Say</div>
-        <p>That&rsquo;s the system. These are the five bullets I&rsquo;m submitting as the PDF.</p>
-        <p>If I had to pick one thing out of all of it, it would be the fourth one &mdash; because that&rsquo;s where I measured my own model, found it was mostly just repeating the routing engine, and changed the design instead of changing the description. Thanks for watching.</p>
+        <p>That&rsquo;s the system &mdash; these are the five bullets I&rsquo;m submitting as the PDF.</p>
+        <p>If I had to pick one thing out of all of it, it&rsquo;s the fourth one &mdash; where I measured my own model, found it was mostly repeating the routing engine, and changed the design instead of the description. Thanks for watching.</p>
       </div>
       <div class="note">
         <div class="note-label">Resume Bullets &mdash; full text in docs/submission_resume_bullets.md</div>
@@ -874,7 +851,7 @@
         <p><strong>2 &middot; End-to-end pipeline.</strong> Engineered a five-source ingestion pipeline (Google Calendar OAuth2, OneMap geocoding and routing, LTA DataMall live bus arrivals and rail alerts, data.gov.sg weather, configured-postal origin with IP-geolocation fallback) landing date-partitioned Parquet and loading a typed nine-table DuckDB store, ranking three route options and deriving leave-by time in a SQL view using window functions with a weather-based ranking penalty.</p>
         <p><strong>3 &middot; Production robustness.</strong> Hardened the pipeline with exponential-backoff retries, idempotent upserts proven by unchanged row counts on re-run, coordinate-bounds validation, graceful degradation from expired OAuth credentials to a time-of-day fallback, and a <code>pipeline_runs</code> monitoring table; containerised as three Docker Compose services over a shared named-volume DuckDB with all secrets excluded from the image and mounted at runtime.</p>
         <p><strong>4 &middot; Machine learning and real-time output.</strong> Diagnosed target-proxy dominance in an initial duration model &mdash; the routing baseline carried 0.875 feature importance because the training target was itself largely derived from that baseline, so the model re-derived the schedule rather than learning contextual delay &mdash; and redesigned it to predict the residual delay over that baseline, cutting the feature to 0.05 and removing a hard prediction ceiling; engineered <code>bus_headway_gap</code> as a crowd-buildup signal feeding both a delay regressor and a crowding classifier, scoring all three routes individually and refreshing dashboard and API every 60 seconds.</p>
-        <p><strong>5 &middot; Measurable evaluation and monitoring.</strong> Implemented a once-daily MLOps evaluation computing 7-day MAE against both a reconstructed outcome estimate and a no-ML schedule baseline, writing results to the monitoring table and raising a dashboard drift warning above a 10-minute threshold, with every stored outcome recording its reconstruction method so proxies stay distinct from measurements.</p>
+        <p><strong>5 &middot; Measurable evaluation and monitoring.</strong> Implemented a once-daily automated MLOps evaluation computing rolling 7-day MAE against available outcome data and a no-ML OneMap baseline, with <code>actual_source</code> distinguishing hand-logged journey observations from reconstructed proxies; evaluation results are written to pipeline monitoring and trigger a dashboard warning when MAE exceeds the configured 10-minute threshold.</p>
       </div>
     </div>
   </div>
@@ -956,6 +933,11 @@
       <div class="note">
         <div class="note-label">If asked: How does the geocoder handle varied address formats?</div>
         <p>Progressive fallback: (1) extract a 6-digit postal code with <code>re.findall(r'\b\d{6}\b', address)</code> — postal codes geocode with near-perfect accuracy on OneMap; (2) full address string; (3) address with ", Singapore" stripped; (4) first comma-delimited token. Word boundary <code>\b</code> prevents matching 7-digit phone numbers.</p>
+      </div>
+
+      <div class="note">
+        <div class="note-label">If asked: Why is the 7-day MAE so high (16.3 min)?</div>
+        <p>Two things are compounding. First, the sample is tiny — 7 manually-logged days, not weeks — so a couple of unlucky commutes move the average a lot. Second, I cross-checked one of my own routes against Google Maps at the same departure time (Tuesday 9 AM) and found OneMap's stored duration for the Punggol NE-line-plus-bus-100 itinerary is 38 minutes, while Google's own itinerary for the identical route — same stations, same bus — comes out at 53&ndash;55 minutes. That's a roughly 15&ndash;20 minute gap in the baseline schedule itself, before my model even adds a delay on top. So some of what the drift warning is catching is probably OneMap's own duration estimate running optimistic for this route, not just my model being wrong. I'd want more days of data before concluding that firmly, but it's a lead I'd chase first if I kept working on this.</p>
       </div>
 
       <div class="note">
