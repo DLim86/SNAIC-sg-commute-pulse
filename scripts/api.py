@@ -53,11 +53,12 @@ _LEGS_SQL = """
     ORDER BY leg_sequence
 """
 
+# Scoped to the latest ingestion snapshot (the stop nearest the current origin).
 _FIRST_TRANSIT_SQL = """
     SELECT next_bus_mins, next_bus2_mins, load
     FROM bus_arrivals
     WHERE service_no = ?
-    ORDER BY fetched_at DESC
+      AND fetched_at = (SELECT MAX(fetched_at) FROM bus_arrivals)
     LIMIT 1
 """
 
@@ -70,7 +71,8 @@ _ALT_ROUTES_SQL = """
 
 _PREDICTIONS_SQL = """
     SELECT p.prediction_id, p.option_id, p.predicted_min, p.predicted_crowd,
-           p.actual_min, p.mae_7day, p.model_version, p.predicted_at
+           p.actual_min, p.mae_7day, p.model_version, p.predicted_at,
+           p.predicted_delay_min, p.actual_source, r.total_duration_min
     FROM predictions p
     JOIN route_options r ON p.option_id = r.option_id
     WHERE r.event_id = ? AND p.option_id IS NOT NULL
@@ -145,6 +147,11 @@ class MLPrediction(BaseModel):
     mae_7day: Optional[float] = None
     model_version: Optional[str] = None
     predicted_at: Optional[str] = None
+    # predicted_min = baseline_duration_min + predicted_delay_min
+    baseline_duration_min: Optional[int] = None
+    predicted_delay_min: Optional[int] = None
+    # How actual_min was reconstructed. It is a proxy, never GPS ground truth.
+    actual_source: Optional[str] = None
 
 
 class PipelineRun(BaseModel):
@@ -290,6 +297,9 @@ def prediction_by_event(event_id: str):
             mae_7day=r[5],
             model_version=r[6],
             predicted_at=str(r[7]) if r[7] else None,
+            predicted_delay_min=r[8],
+            actual_source=r[9],
+            baseline_duration_min=r[10],
         )
         for r in rows
     ]

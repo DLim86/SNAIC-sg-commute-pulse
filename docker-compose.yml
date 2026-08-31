@@ -1,14 +1,31 @@
+# Three runtime services share one DuckDB file on a named volume.
+#
+# Secrets are NEVER baked into the image (see .dockerignore). They are supplied
+# at runtime in one of two ways:
+#   1. bind-mount config.py read-only (default below — works with the local setup)
+#   2. environment variables via a .env file (LTA_API_KEY, ONEMAP_EMAIL,
+#      ONEMAP_PASSWORD, GOOGLE_CALENDAR_ID, HOME_ADDRESS, WORK_ADDRESS)
+# ingest.py falls back to os.environ when config.py is absent.
+#
+# Airflow is deliberately NOT a service here. Airflow and scripts/scheduler.py are
+# two alternative orchestrators for the same pipeline and must never run against
+# this DuckDB file at the same time — DuckDB allows a single writer.
+
 services:
 
   pipeline:
     build: .
     command: ["python", "scripts/scheduler.py"]
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - db_data:/app/db
       - ./data:/app/data
       - ./models:/app/models
+      - ./config.py:/app/config.py:ro
       - ./token.json:/app/token.json
-      - ./credentials.json:/app/credentials.json
+      - ./credentials.json:/app/credentials.json:ro
     restart: unless-stopped
 
   api:

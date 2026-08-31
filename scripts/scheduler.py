@@ -43,6 +43,7 @@ ARRIVAL_VERIFY_SEC      = 30     # Interval between arrival verify checks
 COOLDOWN_DURATION_SEC   = 600    # How long to stay in POST_ARRIVAL_COOLDOWN (10 min)
 COOLDOWN_INTERVAL_SEC   = 60     # Calendar check interval during cooldown
 WEATHER_INTERVAL_SEC    = 1800   # Weather refresh interval in all states (30 min)
+EVAL_HOUR_SGT           = 8      # Hour (SGT) for the once-daily model evaluation
 
 
 # ── Script runners ────────────────────────────────────────────────────────────
@@ -77,6 +78,16 @@ def _run_weather():
     log.info("Weather refresh due — running weather mode")
     _run("scripts/ingest.py", "--mode", "weather")
     _run("scripts/transform.py")
+
+
+def _run_daily_evaluation():
+    """Once-daily MLOps evaluation: 7-day MAE + drift check.
+
+    This mirrors the Airflow DAG's gate_evaluate task. Airflow and this scheduler
+    are alternative orchestrators — only one should run against the database.
+    """
+    log.info("Daily model evaluation window (%02d:00 SGT) — running --evaluate", EVAL_HOUR_SGT)
+    _run("scripts/model.py", "--evaluate")
 
 
 def _get_event_timing():
@@ -122,15 +133,22 @@ def main():
     bus_refresh_last = now_utc - timedelta(seconds=BUS_REFRESH_SEC)
     cooldown_end    = None  # datetime: when POST_ARRIVAL_COOLDOWN ends
     weather_last    = now_utc - timedelta(seconds=WEATHER_INTERVAL_SEC)
+    last_eval_date  = None  # SGT date the evaluation last ran, so it fires once per day
 
     while True:
         now_utc = datetime.now(timezone.utc)
-        now_sgt_hour = now_utc.astimezone(SGT).hour
+        now_sgt = now_utc.astimezone(SGT)
+        now_sgt_hour = now_sgt.hour
 
         # ── Weather: independent of state, every 30 min ───────────────────────
         if (now_utc - weather_last).total_seconds() >= WEATHER_INTERVAL_SEC:
             _run_weather()
             weather_last = datetime.now(timezone.utc)
+
+        # ── Model evaluation: once per day in the 8 AM SGT hour ───────────────
+        if now_sgt_hour == EVAL_HOUR_SGT and last_eval_date != now_sgt.date():
+            _run_daily_evaluation()
+            last_eval_date = now_sgt.date()
 
         # ── State: NO_EVENT ───────────────────────────────────────────────────
         if state == "NO_EVENT":

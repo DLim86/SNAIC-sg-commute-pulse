@@ -185,6 +185,11 @@ MIGRATIONS = [
     "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS alighting_stop_code VARCHAR",
     "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS transit_service_no VARCHAR",
     "ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS nearest_weather_area VARCHAR",
+    # Delay model: the total is baseline + this, so the delay is auditable on its own.
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS predicted_delay_min INTEGER",
+    # Which reconstruction produced actual_min. Never blank for a backfilled row,
+    # so a proxy can never be mistaken for an observed journey time.
+    "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS actual_source VARCHAR",
 ]
 
 

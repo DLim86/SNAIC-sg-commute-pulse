@@ -3,7 +3,7 @@ config.py
 
 # Google Calendar OAuth2 — never commit
 credentials.json
-token.json
+token*.json
 
 # Registration documents and credential files (contain real API keys / tokens)
 LTA/

@@ -184,7 +184,23 @@ TOKEN_PATH = Path(__file__).parent.parent / "token.json"
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 
+class CalendarAuthError(RuntimeError):
+    """Google Calendar credentials are missing, expired, or revoked."""
+
+
+def _interactive_auth_allowed():
+    # run_local_server() blocks forever without a browser, so never attempt it
+    # from a container or a scheduler subprocess.
+    if os.environ.get("COMMUTE_OAUTH_INTERACTIVE") == "1":
+        return True
+    try:
+        return sys.stdin.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
 def _get_calendar_service():
+    from google.auth.exceptions import GoogleAuthError
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
@@ -192,28 +208,55 @@ def _get_calendar_service():
 
     creds = None
     if TOKEN_PATH.exists():
-        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+        except (ValueError, OSError) as exc:
+            raise CalendarAuthError(f"token.json could not be read: {exc}") from exc
+
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except GoogleAuthError as exc:
+                raise CalendarAuthError(
+                    "Google refresh token was rejected (expired or revoked). "
+                    "Delete token.json and run `python scripts/ingest.py` in a terminal "
+                    "to re-consent."
+                ) from exc
+        elif _interactive_auth_allowed():
+            if not CREDENTIALS_PATH.exists():
+                raise CalendarAuthError("credentials.json not found — cannot start OAuth consent")
             flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
             creds = flow.run_local_server(port=0)
-        TOKEN_PATH.write_text(creds.to_json())
-    return build("calendar", "v3", credentials=creds)
+        else:
+            raise CalendarAuthError(
+                "No valid token.json and no interactive terminal available for OAuth consent"
+            )
+        try:
+            TOKEN_PATH.write_text(creds.to_json())
+        except OSError as exc:
+            log.warning("Could not persist refreshed token: %s", exc)
+
+    try:
+        return build("calendar", "v3", credentials=creds)
+    except Exception as exc:
+        raise CalendarAuthError(f"Could not build Calendar client: {exc}") from exc
 
 
 def fetch_next_calendar_event(con, token):
     service = _get_calendar_service()
     now_utc = datetime.now(timezone.utc).isoformat()
 
-    result = service.events().list(
-        calendarId=GOOGLE_CALENDAR_ID,
-        timeMin=now_utc,
-        maxResults=10,
-        singleEvents=True,
-        orderBy="startTime",
-    ).execute()
+    try:
+        result = service.events().list(
+            calendarId=GOOGLE_CALENDAR_ID,
+            timeMin=now_utc,
+            maxResults=10,
+            singleEvents=True,
+            orderBy="startTime",
+        ).execute()
+    except Exception as exc:
+        raise CalendarAuthError(f"Calendar API request failed: {exc}") from exc
 
     for event in result.get("items", []):
         location = event.get("location", "").strip()
@@ -258,9 +301,31 @@ def fetch_next_calendar_event(con, token):
 
 # ── OneMap routing ────────────────────────────────────────────────────────────
 
-def ingest_routes(con, event_id, dest_lat, dest_lng, token, origin_lat, origin_lng):
-    t0 = time.time()
-    data = fetch_with_retry(
+# First guess at journey length, used only to pick the initial departure time to
+# route for. Refined by a second call once OneMap returns a real duration.
+INITIAL_JOURNEY_ALLOWANCE_MIN = 60
+ARRIVAL_BUFFER_MIN = 10
+DEPARTURE_REFINE_THRESHOLD_MIN = 20
+
+
+def _planned_departure(con, event_id, journey_min):
+    """Departure time to route for: leave late enough to arrive just before the event,
+    but never in the past."""
+    now_sgt = datetime.now(SGT)
+    row = con.execute(
+        "SELECT start_time FROM calendar_events WHERE event_id = ?", [event_id]
+    ).fetchone()
+    if not row or row[0] is None:
+        return now_sgt
+    start = row[0]
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    depart = start.astimezone(SGT) - timedelta(minutes=journey_min + ARRIVAL_BUFFER_MIN)
+    return max(now_sgt, depart)
+
+
+def _route_request(token, origin_lat, origin_lng, dest_lat, dest_lng, depart_at):
+    return fetch_with_retry(
         "https://www.onemap.gov.sg/api/public/routingsvc/route",
         headers={"Authorization": token},
         params={
@@ -269,10 +334,34 @@ def ingest_routes(con, event_id, dest_lat, dest_lng, token, origin_lat, origin_l
             "routeType": "pt",
             "mode": "TRANSIT",
             "numItineraries": 3,
-            "date": date.today().strftime("%m-%d-%Y"),
-            "time": "08:00:00",
+            "date": depart_at.strftime("%m-%d-%Y"),
+            "time": depart_at.strftime("%H:%M:%S"),
         },
     )
+
+
+def ingest_routes(con, event_id, dest_lat, dest_lng, token, origin_lat, origin_lng):
+    t0 = time.time()
+
+    depart_at = _planned_departure(con, event_id, INITIAL_JOURNEY_ALLOWANCE_MIN)
+    log.info("Routing for departure %s SGT", depart_at.strftime("%Y-%m-%d %H:%M"))
+    data = _route_request(token, origin_lat, origin_lng, dest_lat, dest_lng, depart_at)
+
+    # The first call guessed the journey length. If the real duration moves the
+    # departure window materially, route again for the corrected time.
+    if isinstance(data, dict):
+        first = data.get("plan", {}).get("itineraries", [])
+        if first:
+            best_min = round(min(it.get("duration", 0) for it in first) / 60)
+            refined = _planned_departure(con, event_id, best_min)
+            drift_min = abs((refined - depart_at).total_seconds()) / 60
+            if drift_min >= DEPARTURE_REFINE_THRESHOLD_MIN:
+                log.info(
+                    "Journey is %d min — re-routing for corrected departure %s SGT (%.0f min shift)",
+                    best_min, refined.strftime("%H:%M"), drift_min,
+                )
+                data = _route_request(token, origin_lat, origin_lng, dest_lat, dest_lng, refined)
+                depart_at = refined
 
     if not isinstance(data, dict):
         raise ValueError(f"Unexpected OneMap response type: {type(data).__name__} — {str(data)[:120]}")
@@ -670,8 +759,13 @@ def main():
         try:
             event_id, dest_lat, dest_lng = fetch_next_calendar_event(con, token)
             _purge_stale_events(con, event_id)
-        except ValueError as exc:
-            log.warning("No usable calendar event — %s", exc)
+        except (ValueError, CalendarAuthError) as exc:
+            if isinstance(exc, CalendarAuthError):
+                log.error("Google Calendar unavailable — %s", exc)
+                log_run(con, "calendar", 0, 0, "error", f"auth: {exc}")
+            else:
+                log.warning("No usable calendar event — %s", exc)
+            log.info("Falling back to time-of-day default destination")
             result = get_smart_default(con, token)
             if result is None:
                 log_run(con, "calendar", 0, 0, "skipped", str(exc))
@@ -710,13 +804,16 @@ def _fetch_raw_calendar_event():
     """Google Calendar only — no geocoding, no ip-api. Returns (event_id, location_raw, start_dt_str) or (None, None, None)."""
     service = _get_calendar_service()
     now_utc = datetime.now(timezone.utc).isoformat()
-    result = service.events().list(
-        calendarId=GOOGLE_CALENDAR_ID,
-        timeMin=now_utc,
-        maxResults=10,
-        singleEvents=True,
-        orderBy="startTime",
-    ).execute()
+    try:
+        result = service.events().list(
+            calendarId=GOOGLE_CALENDAR_ID,
+            timeMin=now_utc,
+            maxResults=10,
+            singleEvents=True,
+            orderBy="startTime",
+        ).execute()
+    except Exception as exc:
+        raise CalendarAuthError(f"Calendar API request failed: {exc}") from exc
     for event in result.get("items", []):
         location = event.get("location", "").strip()
         start_dt_str = event.get("start", {}).get("dateTime")
@@ -736,7 +833,13 @@ def run_calendar_check():
     """
     con = duckdb.connect(str(DB_PATH))
     try:
-        new_event_id, new_location_raw, _ = _fetch_raw_calendar_event()
+        try:
+            new_event_id, new_location_raw, _ = _fetch_raw_calendar_event()
+        except CalendarAuthError as exc:
+            # Degrade instead of crashing the scheduler tick.
+            log.error("Google Calendar unavailable — %s", exc)
+            log_run(con, "calendar", 0, 0, "error", f"auth: {exc}")
+            new_event_id, new_location_raw = None, None
 
         if new_event_id is not None:
             stored = con.execute(
@@ -753,7 +856,7 @@ def run_calendar_check():
         try:
             event_id, dest_lat, dest_lng = fetch_next_calendar_event(con, token)
             _purge_stale_events(con, event_id)
-        except ValueError as exc:
+        except (ValueError, CalendarAuthError) as exc:
             log.warning("No usable calendar event — %s", exc)
             result = get_smart_default(con, token)
             if result is None:

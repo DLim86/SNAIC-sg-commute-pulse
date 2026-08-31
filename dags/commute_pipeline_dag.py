@@ -22,9 +22,29 @@ default_args = {
 }
 
 
+EVAL_HOUR_SGT = 8
+
+
 def _is_evaluation_window(**ctx):
-    """Only let evaluate_model run during the 8 AM SGT half-hour window."""
-    return datetime.now(timezone.utc).astimezone(SGT).hour == 8
+    """Pass exactly once per day: the single */30 run whose logical time is 08:00 SGT.
+
+    Uses the DAG run's logical time, not wall clock, so a delayed or re-run task
+    still evaluates for the interval it was scheduled for. The minute check is
+    what makes it once-daily — with a */30 schedule, an hour-only test passes at
+    both 08:00 and 08:30.
+    """
+    logical = ctx.get("logical_date") or ctx.get("data_interval_start")
+    if logical is None:
+        logical = datetime.now(timezone.utc)
+    if logical.tzinfo is None:
+        logical = logical.replace(tzinfo=timezone.utc)
+    local = logical.astimezone(SGT)
+    fire = local.hour == EVAL_HOUR_SGT and local.minute < 30
+    log.info(
+        "gate_evaluate: logical %s SGT → %s",
+        local.strftime("%Y-%m-%d %H:%M"), "RUN" if fire else "skip",
+    )
+    return fire
 
 
 with DAG(

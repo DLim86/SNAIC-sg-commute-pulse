@@ -58,11 +58,13 @@ WHERE option_id = ?
 ORDER BY leg_sequence
 """
 
+# Scoped to the latest ingestion snapshot (the stop nearest the current origin).
+# service_no alone could match the same bus number at a different stop.
 BUS_WAIT_QUERY = """
 SELECT next_bus_mins, load
 FROM bus_arrivals
 WHERE service_no = ?
-ORDER BY fetched_at DESC
+  AND fetched_at = (SELECT MAX(fetched_at) FROM bus_arrivals)
 LIMIT 1
 """
 
@@ -70,7 +72,7 @@ FIRST_TRANSIT_FULL_QUERY = """
 SELECT next_bus_mins, next_bus2_mins, load
 FROM bus_arrivals
 WHERE service_no = ?
-ORDER BY fetched_at DESC
+  AND fetched_at = (SELECT MAX(fetched_at) FROM bus_arrivals)
 LIMIT 1
 """
 

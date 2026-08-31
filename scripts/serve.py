@@ -43,11 +43,14 @@ WHERE option_id = ?
 ORDER BY leg_sequence
 """
 
+# Scoped to the most recent ingestion snapshot, which is by definition the stop
+# nearest the current origin. Matching on service_no alone could return an
+# arrival for the same bus number at a stop the user is not standing at.
 FIRST_TRANSIT_FULL_QUERY = """
-SELECT next_bus_mins, next_bus2_mins, load
+SELECT next_bus_mins, next_bus2_mins, load, bus_stop_code
 FROM bus_arrivals
 WHERE service_no = ?
-ORDER BY fetched_at DESC
+  AND fetched_at = (SELECT MAX(fetched_at) FROM bus_arrivals)
 LIMIT 1
 """
 
@@ -70,7 +73,8 @@ LIMIT 3
 
 PREDICTION_QUERY = """
 SELECT predicted_min, actual_min, predicted_crowd, actual_crowd,
-       model_version, mae_7day, predicted_at
+       model_version, mae_7day, predicted_at,
+       predicted_delay_min, actual_source
 FROM predictions
 WHERE prediction_id = ?
 LIMIT 1
@@ -90,12 +94,94 @@ ORDER BY ran_at DESC
 LIMIT 1
 """
 
+# Most recent evaluation run, used for the model-health strip.
+MODEL_HEALTH_QUERY = """
+SELECT mae_7day, predicted_at
+FROM predictions
+WHERE mae_7day IS NOT NULL
+ORDER BY predicted_at DESC
+LIMIT 1
+"""
+
+LAST_EVAL_QUERY = """
+SELECT ran_at, rows_upserted, error_msg
+FROM pipeline_runs
+WHERE source = 'model_evaluate'
+ORDER BY ran_at DESC
+LIMIT 1
+"""
+
+DRIFT_THRESHOLD_MIN = 10.0
+
 st.set_page_config(page_title="SG Commute Pulse", page_icon="🚇", layout="centered")
 
 
 def get_connection():
     # fresh connection every rerun so we always see latest DB state
     return duckdb.connect(DB_PATH, read_only=True)
+
+
+def _first_transit(legs):
+    """(mode, service_no) of the first non-walking leg, or (None, None)."""
+    for leg in legs:
+        mode, service_no = leg[1], leg[2]
+        if mode in ("BUS", "MRT", "LRT"):
+            return mode, service_no
+    return None, None
+
+
+def load_dashboard_data():
+    """Run every query one render needs, then close the connection.
+
+    DuckDB allows a single writer and blocks it while any reader holds the file.
+    Holding a connection open across the 60-second refresh would stall the
+    pipeline, so the connection is opened, drained, and closed here — before any
+    rendering or sleeping happens.
+    """
+    con = get_connection()
+    try:
+        d = {
+            "last_run": con.execute(PIPELINE_RUN_QUERY).fetchone(),
+            "model_health": con.execute(MODEL_HEALTH_QUERY).fetchone(),
+            "last_eval": con.execute(LAST_EVAL_QUERY).fetchone(),
+            "row": con.execute(BEST_ROUTE_QUERY).fetchone(),
+            "legs": [],
+            "alerts": [],
+            "arrival": None,
+            "alts": [],
+            "pred": None,
+        }
+        if d["row"] is None:
+            return d
+
+        option_id, event_id = d["row"][0], d["row"][1]
+        d["legs"] = con.execute(LEGS_QUERY, [option_id]).fetchall()
+        d["alerts"] = con.execute(ACTIVE_ALERTS_QUERY).fetchall()
+        d["pred"] = con.execute(PREDICTION_QUERY, [f"{option_id}_pred"]).fetchone()
+
+        ft_mode, ft_svc = _first_transit(d["legs"])
+        d["ft_mode"], d["ft_svc"] = ft_mode, ft_svc
+        if ft_mode == "BUS" and ft_svc:
+            d["arrival"] = con.execute(FIRST_TRANSIT_FULL_QUERY, [ft_svc]).fetchone()
+
+        for alt in con.execute(ALT_ROUTES_QUERY, [event_id, option_id]).fetchall()[:2]:
+            alt_id = alt[0]
+            alt_legs = con.execute(LEGS_QUERY, [alt_id]).fetchall()
+            alt_ft_mode, alt_ft_svc = _first_transit(alt_legs)
+            alt_arrival = None
+            if alt_ft_mode == "BUS" and alt_ft_svc:
+                alt_arrival = con.execute(FIRST_TRANSIT_FULL_QUERY, [alt_ft_svc]).fetchone()
+            d["alts"].append({
+                "meta": alt,
+                "legs": alt_legs,
+                "ft_mode": alt_ft_mode,
+                "ft_svc": alt_ft_svc,
+                "arrival": alt_arrival,
+                "pred": con.execute(PREDICTION_QUERY, [f"{alt_id}_pred"]).fetchone(),
+            })
+        return d
+    finally:
+        con.close()
 
 
 def fmt_sgt(dt):
@@ -124,11 +210,18 @@ def mins_from_now(dt):
     return int(delta)
 
 
-con = get_connection()
-
 st.title("🚇 SG Commute Pulse")
 
-last_run = con.execute(PIPELINE_RUN_QUERY).fetchone()
+try:
+    data = load_dashboard_data()
+except Exception as exc:
+    # The pipeline holds an exclusive write lock while it ingests. Say so plainly
+    # instead of showing a traceback, and let the next refresh pick it up.
+    st.warning(f"Database busy — the pipeline is writing. Retrying on the next refresh.\n\n`{exc}`")
+    time.sleep(15)
+    st.rerun()
+
+last_run = data["last_run"]
 if last_run:
     ran_at, status, rows = last_run
     status_icon = "✅" if status in ("ok", "success") else "⚠️"
@@ -136,9 +229,23 @@ if last_run:
 else:
     st.caption("Pipeline has not run yet — run `python scripts/ingest.py` then `python scripts/transform.py`")
 
+# --- Model health strip (drift monitoring) ---
+mh = data["model_health"]
+if mh and mh[0] is not None:
+    mae = float(mh[0])
+    le = data["last_eval"]
+    when = f" · last evaluated {fmt_sgt(le[0])}" if le else ""
+    if mae > DRIFT_THRESHOLD_MIN:
+        st.error(
+            f"🔺 **Model drift warning** — 7-day MAE is {mae:.1f} min, "
+            f"above the {DRIFT_THRESHOLD_MIN:.0f} min threshold. Retrain recommended.{when}"
+        )
+    else:
+        st.success(f"✅ Model healthy — 7-day MAE {mae:.1f} min (threshold {DRIFT_THRESHOLD_MIN:.0f} min){when}")
+
 st.divider()
 
-row = con.execute(BEST_ROUTE_QUERY).fetchone()
+row = data["row"]
 
 if row is None:
     st.warning("No upcoming events found. Run `python scripts/ingest.py` then `python scripts/transform.py` first.")
@@ -177,13 +284,13 @@ with col3:
 if recommendation_reason:
     st.info(f"**Why chosen:** {recommendation_reason}")
 
-legs = con.execute(LEGS_QUERY, [option_id]).fetchall()
+legs = data["legs"]
 
 # --- Warnings ---
 if is_rainy and weather_forecast:
     st.warning(f"🌧️ {weather_forecast}")
 if alert_msg:
-    active_alerts = con.execute(ACTIVE_ALERTS_QUERY).fetchall()
+    active_alerts = data["alerts"]
     route_rail_lines = {leg[2] for leg in legs if leg[1] in ("MRT", "LRT") and leg[2]}
     relevant_alerts = [a for a in active_alerts if a[0] in route_rail_lines]
     for line, msg in relevant_alerts:
@@ -225,7 +332,7 @@ if legs:
     st.subheader("🔴 Live arrivals")
 
     if ft_mode == "BUS" and ft_svc:
-        bw = con.execute(FIRST_TRANSIT_FULL_QUERY, [ft_svc]).fetchone()
+        bw = data["arrival"]
         if bw and bw[0] is not None:
             x1, x2, load = bw
             load_desc = {"SEA": "seats available", "SDA": "standing room", "LSD": "very full"}.get(load or "", "")
@@ -272,13 +379,13 @@ else:
 st.divider()
 
 # --- Alt routes ---
-alt_rows = con.execute(ALT_ROUTES_QUERY, [event_id, option_id]).fetchall()
+alt_rows = data["alts"]
 
 if alt_rows:
     st.subheader("🔀 Other route options (sorted by arrival time)")
-    for idx, alt in enumerate(alt_rows[:2], start=2):
-        alt_id, alt_dur, alt_fare, alt_transfers = alt
-        alt_legs = con.execute(LEGS_QUERY, [alt_id]).fetchall()
+    for idx, alt_entry in enumerate(alt_rows[:2], start=2):
+        alt_id, alt_dur, alt_fare, alt_transfers = alt_entry["meta"]
+        alt_legs = alt_entry["legs"]
 
         compact_tokens = []
         i = 0
@@ -316,14 +423,11 @@ if alt_rows:
         fare_str = f"${alt_fare:.2f}" if alt_fare else "—"
 
         # first transit note
-        alt_ft_mode = alt_ft_svc = None
-        for _, mode, svc, *_ in alt_legs:
-            if mode in ("BUS", "MRT", "LRT") and alt_ft_mode is None:
-                alt_ft_mode, alt_ft_svc = mode, svc
+        alt_ft_mode, alt_ft_svc = alt_entry["ft_mode"], alt_entry["ft_svc"]
 
         notes = []
         if alt_ft_mode == "BUS" and alt_ft_svc:
-            bw = con.execute(FIRST_TRANSIT_FULL_QUERY, [alt_ft_svc]).fetchone()
+            bw = alt_entry["arrival"]
             if bw and bw[0] is not None:
                 x1 = bw[0]
                 x1_time = (now_sgt + timedelta(minutes=x1)).strftime("%H:%M")
@@ -349,35 +453,52 @@ if alt_rows:
                 svc_display = MRT_LINE_NAMES.get(svc, svc or "") if mode in ("MRT", "LRT") else (svc or "")
                 stops_str = f" ({stops} stops)" if stops else ""
                 st.write(f"{icon} **{svc_display or 'Walk'}** · {from_n} → {to_n} · {dur}m{stops_str}")
-            alt_pred = con.execute(PREDICTION_QUERY, [f"{alt_id}_pred"]).fetchone()
+            alt_pred = alt_entry["pred"]
             if alt_pred and alt_pred[0] is not None:
-                alt_crowd = alt_pred[2]
-                crd_icon = CROWD_ICON.get(alt_crowd or "", "")
-                crd_lbl = CROWD_LABEL.get(alt_crowd or "", "")
-                st.caption(f"🤖 ML: ~{alt_pred[0]} min  ·  crowd: {crd_icon} {crd_lbl}")
+                alt_crowd = alt_pred[2] if alt_ft_mode else None
+                if alt_crowd:
+                    crd_icon = CROWD_ICON.get(alt_crowd, "")
+                    crd_lbl = CROWD_LABEL.get(alt_crowd, "")
+                    st.caption(f"🤖 ML: ~{alt_pred[0]} min  ·  crowd: {crd_icon} {crd_lbl}")
+                else:
+                    st.caption(f"🤖 ML: ~{alt_pred[0]} min  ·  walking route — no crowding to predict")
 
 st.divider()
 
 # --- ML prediction panel ---
 st.subheader("🤖 ML Prediction")
 
-pred = con.execute(PREDICTION_QUERY, [f"{option_id}_pred"]).fetchone()
+pred = data["pred"]
 
 if pred is None:
     st.info("Model not yet trained — run `python scripts/model.py --train` then `python scripts/model.py --predict`")
 else:
-    predicted_min, actual_min, predicted_crowd, actual_crowd, model_version, mae_7day, predicted_at = pred
+    (predicted_min, actual_min, predicted_crowd, actual_crowd,
+     model_version, mae_7day, predicted_at, predicted_delay_min, actual_source) = pred
+
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Predicted journey", f"{predicted_min} min")
     with col2:
-        actual_str = f"{actual_min} min" if actual_min is not None else "not yet recorded"
-        st.metric("Actual (after trip)", actual_str)
+        actual_str = f"{actual_min} min" if actual_min is not None else "after the trip"
+        st.metric("Reconstructed outcome", actual_str)
     with col3:
         mae_str = f"{mae_7day:.1f} min" if mae_7day is not None else "—"
         st.metric("7-day MAE", mae_str)
 
-    if predicted_crowd:
+    if predicted_delay_min is not None:
+        st.caption(
+            f"OneMap schedule {total_duration_min} min  +  ML-predicted delay "
+            f"{predicted_delay_min} min  =  {predicted_min} min. The model predicts the "
+            f"delay on top of the schedule, not the journey from scratch."
+        )
+    if actual_source:
+        st.caption(
+            f"Outcome reconstruction method: `{actual_source}` — a proxy built from "
+            f"transport data, not GPS-tracked journey time."
+        )
+
+    if predicted_crowd and data.get("ft_mode"):
         icon = CROWD_ICON.get(predicted_crowd, "")
         label = CROWD_LABEL.get(predicted_crowd, predicted_crowd)
         actual_crd_str = ""
