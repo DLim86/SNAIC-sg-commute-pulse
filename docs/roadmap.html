@@ -629,7 +629,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
       <div class="station-card">
         <div class="card-eyebrow">Data Transformation</div>
         <div class="card-title">SQL Cleaning, Recommendation Logic & Walk Alternative</div>
-        <div class="card-desc">Join routes, weather, and alerts into a ranked recommendation. Calculate leave-by time, flag rainy walks, detect MRT disruptions, and rank routes using window functions. The <code>recommendation_reason</code> field has 9 dynamic labels (e.g. "✓ Fastest + direct", "✓ Fewest transfers (N)", "✓ Least walking (Xm)", "⚠ Rain — Xm exposed walk") computed via <code>MIN() OVER (PARTITION BY event_id)</code> window functions — not hardcoded. Weather and disruption warnings appear under "Why chosen:" for the recommended route. Disruption status is filtered to the actual rail modes in the route (MRT-only route shows MRT disruptions only, not MRT/LRT). Output includes: <strong>inline first-transit live arrival</strong> after the step-by-step legs (X1+X2 for bus; headway estimate ~3-5 min for MRT, ~5-10 min for LRT — no public real-time MRT/LRT arrival API in Singapore), an alt routes section labelled "Other route options (sorted by arrival time)" with [2]/[3] labels (always exactly 2 alternatives — OneMap API hard-caps at 3 total itineraries), consecutive MRT+LRT legs grouped in compact display, per-alt first-transit X1 + disruption note, and a walk alternative with Zone 1/2 health stats plus optional Garmin/Whoop fitness context. Note: alt routes query <code>route_options</code> directly — querying <code>v_enriched_routes WHERE route_rank &gt; 1</code> returns 47× duplicates because the view cross-joins 47 weather areas.</div>
+        <div class="card-desc">Join routes, weather, and alerts into a ranked recommendation. Calculate leave-by time, flag rainy walks, detect MRT disruptions, and rank routes using window functions. The <code>recommendation_reason</code> field has 9 dynamic labels (e.g. "✓ Fastest + direct", "✓ Fewest transfers (N)", "✓ Least walking (Xm)", "⚠ Rain — Xm exposed walk") computed via <code>MIN() OVER (PARTITION BY event_id)</code> window functions — not hardcoded. Weather and disruption warnings appear under "Why chosen:" for the recommended route. Disruption status is filtered to the actual rail modes in the route (MRT-only route shows MRT disruptions only, not MRT/LRT). Output includes: <strong>inline first-transit live arrival</strong> after the step-by-step legs (X1+X2 for bus; headway estimate ~3-5 min for MRT, ~5-10 min for LRT — no public real-time MRT/LRT arrival API in Singapore), an alt routes section labelled "Other route options (sorted by arrival time)" with [2]/[3] labels (always exactly 2 alternatives — OneMap API hard-caps at 3 total itineraries), consecutive MRT+LRT legs grouped in compact display, per-alt first-transit X1 + disruption note, and a walk alternative with Zone 1/2 health stats plus optional Garmin/Whoop fitness context. Note: alt routes query <code>route_options</code> directly — the view's weather join and ranking are not needed for the alternatives. An earlier version of the view joined the globally-latest weather row, which matched all 47 areas and returned 47× duplicates; the join is now scoped to the event's own <code>nearest_weather_area</code>.</div>
 
         <div class="chip-row">
           <span class="chip chip-amber">SQL JOINs</span>
@@ -661,7 +661,7 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
     w.is_rainy,
     <span class="k">CASE WHEN</span> ta.alert_id <span class="k">IS NOT NULL THEN</span> ta.message <span class="k">ELSE NULL END AS</span> alert_msg,
 
-    <span class="com">-- Recommendation label</span>
+    <span class="com">-- Recommendation label (abbreviated here — 9 branches in schema.py)</span>
     <span class="k">CASE</span>
         <span class="k">WHEN</span> w.is_rainy <span class="k">AND</span> r.walk_distance_m > <span class="n">400</span>
             <span class="k">THEN</span> <span class="s">'⚠ Rainy — take covered transport'</span>
@@ -683,8 +683,14 @@ con.execute(<span class="s">"""CREATE TABLE IF NOT EXISTS pipeline_runs (
 
 <span class="k">FROM</span> route_options r
 <span class="k">JOIN</span> calendar_events e <span class="k">ON</span> r.event_id = e.event_id
+<span class="com">-- Destination-specific: the event's own weather area, latest row for THAT area.</span>
+<span class="com">-- Joining on the globally-latest fetched_at matched all 47 areas (47x rows).</span>
 <span class="k">LEFT JOIN</span> weather_forecast w
-    <span class="k">ON</span> w.fetched_at = (<span class="k">SELECT MAX</span>(fetched_at) <span class="k">FROM</span> weather_forecast)
+    <span class="k">ON</span> w.area = e.nearest_weather_area
+   <span class="k">AND</span> w.fetched_at = (
+       <span class="k">SELECT MAX</span>(fetched_at) <span class="k">FROM</span> weather_forecast ww
+       <span class="k">WHERE</span> ww.area = e.nearest_weather_area
+   )
 <span class="k">LEFT JOIN</span> train_alerts ta
     <span class="k">ON</span> ta.severity = <span class="s">'HEAVY'</span>
    <span class="k">AND</span> ta.fetched_at > <span class="k">NOW</span>() - <span class="k">INTERVAL</span> <span class="s">'30 minutes'</span>;</pre>

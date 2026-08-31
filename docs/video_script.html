@@ -289,8 +289,8 @@
   </div>
 
   <div class="total-time">
-    <div class="big">~12:30 SAY</div>
-    <div class="label">Add ~2:30 for navigation, loading, and transitions → total ≈ 15:00 · SAY ≈ 1,620 words at 130 wpm</div>
+    <div class="big">~22:00 SAY</div>
+    <div class="label"><strong>MEASURED 2026-08-31: the SAY blocks total 3,313 words ≈ 22 min at 150 wpm — not the 1,620 words this header used to claim.</strong> With navigation that is 24–25 min against a 15-minute limit. To land at 15:00 you must speak ~1,900 words: cut Reflection to ~110 words per question, and trim Sections 2, 3, 6 and 9. Protect Section 4 (idempotency) and Section 7 (ML redesign + <code>bus_headway_gap</code>) — those two carry the marks.</div>
   </div>
 
   <div class="rubric-bar">
@@ -497,9 +497,10 @@
       <div class="do">
         <div class="do-label">Screen / Do</div>
         <ul>
-          <li>Open Airflow UI at <code>http://localhost:8080</code></li>
-          <li>Show the <code>commute_pipeline</code> DAG — point at the 7-task sequential chain in the graph view</li>
-          <li>Click one completed task run → show green success → click Logs</li>
+          <li><strong>AIRFLOW IS NOT INSTALLED — use the DAG-code path.</strong> Open <code>dags/commute_pipeline_dag.py</code> in VS Code instead of the UI. Do not open <code>localhost:8080</code>.</li>
+          <li>Scroll to the bottom of the file — point at the 7-task chain on the <code>&gt;&gt;</code> line</li>
+          <li>Scroll up to <code>_is_evaluation_window()</code> — point at <code>local.hour == 8 and local.minute &lt; 30</code> as you tell the twice-a-day story</li>
+          <li>Terminal: show the row-count → re-run ingest → same counts (the idempotency proof)</li>
           <li>Show a Parquet file in <code>data/raw/</code> in VS Code Explorer</li>
         </ul>
       </div>
@@ -597,7 +598,7 @@
         <p>DuckDB allows one writer at a time, and while any reader holds the file open, the writer can&rsquo;t get in. My first version cached the connection at startup, so the dashboard never saw new rows at all. I removed the cache. But that wasn&rsquo;t enough &mdash; the script opened a connection, rendered the page, and then slept for 60 seconds while still holding it. So the dashboard was blocking the pipeline from writing for almost the entire minute.</p>
         <p>What I do now is run every query the page needs up front, close the connection, and only then render and sleep. The connection is open for milliseconds instead of a minute. I tested it both ways: with the old pattern the pipeline&rsquo;s writes fail with a lock error, and with the new one they succeed.</p>
         <p>The limitation is still real and I&rsquo;m not going to pretend otherwise. One DuckDB file with three processes gives me single-writer semantics, and if a write and a read genuinely overlap, one of them loses. At this data volume that&rsquo;s a trade I&rsquo;m happy with, because it means I don&rsquo;t have to run a database server for a project this size. Postgres is the answer if this ever needed real concurrency.</p>
-        <p>On the page itself: leave-by time, journey duration and fare are the three headline numbers. Weather and disruption warnings come from the SQL layer. There&rsquo;s a model health strip at the top, the ML panel below it, and each alternative route expands with its own prediction.</p>
+        <p>On the page itself: leave-by time, journey duration and fare are the three headline numbers. Weather and disruption warnings come from the SQL layer. The ML panel sits below that, and each alternative route expands with its own prediction. At the top there&rsquo;s a model health strip driven by the daily evaluation &mdash; right now it&rsquo;s showing a drift warning, because my seven-day error is above the threshold I set.</p>
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
@@ -636,9 +637,9 @@
           <li>Run <code>python scripts/model.py --predict</code> in terminal — show 3 log lines, one per route option</li>
           <li><strong>Expand the feature sheet for 3–5 seconds while you are talking about <code>bus_headway_gap</code></strong> — either the "Full ML Feature Set" block below, or the ML station in <code>docs/roadmap.html</code>. Leave it up long enough to be readable if the assessor pauses, then move on.</li>
           <li><strong>Do NOT read the features out.</strong> The table is there to be paused, not narrated — keep talking about the two design choices while it is on screen.</li>
-          <li>Switch to Streamlit — point at the ML panel: "Predicted: 38 min | crowd: 🟢 Seats available | 7-day MAE: 4.2 min"</li>
-          <li>Expand alt route [2] or [3] — show "🤖 ML: ~41 min · crowd: 🟡 Standing"</li>
-          <li>Switch to Airflow — show the <code>predict_commute</code> task and the daily <code>evaluate_model</code> task</li>
+          <li>Switch to Streamlit — point at the ML panel. <strong>Today it reads: Predicted 70 min · crowd 🟡 Standing (SDA) · 7-day MAE 26.3 min.</strong> The red drift banner at the top of the page is firing because 26.3 is above your 10-minute threshold &mdash; that is the monitoring working, so say so rather than skipping past it.</li>
+          <li>Expand alt route [2] or [3] — the ML caption shows ~74 min and ~75 min, so the three routes are visibly scored differently</li>
+          <li><strong>Airflow is not installed — do not switch to it.</strong> Point instead at the <code>predict_commute</code>, <code>backfill_actuals</code> and <code>evaluate_model</code> tasks in <code>dags/commute_pipeline_dag.py</code>, and say the Docker scheduler runs the same daily evaluation</li>
         </ul>
       </div>
 
@@ -699,7 +700,7 @@
         <p>There are two models here. I want to spend most of this section on one design decision and one feature, because those are more interesting than the fact that I used Random Forest.</p>
         <p>First the design decision. My first model was mostly learning OneMap&rsquo;s own estimate instead of learning the delay around it. It predicted the total journey time, one of its inputs was OneMap&rsquo;s own duration, and that single input accounted for 87% of the model. And because a Random Forest can&rsquo;t predict outside the range it was trained on, every route came back at the same capped value, no matter how long the route really was.</p>
         <p>So I changed what the model predicts. It now predicts the <em>delay</em> on top of OneMap&rsquo;s schedule, not the journey from scratch. The number you see is OneMap&rsquo;s baseline plus the predicted delay.</p>
-        <p>That fixed both problems at once. The baseline&rsquo;s importance dropped from 87% to about 4%, because the answer isn&rsquo;t hiding inside it any more. And the ceiling disappeared, because the total is anchored to OneMap&rsquo;s figure &mdash; a 125-minute route stays a 125-minute route, plus a delay.</p>
+        <p>That fixed both problems at once. The baseline&rsquo;s importance dropped from 87% to about 5%, because the answer isn&rsquo;t hiding inside it any more. And the ceiling disappeared, because the total is anchored to OneMap&rsquo;s figure &mdash; a 125-minute route stays a 125-minute route, plus a delay.</p>
         <p>Now the feature I&rsquo;m most pleased with. The top drivers of that delay are rush hour, and then two features about bus timing.</p>
         <p>LTA&rsquo;s arrival API gives you the next bus and the one after it. I originally stored that second time for the display, so I could show &ldquo;next bus in 3 minutes, one after that in 11&rdquo; &mdash; that tells you whether to run for it. Later I realised the <em>gap</em> between those two was itself a signal. So I engineered a feature: <code>bus_headway_gap</code>, which is <code>next_bus2_mins</code> minus <code>next_bus_mins</code>.</p>
         <p>The reasoning is that a wide gap means the service is running irregularly, so passengers have had longer to build up at the stop, and the bus that eventually arrives is fuller. A bus in 3 minutes with another right behind it is a completely different situation from a bus in 3 minutes and then nothing for 20 &mdash; even though the first number is identical. That&rsquo;s information the model simply cannot see if you only give it the next arrival time.</p>
@@ -711,7 +712,7 @@
       </div>
       <div class="optional">
         <div class="optional-label">Optional — only if ahead of time</div>
-        <p>The delay model uses 13 features: <code>base_duration</code>, <code>next_bus_mins</code>, <code>next_bus2_mins</code>, <code>bus_headway_gap</code>, <code>walk_distance_m</code>, <code>num_transfers</code>, <code>is_rainy</code>, <code>rain_exposure</code>, <code>rush_hour</code>, <code>is_weekend</code>, <code>hour_of_day</code>, <code>day_of_week</code>, <code>bus_crowd_score</code>. Measured importances (reproducible, <code>random_state=42</code>): rush_hour 0.364, next_bus2_mins 0.166, next_bus_mins 0.142, rain_exposure 0.113 &mdash; and base_duration only 0.041, which is the point. Outcome reconstruction: BUS uses the observed boarding wait from the live LTA feed; MRT and LRT add a published headway allowance plus 20 minutes if a HEAVY disruption was active; walking routes are deterministic. Each row stores which method was used in <code>actual_source</code>.</p>
+        <p>The delay model uses 13 features: <code>base_duration</code>, <code>next_bus_mins</code>, <code>next_bus2_mins</code>, <code>bus_headway_gap</code>, <code>walk_distance_m</code>, <code>num_transfers</code>, <code>is_rainy</code>, <code>rain_exposure</code>, <code>rush_hour</code>, <code>is_weekend</code>, <code>hour_of_day</code>, <code>day_of_week</code>, <code>bus_crowd_score</code>. Measured importances on the currently trained model (<code>random_state=42</code>; the exact digits shift a little as real rows join the synthetic bootstrap): rush_hour 0.36, next_bus2_mins 0.17, next_bus_mins 0.14, rain_exposure 0.12 &mdash; and base_duration only 0.05, which is the point. Outcome reconstruction: BUS uses the observed boarding wait from the live LTA feed; MRT and LRT add a published headway allowance plus 20 minutes if a HEAVY disruption was active; walking routes are deterministic. Each row stores which method was used in <code>actual_source</code>.</p>
       </div>
       <div class="skip">
         <div class="skip-label">Skip / Do Not Say</div>
@@ -872,7 +873,7 @@
         <p><strong>1 &middot; Problem and outcome.</strong> Built a calendar-aware commute recommender that answers one question &mdash; when do I need to leave? &mdash; by joining the user&rsquo;s next Google Calendar event to live Singapore transport and weather data, replacing a three-app manual check with one ranked leave-by recommendation on a live dashboard and REST API.</p>
         <p><strong>2 &middot; End-to-end pipeline.</strong> Engineered a five-source ingestion pipeline (Google Calendar OAuth2, OneMap geocoding and routing, LTA DataMall live bus arrivals and rail alerts, data.gov.sg weather, IP geolocation) landing date-partitioned Parquet and loading a typed nine-table DuckDB store, ranking three route options and deriving leave-by time in a SQL view using window functions with a weather-based ranking penalty.</p>
         <p><strong>3 &middot; Production robustness.</strong> Hardened the pipeline with exponential-backoff retries, idempotent upserts proven by unchanged row counts on re-run, coordinate-bounds validation, graceful degradation from expired OAuth credentials to a time-of-day fallback, and a <code>pipeline_runs</code> monitoring table; containerised as three Docker Compose services over a shared named-volume DuckDB with all secrets excluded from the image and mounted at runtime.</p>
-        <p><strong>4 &middot; Machine learning and real-time output.</strong> Diagnosed target-proxy dominance in an initial duration model &mdash; the routing baseline carried 0.875 feature importance because the training target was itself largely derived from that baseline, so the model re-derived the schedule rather than learning contextual delay &mdash; and redesigned it to predict the residual delay over that baseline, cutting the feature to 0.041 and removing a hard prediction ceiling; engineered <code>bus_headway_gap</code> as a crowd-buildup signal feeding both a delay regressor and a crowding classifier, scoring all three routes individually and refreshing dashboard and API every 60 seconds.</p>
+        <p><strong>4 &middot; Machine learning and real-time output.</strong> Diagnosed target-proxy dominance in an initial duration model &mdash; the routing baseline carried 0.875 feature importance because the training target was itself largely derived from that baseline, so the model re-derived the schedule rather than learning contextual delay &mdash; and redesigned it to predict the residual delay over that baseline, cutting the feature to 0.05 and removing a hard prediction ceiling; engineered <code>bus_headway_gap</code> as a crowd-buildup signal feeding both a delay regressor and a crowding classifier, scoring all three routes individually and refreshing dashboard and API every 60 seconds.</p>
         <p><strong>5 &middot; Measurable evaluation and monitoring.</strong> Implemented a once-daily MLOps evaluation computing 7-day MAE against both a reconstructed outcome estimate and a no-ML schedule baseline, writing results to the monitoring table and raising a dashboard drift warning above a 10-minute threshold, with every stored outcome recording its reconstruction method so proxies stay distinct from measurements.</p>
       </div>
     </div>
@@ -887,7 +888,7 @@
     </div>
     <div class="section-body">
       <div class="chips">
-        <span class="chip chip-green">Airflow UI at localhost:8080 — DAG visible with all 7 tasks</span>
+        <span class="chip chip-amber">Airflow NOT installed — show dags/commute_pipeline_dag.py, never localhost:8080</span>
         <span class="chip chip-green">Streamlit at localhost:8501 — shows leave-by, prediction, fare</span>
         <span class="chip chip-green">FastAPI at localhost:8000/docs — Try it out works live</span>
         <span class="chip chip-green">docker compose up starts all 3 services cleanly</span>
@@ -922,14 +923,14 @@
 
       <div class="note">
         <div class="note-label">If asked: How do you know the model isn&rsquo;t just repeating OneMap?</div>
-        <p>That&rsquo;s exactly what it was doing in my first version, and I caught it in the feature importances &mdash; OneMap&rsquo;s duration accounted for 87.5% of the model, because the target I was training on was itself largely derived from that same baseline. So I changed the target. It now predicts the delay on top of the schedule rather than the total, which means the target isn&rsquo;t contained in any input. That dropped the baseline&rsquo;s importance to about 4%, and the top drivers became rush hour and the two bus-timing features. The evaluation also computes the error of the plain OneMap schedule alongside the model&rsquo;s, so I can see directly whether the model is earning its place.</p>
+        <p>That&rsquo;s exactly what it was doing in my first version, and I caught it in the feature importances &mdash; OneMap&rsquo;s duration accounted for 87.5% of the model, because the target I was training on was itself largely derived from that same baseline. So I changed the target. It now predicts the delay on top of the schedule rather than the total, which means the target isn&rsquo;t contained in any input. That dropped the baseline&rsquo;s importance to about 5%, and the top drivers became rush hour and the two bus-timing features. The evaluation also computes the error of the plain OneMap schedule alongside the model&rsquo;s, so I can see directly whether the model is earning its place.</p>
       </div>
 
       <div class="note">
         <div class="note-label">If asked: Wasn&rsquo;t that just target leakage?</div>
         <p>Not in the strict sense, and I&rsquo;d rather be precise about it. Classic target leakage means a feature that would not be available at inference time. OneMap&rsquo;s duration <em>is</em> available at inference time &mdash; I have it before the journey starts &mdash; so using it as an input was not inherently invalid.</p>
         <p>The real problem was on the target side. My synthetic bootstrap and my reconstructed outcomes were themselves heavily derived from that same OneMap baseline, so the target was largely a function of one of the inputs. The model dutifully re-derived OneMap&rsquo;s number instead of learning the delay around it, and <code>base_duration</code> came out at 0.875 importance. The accurate name for that is <strong>target-proxy dominance</strong>, or circular target construction &mdash; not leakage.</p>
-        <p>Predicting the residual over the baseline breaks the circularity: the target is now what the baseline <em>fails</em> to account for. <code>base_duration</code> dropped to about 0.039 and the top drivers became rush hour and the two bus-timing features. It also removed the prediction ceiling, since the total is anchored to OneMap&rsquo;s figure rather than bounded by the training range.</p>
+        <p>Predicting the residual over the baseline breaks the circularity: the target is now what the baseline <em>fails</em> to account for. <code>base_duration</code> dropped to about 0.05 and the top drivers became rush hour and the two bus-timing features. It also removed the prediction ceiling, since the total is anchored to OneMap&rsquo;s figure rather than bounded by the training range.</p>
       </div>
 
       <div class="note">

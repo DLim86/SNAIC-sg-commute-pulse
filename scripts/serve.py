@@ -1,6 +1,7 @@
 import sys
 import time
 from datetime import datetime, timezone, timedelta
+from html import escape
 from pathlib import Path
 
 import duckdb
@@ -113,7 +114,53 @@ LIMIT 1
 
 DRIFT_THRESHOLD_MIN = 10.0
 
-st.set_page_config(page_title="SG Commute Pulse", page_icon="🚇", layout="centered")
+st.set_page_config(page_title="SG Commute Pulse", page_icon="🚇", layout="wide")
+
+# Journey-steps rows are a CSS grid, not st.columns. A 5-way st.columns split gave the
+# duration cell ~7% of the width, so "23m (7 stops)" wrapped one word per line. Fixed
+# min-widths on the outer columns + nowrap on duration keeps every row on one line, and
+# the two station columns take whatever space is left. Colours are inherited so the
+# active Streamlit theme (dark or light) is preserved.
+st.markdown(
+    """
+    <style>
+      .block-container, [data-testid="stMainBlockContainer"] { max-width: 1180px; }
+      .jsteps { display: flex; flex-direction: column; gap: 3px; margin: 2px 0 6px; }
+      .js-row {
+        display: grid;
+        grid-template-columns:
+            34px                    /* icon        */
+            minmax(120px, 172px)    /* mode/service */
+            minmax(0, 1fr)          /* from — flexible */
+            minmax(0, 1fr)          /* to   — flexible */
+            minmax(142px, auto);    /* duration/stops  */
+        align-items: center;
+        gap: 12px;
+        padding: 9px 12px;
+        border: 1px solid rgba(140, 150, 165, 0.22);
+        border-radius: 8px;
+        background: rgba(140, 150, 165, 0.06);
+        font-size: inherit;
+        line-height: 1.45;
+      }
+      .js-icon { font-size: 1.15rem; text-align: center; }
+      .js-mode { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .js-from, .js-to { min-width: 0; overflow-wrap: anywhere; }
+      .js-dur {
+        white-space: nowrap;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.92;
+      }
+      /* Narrow viewports only: stack rather than squeeze. Desktop never hits this. */
+      @media (max-width: 760px) {
+        .js-row { grid-template-columns: 34px 1fr; row-gap: 2px; }
+        .js-dur { text-align: left; }
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def get_connection():
@@ -304,6 +351,7 @@ st.subheader("🗺️ Journey steps")
 if legs:
     ft_mode = None
     ft_svc = None
+    rows_html = []
     for leg in legs:
         seq, mode, service_no, from_name, to_name, duration_min, distance_m, num_stops = leg
         icon = MODE_ICON.get(mode, "")
@@ -312,20 +360,29 @@ if legs:
             svc_display = MRT_LINE_NAMES.get(service_no, service_no or "MRT")
         elif mode == "LRT":
             svc_display = MRT_LINE_NAMES.get(service_no, service_no or "LRT")
+        if mode == "WALK":
+            svc_display = "Walk"
 
         stops_str = f" ({num_stops} stops)" if num_stops else ""
-        dist_str = f" · {distance_m}m" if distance_m else ""
 
-        cols = st.columns([0.08, 0.15, 0.35, 0.35, 0.07])
-        cols[0].write(icon)
-        cols[1].write(svc_display if mode != "WALK" else "Walk")
-        cols[2].write(from_name or "—")
-        cols[3].write(to_name or "—")
-        cols[4].write(f"{duration_min}m{stops_str}")
+        rows_html.append(
+            '<div class="js-row">'
+            f'<div class="js-icon">{icon}</div>'
+            f'<div class="js-mode">{escape(svc_display)}</div>'
+            f'<div class="js-from">{escape(from_name or "—")}</div>'
+            f'<div class="js-to">{escape(to_name or "—")}</div>'
+            f'<div class="js-dur">{duration_min}m{stops_str}</div>'
+            "</div>"
+        )
 
         if ft_mode is None and mode in ("BUS", "MRT", "LRT"):
             ft_mode = mode
             ft_svc = service_no
+
+    st.markdown(
+        '<div class="jsteps">' + "".join(rows_html) + "</div>",
+        unsafe_allow_html=True,
+    )
 
     # --- Inline first-transit live arrival ---
     st.divider()

@@ -41,7 +41,7 @@ Diagnosed target-proxy dominance in an initial duration model — the routing en
 own estimate carried 0.875 feature importance because the training target was itself
 largely derived from that baseline, so the model re-derived the schedule rather than
 learning contextual delay — and redesigned it to predict the *residual delay* over that
-baseline instead of the total journey, cutting that feature's importance to 0.041 and
+baseline instead of the total journey, cutting that feature's importance to 0.05 and
 removing a hard prediction ceiling; engineered `bus_headway_gap`
 (`next_bus2_mins − next_bus_mins`) as a crowd-buildup signal feeding both a
 `RandomForestRegressor` for delay and a `RandomForestClassifier` for bus crowding,
