@@ -94,7 +94,7 @@
 │    >> backfill_actuals >> gate_evaluate >> evaluate_model   │
 │                                                             │
 │  gate_evaluate = ShortCircuitOperator                       │
-│    → passes ONLY when datetime.now(SGT).hour == 8           │
+│    → passes ONLY on the logical-08:00-SGT run (hour+minute) │
 │    → evaluate_model only runs once per day at 8 AM SGT      │
 │                                                             │
 │  All tasks use BashOperator with absolute PROJECT_DIR path  │
@@ -180,10 +180,10 @@ SQL Transformation (v_enriched_routes view):
 
 ML Pipeline (model.py):
   → --train:
-     Duration model: RandomForestRegressor (11 features) → models/commute_predictor.pkl
+     Delay model: RandomForestRegressor (13 features) → models/commute_predictor.pkl
        features: base_duration, next_bus_mins, walk_distance_m, num_transfers,
                  is_rainy, rain_exposure, rush_hour, is_weekend, hour_of_day, day_of_week, bus_crowd_score
-       target: total_duration_min
+       target: delay_min (residual over OneMap baseline; total = base + delay)
      Crowd model: RandomForestClassifier (10 features) → models/crowd_predictor.pkl
        features: leave_hour, day_of_week, is_rainy, rush_hour,
                  next_bus_mins, next_bus2_mins, bus_headway_gap,

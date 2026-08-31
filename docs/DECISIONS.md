@@ -306,7 +306,9 @@ for attempt in range(max_retries):
 
 ## D20 — RandomForestRegressor for Commute Time Prediction
 
-**Decision:** Use `sklearn.ensemble.RandomForestRegressor` to predict `total_duration_min`.
+**Decision:** Use `sklearn.ensemble.RandomForestRegressor` to predict `delay_min` — the residual on top of OneMap's scheduled duration — rather than the total journey time. `predicted_min = base_duration + predicted_delay_min`.
+
+**Superseded:** the original decision predicted `total_duration_min` directly. That made `base_duration` carry 0.875 feature importance, because the training target was itself largely derived from that same baseline: the model re-derived OneMap's schedule instead of learning the delay around it. This is target-proxy dominance from circular target construction, not classic target leakage — OneMap's estimate *is* legitimately available at inference time. Predicting the residual dropped `base_duration` to 0.041 and removed the hard prediction ceiling a Random Forest imposes at the edge of its training range.
 
 **Why:**
 - **Non-linear interactions:** Rush hour combined with rain produces a longer delay than the sum of rush hour alone and rain alone. Linear Regression cannot model interaction effects without explicit feature engineering. Random Forest handles this natively.
@@ -501,7 +503,7 @@ model = mlflow.pyfunc.load_model("models:/commute_predictor@champion")
 | Type | Definition | Example in this project |
 |---|---|---|
 | **Data Drift** | Input feature distributions change after deployment | User changes jobs: `hour_of_day` distribution shifts from 8 AM to 10 AM starts |
-| **Concept Drift** | Relationship between features and target changes | Bus network restructuring: same `hour_of_day` → different `total_duration_min` mapping |
+| **Concept Drift** | Relationship between features and target changes | Bus network restructuring: the same `rush_hour` and `bus_headway_gap` now imply a different `delay_min` |
 | **Training-Serving Skew** | Feature computation differs between training and production | `is_rainy` encoded as `True/False` in training but `1/0` in production, or a weather API format change |
 
 **Why MAE threshold over distribution tests:**

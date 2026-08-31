@@ -101,7 +101,7 @@ predictions       — prediction_id PK, event_id, option_id [s8], predicted_min,
 ```
 
 **`predictions` table:** base columns added session 4; 6 new columns added session 8 via `MIGRATIONS` in schema.py. `prediction_id` format changed from `{event_id}_pred` to `{option_id}_pred` (session 8) — one row per route option, not per event. Old rows (pre-session-8) have `option_id IS NULL` and are silently ignored by serve.py.
-`actual_min` is mode-aware backfill (session 8): BUS → LTA v3/BusArrival at alighting stop; MRT → `total_duration_min + 4` headway (or +20 disruption); LRT → `total_duration_min + 7`; WALK → `total_duration_min`.
+`actual_min` is a **reconstructed outcome estimate, not observed ground truth** — there is no trip tracking. BUS → `total_duration_min` + the wait genuinely observed at the **boarding** stop in the live LTA feed; MRT → `+ 4` headway allowance (or `+20` when a HEAVY alert was active on that line); LRT → `+ 7` (or `+20`); WALK → deterministic. Each row records which path produced it in `actual_source`. The earlier alighting-stop lookup was removed: minutes-until-next-bus-at-the-alighting-stop is not a journey duration.
 
 View: `v_enriched_routes` — JOINs route_options + calendar_events + weather_forecast + train_alerts. Returns `route_rank` via `ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY rain_penalty, total_duration_min)`.
 
@@ -163,9 +163,12 @@ Day 5 covers GPU acceleration (RAPIDS ecosystem) and Business Intelligence. **No
 **Purpose:** Satisfy the 30-mark "ML and Real-Time Output" rubric criterion.
 
 **Models:**
-- `RandomForestRegressor` → `models/commute_predictor.pkl` — predicts `total_duration_min` (11 features)
+- `RandomForestRegressor` → `models/commute_predictor.pkl` — predicts `delay_min`, the **residual over OneMap's scheduled duration** (13 features). `predicted_min = base_duration + predicted_delay_min`. Model version `rf_delay_v2`.
 - `RandomForestClassifier` → `models/crowd_predictor.pkl` — predicts crowd level (SEA/SDA/LSD) **per route option** (10 features)
-- **Duration features (11):** `base_duration`, `next_bus_mins`, `walk_distance_m`, `num_transfers`, `is_rainy`, `rain_exposure`, `rush_hour`, `is_weekend`, `hour_of_day`, `day_of_week`, `bus_crowd_score`
+- **Delay features (13):** `base_duration`, `next_bus_mins`, `next_bus2_mins`, `bus_headway_gap`, `walk_distance_m`, `num_transfers`, `is_rainy`, `rain_exposure`, `rush_hour`, `is_weekend`, `hour_of_day`, `day_of_week`, `bus_crowd_score`
+- **Why residual, not total:** predicting the total made `base_duration` carry 0.875 importance — the target itself was largely derived from that baseline, so the model re-derived OneMap's schedule instead of learning contextual delay (target-proxy dominance, not classic leakage: the baseline *is* available at inference time). Predicting the residual dropped it to 0.041 and removed the training-range prediction ceiling.
+- **`day_of_week` convention:** DuckDB `EXTRACT(DOW)` is 0=Sunday..6=Saturday, so weekend = `{0, 6}`. `_is_weekend()` is the single source of that rule for both training and inference — a `dow < 5` test would call Sunday a weekday and Friday a weekend (bug found and fixed).
+- **`is_rainy` scope:** read from the weather area nearest the destination (`calendar_events.nearest_weather_area`), the same predicate the SQL view uses, in both training and serving — never the globally-latest forecast row.
 - **Crowd features (10):** `leave_hour`, `day_of_week`, `is_rainy`, `rush_hour`, `next_bus_mins`, `next_bus2_mins`, `bus_headway_gap`, `walk_distance_m`, `num_transfers`, `base_duration`
 - LTA `load` snapshots (SEA/SDA/LSD) are stored as `actual_crowd` labels — they are NOT the crowd prediction. The model predicts crowd from engineered arrival-timing + route-context features.
 - `is_rainy` and `rain_exposure` are engineered features from data.gov.sg raw forecasts — weather is not predicted. `actual_min` is not rain-adjusted; rain is a model input feature only.
@@ -187,7 +190,7 @@ Day 5 covers GPU acceleration (RAPIDS ecosystem) and Business Intelligence. **No
 schema_check >> ingest >> transform >> predict_commute >> backfill_actuals >> gate_evaluate >> evaluate_model
 ```
 
-- `gate_evaluate` = `ShortCircuitOperator` — only passes when `datetime.now(SGT).hour == 8`
+- `gate_evaluate` = `ShortCircuitOperator` — passes for exactly one run per day: the `*/30` run whose **logical** time is 08:00 SGT. It tests hour *and* `minute < 30`, because an hour-only test passes at both 08:00 and 08:30 and evaluated twice daily.
 - Schedule: `*/30 * * * *` (every 30 minutes, not 10 — changed from early design)
 - `ingest` calls `python scripts/ingest.py` (full pipeline — weather + routes + bus + train internally)
 - Run: `airflow standalone` → UI at `http://localhost:8080`
@@ -333,7 +336,7 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 - **Weather cross-join (session 8):** `predict()` uses scalar subquery `(SELECT COALESCE(is_rainy, FALSE) FROM weather_forecast ORDER BY fetched_at DESC LIMIT 1)` instead of `LEFT JOIN weather_forecast w ON w.fetched_at = (SELECT MAX...)`. The JOIN produced 47× rows (one per weather area). Scalar subquery returns one boolean.
 - **`prediction_id` format change (session 8):** changed from `{event_id}_pred` to `{option_id}_pred`. Old rows (pre-session-8) have `option_id IS NULL` and are silently ignored by serve.py's `PREDICTION_QUERY WHERE prediction_id = ?`. Re-run `--predict` to generate new-format rows.
 - **`_match_stop_name()` (session 8):** matches `route_legs.to_name` against `bus_stops.Description` — exact lowercase, then first-15-char prefix (if len ≥ 5). BUS legs only. MRT/LRT set `transit_service_no` but leave `alighting_stop_code = None`.
-- **Mode-aware backfill (session 8):** `--backfill` determines `dominant_mode` from `route_legs` for each `option_id`. BUS: LTA v3/BusArrival at alighting stop within 3h, else proxy. MRT: `total_duration_min + 4` (or +20 if HEAVY disruption in `train_alerts` window). LRT: `total_duration_min + 7` (or +20). WALK: `total_duration_min` deterministic. Old predictions without `option_id` use legacy `route_options` proxy.
+- **Mode-aware backfill (session 8):** `--backfill` determines `dominant_mode` from `route_legs` for each `option_id`. BUS: `total_duration_min` + the wait actually observed at the **boarding** stop in `bus_arrivals` (`actual_source='observed_boarding_wait'`), else schedule only. The earlier alighting-stop lookup was removed — minutes-until-next-bus at the alighting stop is not a journey duration (it produced a 40-minute 'actual' for a 125-minute route). MRT: `total_duration_min + 4` (or +20 if HEAVY disruption in `train_alerts` window). LRT: `total_duration_min + 7` (or +20). WALK: `total_duration_min` deterministic. Old predictions without `option_id` use legacy `route_options` proxy.
 - **`serve.py` ML panel keyed by `prediction_id` (session 8):** `PREDICTION_QUERY` uses `WHERE prediction_id = ?`. Recommended route passes `f"{option_id}_pred"`. Each alt expander passes `f"{alt_id}_pred"`. `CROWD_ICON`/`CROWD_LABEL` moved to module level so both sections share them.
 - **Alt routes skipped for walk-only (session 8, transform.py):** `alt_rows = [] if is_walk_only else con.execute(ALT_ROUTES_QUERY, ...).fetchall()` — one-line guard before the alt routes block.
 - **MRT/LRT have no public real-time arrival API:** Singapore SMRT/SBS Transit do not publish a real-time train arrival API. "Next at HH:MM" for MRT/LRT in transform.py is `now_sgt + headway_estimate` — an educated approximation. Same estimate is used in `--backfill` for MRT/LRT actual_min.
@@ -345,7 +348,7 @@ All credentials in `config.py` (gitignored). Template in `config_example.py`.
 - **`api.py` per-request DuckDB connection:** `contextmanager get_db()` opens `read_only=True`, yields, closes in `finally`. Multiple simultaneous read-only connections to DuckDB are safe.
 - **`scheduler.py` no ip-api during LEAVE_WINDOW 1s burst:** ip-api.com free tier limit is 45 req/min. During the LEAVE_WINDOW 1s burst, Group 1 uses cached geocode — no ip-api call per second. ip-api is only called in Group 2 (`run_routes()`) which fires at most once per 60s cycle when event/dest changes.
 - **`ingest.py` `_fetch_raw_calendar_event()`:** lightweight Google Calendar only — no geocoding, no ip-api. Returns `(event_id, location_raw, start_dt_str)`. Used in `run_calendar_check()` to skip OneMap when event_id and location string are unchanged.
-- **Airflow DAG `gate_evaluate`:** `ShortCircuitOperator` returns `True` only when `datetime.now(SGT).hour == 8`. Skips `evaluate_model` on all other runs without failing the DAG.
+- **Airflow DAG `gate_evaluate`:** `ShortCircuitOperator` returns `True` only for the run whose **logical** time is 08:00 SGT — it checks `local.hour == 8 and local.minute < 30`. Using wall-clock hour alone passed at both 08:00 and 08:30 on the `*/30` schedule and evaluated twice a day. Skips `evaluate_model` on all other runs without failing the DAG.
 - **DuckDB WAL lock in Docker named volume:** killed pipeline container leaves stale `.duckdb.wal` in `db_data`. Fix: `docker compose down -v` then `docker compose up --build`. Data lost — repopulate by triggering pipeline once.
 - **`docker compose restart` does NOT rebuild:** reuses existing image. Code changes require `docker compose up --build`.
 
