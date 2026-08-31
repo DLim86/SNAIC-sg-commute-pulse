@@ -29,10 +29,15 @@ try:
         from config import WORK_ADDRESS
     except ImportError:
         WORK_ADDRESS = ""
+    try:
+        from config import CURRENT_ORIGIN_POSTAL
+    except ImportError:
+        CURRENT_ORIGIN_POSTAL = ""
 except ImportError:
     LTA_API_KEY = os.environ["LTA_API_KEY"]
     ONEMAP_EMAIL = os.environ["ONEMAP_EMAIL"]
     ONEMAP_PASSWORD = os.environ["ONEMAP_PASSWORD"]
+    CURRENT_ORIGIN_POSTAL = os.environ.get("CURRENT_ORIGIN_POSTAL", "")
     GOOGLE_CALENDAR_ID = os.environ.get("GOOGLE_CALENDAR_ID", "primary")
     HOME_ADDRESS = os.environ.get("HOME_ADDRESS")
     WORK_ADDRESS = os.environ.get("WORK_ADDRESS", "")
@@ -99,8 +104,28 @@ def log_run(con, source, rows, duration_ms, status, error_msg=None):
 
 # ── IP geolocation ───────────────────────────────────────────────────────────
 
-def get_current_location():
+def get_current_location(token=None):
+    """Routing origin, most trustworthy source first.
+
+    1. CURRENT_ORIGIN_POSTAL from config — an actual postal code for where you are.
+    2. ip-api.com — geolocates the PUBLIC/ISP IP, not the device. On a residential
+       CGNAT link it resolves to ISP infrastructure and has been observed 14 km and
+       20 km from the real origin in the same evening, so it is a fallback only.
+    3. Bishan, if ip-api fails or returns a coordinate outside Singapore.
+    """
+    if CURRENT_ORIGIN_POSTAL:
+        try:
+            tok = token or get_onemap_token()
+            lat, lng = geocode(CURRENT_ORIGIN_POSTAL, tok)
+            if validate_sg_coords(lat, lng):
+                log.info("Origin source: CURRENT_ORIGIN_POSTAL (configured)")
+                return lat, lng
+            log.warning("CURRENT_ORIGIN_POSTAL geocoded outside Singapore — falling back to ip-api")
+        except Exception as exc:
+            log.warning("CURRENT_ORIGIN_POSTAL lookup failed (%s) — falling back to ip-api", exc)
+
     try:
+        log.info("Origin source: ip-api.com (no CURRENT_ORIGIN_POSTAL configured)")
         r = requests.get("http://ip-api.com/json/", timeout=5)
         r.raise_for_status()
         data = r.json()
@@ -752,9 +777,9 @@ def main():
     con = duckdb.connect(str(DB_PATH))
 
     try:
-        # Origin is always the user's current IP-geolocated position, not HOME_ADDRESS.
-        # HOME_ADDRESS is used only as a *destination* (go-home default, at-home detection).
-        origin_lat, origin_lng = get_current_location()
+        # Origin is where the user physically is, never HOME_ADDRESS. HOME_ADDRESS is
+        # used only as a *destination* (go-home default, at-home detection).
+        origin_lat, origin_lng = get_current_location(token)
 
         try:
             event_id, dest_lat, dest_lng = fetch_next_calendar_event(con, token)
@@ -873,7 +898,7 @@ def run_calendar_check():
 def run_routes():
     """Group 2: routes + bus arrivals + train alerts using stored event coords."""
     token = get_onemap_token()
-    origin_lat, origin_lng = get_current_location()
+    origin_lat, origin_lng = get_current_location(token)
     con = duckdb.connect(str(DB_PATH))
     try:
         row = con.execute(

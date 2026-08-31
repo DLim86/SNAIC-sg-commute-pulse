@@ -16,6 +16,10 @@ try:
 except ImportError:
     HOME_ADDRESS = None
 try:
+    from config import CURRENT_ORIGIN_POSTAL
+except ImportError:
+    CURRENT_ORIGIN_POSTAL = ""
+try:
     from config import GARMIN_EMAIL, GARMIN_PASSWORD
 except ImportError:
     GARMIN_EMAIL = GARMIN_PASSWORD = ""
@@ -103,7 +107,22 @@ def _haversine_m(lat1, lng1, lat2, lng2):
 
 
 def _detect_origin():
-    """IP geolocation as routing origin — falls back to Bishan if outside SG or call fails."""
+    """Same origin precedence as ingest: configured postal, then ip-api, then Bishan."""
+    if CURRENT_ORIGIN_POSTAL:
+        try:
+            r = requests.get(
+                "https://www.onemap.gov.sg/api/common/elastic/search",
+                params={"searchVal": CURRENT_ORIGIN_POSTAL, "returnGeom": "Y",
+                        "getAddrDetails": "Y", "pageNum": 1},
+                timeout=10,
+            ).json()
+            hit = (r.get("results") or [None])[0]
+            if hit:
+                lat, lng = float(hit["LATITUDE"]), float(hit["LONGITUDE"])
+                if 1.15 <= lat <= 1.47 and 103.6 <= lng <= 104.1:
+                    return lat, lng
+        except Exception:
+            pass
     try:
         r = requests.get("http://ip-api.com/json/", timeout=5)
         data = r.json()

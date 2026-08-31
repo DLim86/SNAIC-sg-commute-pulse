@@ -11,9 +11,16 @@ ONEMAP_PASSWORD = "your_onemap_password_here"
 # credentials.json and token.json are gitignored — never commit them
 GOOGLE_CALENDAR_ID = "primary"  # "primary" = your main Google Calendar
 
-# Your home address — geocoded via OneMap at pipeline start as the routing origin
-# Use postal code for best results: e.g. "123 Bishan Street 12, Singapore 570123"
+# Your home address — used ONLY as a destination (go-home default, at-home check).
+# It is NOT the routing origin. Use a postal code for best geocoding results.
 HOME_ADDRESS = "your home block and street, Singapore"
+
+# Where you currently are, as a 6-digit Singapore postal code. This is the routing
+# ORIGIN when set. Leave "" to fall back to ip-api.com.
+# ip-api geolocates the public/ISP IP, not the device — on a residential CGNAT
+# connection it can land 15-20 km from where you actually are, and it moves as the
+# ISP reassigns addresses. Set this whenever the origin has to be right.
+CURRENT_ORIGIN_POSTAL = ""
 
 # Your default work or school address — used as fallback destination when the
 # calendar event location cannot be geocoded by OneMap

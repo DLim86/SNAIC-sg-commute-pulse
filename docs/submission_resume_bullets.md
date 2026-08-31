@@ -19,7 +19,8 @@ leave-by recommendation delivered through a live dashboard and a REST API.
 
 Engineered a five-source ingestion pipeline (Google Calendar via OAuth2, OneMap
 geocoding and routing, LTA DataMall real-time bus arrivals and rail disruption alerts,
-data.gov.sg weather, IP geolocation) that lands date-partitioned Parquet and loads a
+data.gov.sg weather, configured-postal origin with IP-geolocation fallback) that lands
+date-partitioned Parquet and loads a
 typed nine-table DuckDB store, then ranks three route options and derives the leave-by
 time in a SQL view using `ROW_NUMBER()` and `MIN() OVER (PARTITION BY …)` window
 functions with a weather-based ranking penalty.
