@@ -1,0 +1,1516 @@
+﻿1
+00:00:00,000 --> 00:00:01,180
+Hi, I'm David Lim.
+
+2
+00:00:01,560 --> 00:00:02,880
+This is my week two assessment.
+
+3
+00:00:03,120 --> 00:00:05,060
+I call it SG Commute Pulse.
+
+4
+00:00:05,640 --> 00:00:07,460
+This is a real problem I have.
+
+5
+00:00:07,840 --> 00:00:09,520
+I have a calendar event
+somewhere in Singapore.
+
+6
+00:00:09,840 --> 00:00:12,080
+To work out when to
+leave, I check three apps.
+
+7
+00:00:12,200 --> 00:00:13,620
+One for the route, one
+for the bus, one for the
+
+8
+00:00:13,660 --> 00:00:15,380
+weather. None of them know my calendar.
+
+9
+00:00:15,600 --> 00:00:18,160
+So I built one pipeline
+just to answer one question.
+
+10
+00:00:18,460 --> 00:00:19,320
+When do I need to leave?
+
+11
+00:00:19,680 --> 00:00:21,900
+It reads my next event
+and finds the location.
+
+12
+00:00:22,580 --> 00:00:27,000
+Then it pulls routes, live bus times
+train alert, and weather.
+
+13
+00:00:27,260 --> 00:00:28,740
+We store all of that in DuckDB.
+
+14
+00:00:29,080 --> 00:00:32,120
+SQL picks the best route
+and work out my leave by
+
+15
+00:00:32,160 --> 00:00:35,740
+time. Then a model adds
+a predicted delay on top.
+
+16
+00:00:35,940 --> 00:00:37,600
+Next, I will show you how
+the system is being put
+
+17
+00:00:37,640 --> 00:00:38,200
+together.
+
+18
+00:00:39,570 --> 00:00:40,770
+It has three layers.
+
+19
+00:00:40,890 --> 00:00:43,550
+I kept them separated because
+they do different job.
+
+20
+00:00:43,870 --> 00:00:45,130
+Layer one is the data pipeline.
+
+21
+00:00:45,850 --> 00:00:49,750
+It pulls data, store it, and
+run a SQL transformation.
+
+22
+00:00:50,370 --> 00:00:53,970
+That is the core data engineering work
+Layer two is the machine learning.
+
+23
+00:00:54,390 --> 00:00:55,830
+One model predicted delay.
+
+24
+00:00:55,910 --> 00:00:59,670
+A second model predicted
+how crowded the bus will be.
+
+25
+00:00:59,830 --> 00:01:00,750
+Layer three is serving.
+
+26
+00:01:01,210 --> 00:01:05,470
+A dashboard that refreshes
+every 60 seconds and an API for
+
+27
+00:01:05,510 --> 00:01:10,050
+anything else. I also store the data twice
+
+28
+00:01:10,090 --> 00:01:13,530
+on purpose. The raw pulls
+goes into Parquet files.
+
+29
+00:01:13,850 --> 00:01:16,770
+It keeps whatever each API gave me.
+
+30
+00:01:17,030 --> 00:01:18,810
+The clean version goes into DuckDB.
+
+31
+00:01:19,190 --> 00:01:22,890
+That is what the dashboard
+and the API reads.
+
+32
+00:01:23,190 --> 00:01:26,630
+Next, where the data comes from.
+
+33
+00:01:27,550 --> 00:01:31,110
+Over here, you will
+see my config template.
+
+34
+00:01:31,350 --> 00:01:32,910
+It holds the placeholder for my keys.
+
+35
+00:01:33,110 --> 00:01:35,810
+The real file is not
+in the repo and is not
+
+36
+00:01:35,850 --> 00:01:36,830
+on this screen.
+
+37
+00:01:37,170 --> 00:01:38,170
+I have five data sources.
+
+38
+00:01:38,530 --> 00:01:39,870
+I will go through one at a time.
+
+39
+00:01:40,310 --> 00:01:41,810
+The first one is the Google calendar.
+
+40
+00:01:42,270 --> 00:01:43,330
+This is my starting point.
+
+41
+00:01:43,370 --> 00:01:45,510
+It gives me the next
+event and its location.
+
+42
+00:01:45,900 --> 00:01:47,560
+The second one will be OneMap.
+
+43
+00:01:48,020 --> 00:01:50,100
+It turns the location into coordinates.
+
+44
+00:01:50,360 --> 00:01:51,940
+Then gives me up to three routes.
+
+45
+00:01:52,160 --> 00:01:55,480
+Each route has a duration, a
+walking distance and a fare.
+
+46
+00:01:55,780 --> 00:02:00,460
+Next will be LTA DataMall This gives
+me the live bus arrival times and
+
+47
+00:02:00,500 --> 00:02:02,580
+the MRT disruption alerts
+
+48
+00:02:03,260 --> 00:02:05,260
+The fourth is you won't see it here.
+
+49
+00:02:05,480 --> 00:02:08,360
+It is from data .graph .sg.
+
+50
+00:02:08,800 --> 00:02:11,480
+A two -hour weather forecast for 47 area.
+
+51
+00:02:11,800 --> 00:02:13,480
+It is open, so no key needed.
+
+52
+00:02:13,560 --> 00:02:15,180
+That's why you won't see it here.
+
+53
+00:02:15,380 --> 00:02:16,940
+The fifth one is my starting location.
+
+54
+00:02:17,140 --> 00:02:20,660
+I have an interesting story for
+this, when I was experimenting
+
+55
+00:02:20,700 --> 00:02:24,100
+to see if I can get my
+location without asking for
+
+56
+00:02:24,140 --> 00:02:28,780
+GPS permission. I use a
+free service that guesses
+
+57
+00:02:28,820 --> 00:02:31,400
+it from my internet connection.
+
+58
+00:02:31,800 --> 00:02:35,100
+On the day that I'm testing,
+it put me at Woodlands,
+
+59
+00:02:35,360 --> 00:02:39,600
+then Jurong I was physically
+sitting in Punggol the whole time.
+
+60
+00:02:39,880 --> 00:02:44,520
+Later, I then realized it was
+reading my internet provider, not
+
+61
+00:02:44,560 --> 00:02:48,800
+my device. Now I use a
+postal code that I have to
+
+62
+00:02:48,840 --> 00:02:52,440
+set myself. The free
+service is only a backup.
+
+63
+00:02:52,640 --> 00:02:54,980
+Next is the pipeline itself.
+
+64
+00:02:55,520 --> 00:02:57,740
+Let's move to my pipeline.
+
+65
+00:02:57,780 --> 00:03:01,500
+Okay, this is Airflow,
+
+66
+00:03:02,180 --> 00:03:05,820
+and this is my pipeline as a graph.
+
+67
+00:03:06,160 --> 00:03:09,520
+Seven tasks running in order,
+check the schema, pull the data,
+
+68
+00:03:09,560 --> 00:03:13,500
+transform it, predict and fill
+in what actually happened, then
+
+69
+00:03:13,540 --> 00:03:15,740
+evaluate the model.
+
+70
+00:03:15,940 --> 00:03:18,180
+This is the interesting part
+that I would like to highlight
+
+71
+00:03:18,220 --> 00:03:19,160
+in this Airflow.
+
+72
+00:03:19,420 --> 00:03:22,280
+The pipeline runs every 30
+minutes, but I do not want
+
+73
+00:03:22,320 --> 00:03:24,080
+it to test my model every 30 minutes.
+
+74
+00:03:24,220 --> 00:03:26,360
+So I added a gate, which is over here.
+
+75
+00:03:26,560 --> 00:03:30,180
+Only at 8am is allowed
+through to evaluation.
+
+76
+00:03:30,380 --> 00:03:32,860
+You can see it working
+all the way, but the last
+
+77
+00:03:32,900 --> 00:03:33,900
+one is gate.
+
+78
+00:03:34,670 --> 00:03:39,530
+In Airflow, this gate is
+called short circuit operator.
+
+79
+00:03:40,010 --> 00:03:41,510
+The other thing that I
+want to show you is what
+
+80
+00:03:41,550 --> 00:03:42,930
+happened if API fails.
+
+81
+00:03:43,350 --> 00:03:44,950
+So let's go back to VS code.
+
+82
+00:03:45,620 --> 00:03:49,320
+If we focus on this part
+of the script, LTA API
+
+83
+00:03:49,360 --> 00:03:51,460
+sometimes fail during rush
+hour, so I don't want to give
+
+84
+00:03:51,500 --> 00:03:53,000
+up on the first failure.
+
+85
+00:03:53,640 --> 00:03:54,700
+I try three times.
+
+86
+00:03:54,960 --> 00:03:57,760
+I wait one second, then
+two, then four seconds.
+
+87
+00:03:58,220 --> 00:03:59,660
+The wait double each time.
+
+88
+00:03:59,820 --> 00:04:02,060
+The pattern is called
+exponential back off.
+
+89
+00:04:02,400 --> 00:04:06,480
+Without it, one failed call at
+8am will kill the whole run.
+
+90
+00:04:06,780 --> 00:04:08,940
+Okay, the next part
+that I want to show you,
+
+91
+00:04:09,700 --> 00:04:12,220
+I made my pipeline safe to run again.
+
+92
+00:04:12,260 --> 00:04:14,520
+Here is why it matters.
+
+93
+00:04:14,680 --> 00:04:17,740
+If the pipeline crashes
+halfway, I just want it to run
+
+94
+00:04:17,780 --> 00:04:20,620
+it again. I do not want a
+second copy of everything.
+
+95
+00:04:20,940 --> 00:04:23,560
+Let me prove it by running
+this in the terminal.
+
+96
+00:04:25,480 --> 00:04:28,620
+We have 12, 27, 91, and 124.
+
+97
+00:04:28,820 --> 00:04:32,380
+This is the calendar event,
+route option, route leg, and bus
+
+98
+00:04:32,420 --> 00:04:34,920
+arrival. Now let me ingest it again.
+
+99
+00:04:35,120 --> 00:04:36,520
+The numbers should not double.
+
+100
+00:04:36,560 --> 00:04:39,120
+In fact, some of the numbers
+should not move at all.
+
+101
+00:04:39,320 --> 00:04:42,520
+Lastly, let me run this
+again in the terminal.
+
+102
+00:04:44,740 --> 00:04:47,920
+Okay, as you can see, still
+12, still 27, still 91,
+
+103
+00:04:48,080 --> 00:04:50,300
+but the bus arrival changed to 128.
+
+104
+00:04:50,500 --> 00:04:53,020
+12, 27, 91, 124, 128.
+
+105
+00:04:53,320 --> 00:04:54,240
+They did not double.
+
+106
+00:04:54,740 --> 00:04:56,040
+There's something new.
+
+107
+00:04:56,240 --> 00:04:58,340
+That is because I do not add a new row.
+
+108
+00:04:58,600 --> 00:05:00,820
+I replace the row that is already there.
+
+109
+00:05:00,860 --> 00:05:02,340
+It matches on the primary key.
+
+110
+00:05:02,520 --> 00:05:05,380
+That word for this is idempotency.
+
+111
+00:05:05,580 --> 00:05:08,700
+There is one table that
+grows, and I want two, which
+
+112
+00:05:08,740 --> 00:05:09,980
+is the bus arrival.
+
+113
+00:05:10,680 --> 00:05:13,820
+Every fetch is a snapshot
+of that moment so that fetch
+
+114
+00:05:13,860 --> 00:05:15,740
+time is part of its key.
+
+115
+00:05:16,380 --> 00:05:19,980
+A new run adds a new snapshot
+instead of replacing the old one
+
+116
+00:05:20,300 --> 00:05:23,160
+That gives me a time
+series I can look back to.
+
+117
+00:05:23,560 --> 00:05:28,240
+Same SQL command, different behavior
+on purpose because I choose different
+
+118
+00:05:28,280 --> 00:05:30,800
+keys. One honest note about storage.
+
+119
+00:05:31,220 --> 00:05:33,300
+My Parquet layer is a staging layer.
+
+120
+00:05:33,600 --> 00:05:35,840
+One file per source per day.
+
+121
+00:05:36,100 --> 00:05:39,180
+It's not a full archive
+of every raw API response.
+
+122
+00:05:39,860 --> 00:05:42,680
+That is something that I
+will fix in the future.
+
+123
+00:05:42,980 --> 00:05:45,540
+Next is the SQL.
+
+124
+00:05:45,840 --> 00:05:48,380
+This is where the
+recommendation is actually made.
+
+125
+00:05:48,640 --> 00:05:49,840
+This is the SQL view.
+
+126
+00:05:50,120 --> 00:05:53,480
+It joins my route option to
+the weather at the destination
+
+127
+00:05:53,520 --> 00:05:56,460
+and to any active train alert.
+
+128
+00:05:57,140 --> 00:05:58,620
+The leave-by time is simple.
+
+129
+00:06:00,190 --> 00:06:04,710
+To rank the routes, I use a window
+
+130
+00:06:04,750 --> 00:06:09,190
+function. It numbers the route
+for each event, best one first.
+
+131
+00:06:09,790 --> 00:06:11,170
+But I do not just pick the fastest.
+
+132
+00:06:11,610 --> 00:06:14,390
+If it's raining and a
+route has a long walk, I
+
+133
+00:06:14,430 --> 00:06:15,930
+push that route down.
+
+134
+00:06:16,230 --> 00:06:19,250
+So a slightly slower, drier route can win.
+
+135
+00:06:19,450 --> 00:06:22,670
+the “Why chosen” line is also SQL.
+
+136
+00:06:23,050 --> 00:06:25,970
+It compares the route against
+the other route and pick one
+
+137
+00:06:26,010 --> 00:06:27,030
+of nine reasons.
+
+138
+00:06:27,230 --> 00:06:30,790
+disruption warning are filtered
+to the train lines my routes
+
+139
+00:06:30,830 --> 00:06:32,670
+actually uses.
+
+140
+00:06:33,350 --> 00:06:37,470
+So a bus only route shows
+no train warning at all.
+
+141
+00:06:37,670 --> 00:06:42,150
+So if you want to see how
+it's been calculated, the
+
+142
+00:06:42,190 --> 00:06:44,250
+leave by formula, it will be here.
+
+143
+00:06:45,420 --> 00:06:46,820
+Okay, now the dashboard.
+
+144
+00:06:47,060 --> 00:06:48,680
+This is live output.
+
+145
+00:06:49,060 --> 00:06:50,880
+It refreshes every 60 seconds.
+
+146
+00:06:50,940 --> 00:06:54,100
+It makes no API call.
+
+147
+00:06:54,640 --> 00:06:55,940
+Here is the leave by time.
+
+148
+00:06:57,010 --> 00:06:58,590
+Here is the journey duration.
+
+149
+00:06:59,310 --> 00:06:59,970
+Here is the fare.
+
+150
+00:07:00,640 --> 00:07:03,020
+The weather and the disruption
+warning comes from SQL.
+
+151
+00:07:03,540 --> 00:07:05,760
+And each route option
+has its own prediction.
+
+152
+00:07:06,200 --> 00:07:09,100
+So the alternatives are also scored too
+
+153
+00:07:13,520 --> 00:07:15,180
+There is also a model health panel here.
+
+154
+00:07:15,320 --> 00:07:18,140
+I will come back to this in
+the machine learning section.
+
+155
+00:07:18,340 --> 00:07:20,340
+Now above, I hit here.
+
+156
+00:07:20,380 --> 00:07:21,900
+It took me two tries to fix.
+
+157
+00:07:22,120 --> 00:07:24,340
+DuckDB only allows one writer at a time.
+
+158
+00:07:24,500 --> 00:07:28,140
+My first version opened one connection
+when the dashboard started and
+
+159
+00:07:28,180 --> 00:07:29,680
+kept reusing it.
+
+160
+00:07:29,720 --> 00:07:32,080
+So the dashboard never
+saw new data at all.
+
+161
+00:07:32,260 --> 00:07:35,480
+I removed that, but it still
+broke in a different way.
+
+162
+00:07:35,920 --> 00:07:38,860
+The dashboard was holding the
+connection open while it slept for
+
+163
+00:07:38,900 --> 00:07:43,500
+60 seconds. So my pipeline
+could not write for almost the
+
+164
+00:07:43,540 --> 00:07:44,520
+whole minute.
+
+165
+00:07:45,060 --> 00:07:48,000
+The fix was to change the order.
+
+166
+00:07:48,300 --> 00:07:52,520
+Run all query first, close the
+connection, then draw the page and sleep.
+
+167
+00:07:53,060 --> 00:07:55,860
+Now it's open for a millisecond
+instead of a minute.
+
+168
+00:07:56,360 --> 00:07:57,520
+I tested both ways.
+
+169
+00:07:57,560 --> 00:07:59,800
+The old version gives a log error.
+
+170
+00:07:59,900 --> 00:08:00,840
+The new one doesn't.
+
+171
+00:08:01,140 --> 00:08:02,300
+Now, machine learning.
+
+172
+00:08:02,400 --> 00:08:03,340
+I have two models.
+
+173
+00:08:04,040 --> 00:08:07,900
+I want to spend most of
+the section on one mistake
+
+174
+00:08:07,940 --> 00:08:10,060
+I found and one feature I made myself.
+
+175
+00:08:10,240 --> 00:08:13,180
+The first mistake, my first
+model tried to predict the whole
+
+176
+00:08:13,220 --> 00:08:16,860
+journey time. And I also give
+OneMap journey time as one
+
+177
+00:08:16,900 --> 00:08:17,700
+of the input.
+
+178
+00:08:17,900 --> 00:08:21,740
+Then I checked which input
+the model was actually using.
+
+179
+00:08:21,920 --> 00:08:24,820
+That one input was 87 .5 % of the model.
+
+180
+00:08:24,960 --> 00:08:27,660
+So my model was mostly copying OneMap.
+
+181
+00:08:28,060 --> 00:08:30,200
+It was not learning anything about delay.
+
+182
+00:08:30,880 --> 00:08:32,600
+There was a second problem too.
+
+183
+00:08:32,640 --> 00:08:36,450
+A random forest can only predict
+value it has already seen
+
+184
+00:08:36,490 --> 00:08:37,290
+in the training.
+
+185
+00:08:37,830 --> 00:08:41,670
+So every long route got
+kept at a same number.
+
+186
+00:08:42,360 --> 00:08:43,850
+So I changed that question.
+
+187
+00:08:44,070 --> 00:08:45,170
+I was asking it.
+
+188
+00:08:45,210 --> 00:08:48,650
+Instead, predicting the whole journey,
+the model now predicts only the
+
+189
+00:08:48,690 --> 00:08:52,910
+extra delay. Then my final
+answer is OneMap time plus
+
+190
+00:08:52,950 --> 00:08:54,750
+that predicted delay.
+
+191
+00:08:55,190 --> 00:08:58,130
+After the change, OneMap feature importance
+was about 5%.
+
+192
+00:08:58,170 --> 00:09:00,490
+Now other things matter more.
+
+193
+00:09:00,750 --> 00:09:04,230
+Rush hour, bus timing, rain,
+and the ceiling is gone because
+
+194
+00:09:04,270 --> 00:09:07,370
+the data is anchored to OneMap's number.
+
+195
+00:09:07,730 --> 00:09:10,290
+If you want the technical
+name for the problem, it is
+
+196
+00:09:10,330 --> 00:09:12,650
+sometimes called target proxy dominance.
+
+197
+00:09:13,390 --> 00:09:16,470
+What I was trying to predict
+was mostly built out of
+
+198
+00:09:16,510 --> 00:09:18,250
+one of my own input.
+
+199
+00:09:20,420 --> 00:09:23,660
+Now the feature I am most pleased with.
+
+200
+00:09:23,780 --> 00:09:25,260
+LTA tell me two things.
+
+201
+00:09:25,380 --> 00:09:27,500
+The next bus and the bus after that.
+
+202
+00:09:28,100 --> 00:09:30,520
+Say the next bus is three minutes away.
+
+203
+00:09:30,720 --> 00:09:33,720
+And if the one after it
+was six minutes away, the
+
+204
+00:09:33,760 --> 00:09:35,260
+service is running normally.
+
+205
+00:09:35,620 --> 00:09:39,720
+But if the one after is
+20 minutes away, there is
+
+206
+00:09:39,760 --> 00:09:40,880
+a big gap behind it.
+
+207
+00:09:41,000 --> 00:09:44,860
+People keep arriving at the
+stop during those 20 minutes.
+
+208
+00:09:45,080 --> 00:09:49,580
+So the bus that turn up is
+fuller and slower toward.
+
+209
+00:09:49,780 --> 00:09:51,480
+So I made a new column.
+
+210
+00:09:51,720 --> 00:09:55,100
+The gap between the bus one
+and bus two, three minutes,
+
+211
+00:09:55,200 --> 00:09:56,140
+then 20 minutes.
+
+212
+00:09:56,240 --> 00:09:57,360
+The gap is 17.
+
+213
+00:09:57,780 --> 00:10:01,910
+I called it bus headway gap
+Here's the point.
+
+214
+00:10:02,430 --> 00:10:05,370
+In both cases, the first
+bus is three minutes away.
+
+215
+00:10:05,750 --> 00:10:06,990
+The number looks identical.
+
+216
+00:10:07,190 --> 00:10:10,210
+A model that only see the
+first bus cannot tell those
+
+217
+00:10:10,250 --> 00:10:12,250
+situation apart. Mine can.
+
+218
+00:10:12,670 --> 00:10:14,590
+LTA already sent me both numbers.
+
+219
+00:10:14,730 --> 00:10:16,770
+I was only using the
+second one for display.
+
+220
+00:10:17,210 --> 00:10:20,090
+So it cost me no extra API calls.
+
+221
+00:10:20,510 --> 00:10:24,990
+It feeds both models and all
+three routes option separately.
+
+222
+00:10:25,460 --> 00:10:26,700
+Then the full loop.
+
+223
+00:10:27,020 --> 00:10:27,880
+Train the model.
+
+224
+00:10:28,080 --> 00:10:28,620
+Predict.
+
+225
+00:10:29,180 --> 00:10:30,920
+Fill in what actually happened.
+
+226
+00:10:31,040 --> 00:10:32,900
+Then evaluate. We don't need that.
+
+227
+00:10:33,280 --> 00:10:36,920
+Let's see. Filling in what
+actually happened is the hard part.
+
+228
+00:10:37,100 --> 00:10:39,480
+For seven days, I lock on
+my own, leave and arrive
+
+229
+00:10:39,520 --> 00:10:40,640
+time on my phone.
+
+230
+00:10:40,880 --> 00:10:42,060
+Those are real observation.
+
+231
+00:10:42,280 --> 00:10:44,420
+But I want to be clear
+about what they are not.
+
+232
+00:10:44,460 --> 00:10:46,060
+They are not GPS track.
+
+233
+00:10:46,200 --> 00:10:48,640
+I have no trip tracking in this system.
+
+234
+00:10:48,860 --> 00:10:51,440
+In fact, while checking them
+today, I found I had over
+
+235
+00:10:51,480 --> 00:10:54,940
+record them by nine minutes
+for some of the session and
+
+236
+00:10:54,980 --> 00:10:55,980
+I corrected that.
+
+237
+00:10:56,460 --> 00:10:59,500
+Other rows are reconstructed instead.
+
+238
+00:10:59,840 --> 00:11:04,060
+The schedule plus the
+bus, which I actually saw,
+
+239
+00:11:04,580 --> 00:11:06,460
+plus a published gap for trains.
+
+240
+00:11:06,720 --> 00:11:07,760
+I saw which
+
+241
+00:11:08,320 --> 00:11:10,880
+method was used for every single row.
+
+242
+00:11:11,260 --> 00:11:14,600
+So a hand-logged time and
+estimate never get mixed up.
+
+243
+00:11:14,900 --> 00:11:17,700
+The evaluator runs once a day.
+
+244
+00:11:17,820 --> 00:11:20,740
+It measure my average error
+over the past seven days.
+
+245
+00:11:20,960 --> 00:11:22,660
+Right now, it is 6.1 minutes.
+
+246
+00:11:23,200 --> 00:11:24,640
+My warning threshold is 10.
+
+247
+00:11:24,800 --> 00:11:26,960
+So the dashboard says healthy.
+
+248
+00:11:27,240 --> 00:11:29,840
+But I also built a
+comparison that matters more.
+
+249
+00:11:29,880 --> 00:11:33,780
+What if I use no model
+or just trusted OneMap?
+
+250
+00:11:34,080 --> 00:11:35,760
+That gives me 3.7 minutes.
+
+251
+00:11:36,140 --> 00:11:38,840
+So today my model
+does not beat just trusting OneMap.
+
+252
+00:11:39,200 --> 00:11:42,660
+I would rather say that than hide it.
+
+253
+00:11:45,030 --> 00:11:48,490
+Although I checked why and the
+comparison is not fair yet,
+
+254
+00:11:48,850 --> 00:11:51,350
+my model was scored on nine outcomes.
+
+255
+00:11:51,750 --> 00:11:53,650
+OneMap was only scored on three.
+
+256
+00:11:54,130 --> 00:11:58,070
+And for those three, the actual
+time was itself reconstructed from
+
+257
+00:11:58,110 --> 00:11:59,550
+OneMap's own schedule.
+
+258
+00:11:59,810 --> 00:12:02,850
+So OneMap is being marked
+against its own number.
+
+259
+00:12:03,190 --> 00:12:07,910
+To make a fair test, I need
+hand-logged times for journeys that
+
+260
+00:12:07,950 --> 00:12:10,030
+also have a route saved.
+
+261
+00:12:10,630 --> 00:12:12,050
+That is the first thing I would fix.
+
+262
+00:12:12,370 --> 00:12:16,830
+And it's why I kept the
+two types of outcome apart.
+
+263
+00:12:17,550 --> 00:12:21,330
+Okay, now let's go to the FastAPI docs
+
+264
+00:12:22,400 --> 00:12:25,720
+Okay, the dashboard read that directly.
+
+265
+00:12:26,160 --> 00:12:29,520
+I added an API so anything
+else can get the same
+
+266
+00:12:29,560 --> 00:12:33,640
+answer. A phone app a classmates
+script, six endpoints help, the next
+
+267
+00:12:33,680 --> 00:12:37,280
+recommendation, a recommendation or
+prediction by event, pipeline status,
+
+268
+00:12:37,600 --> 00:12:40,520
+and alert. Let me run one live
+
+269
+00:12:41,170 --> 00:12:42,650
+recommendation.
+
+270
+00:12:43,370 --> 00:12:44,930
+Next, let's try this.
+
+271
+00:12:45,610 --> 00:12:46,110
+This
+
+272
+00:12:50,630 --> 00:12:54,190
+is the real recommendation as JSON.
+
+273
+00:12:59,010 --> 00:13:00,750
+Let's do try this as well.
+
+274
+00:13:03,670 --> 00:13:05,290
+And this is my pipeline history.
+
+275
+00:13:05,650 --> 00:13:08,530
+Every run with row counts
+how long it took and any
+
+276
+00:13:08,570 --> 00:13:11,950
+error. Like the dashboard, the
+API opens a read -only connection
+
+277
+00:13:11,990 --> 00:13:14,050
+and close it straight away.
+
+278
+00:13:14,350 --> 00:13:15,170
+Last piece,
+
+279
+00:13:15,890 --> 00:13:20,810
+one command that starts all these
+three services, the pipeline,
+
+280
+00:13:21,070 --> 00:13:25,110
+the API, and the dashboard,
+they share one volume.
+
+281
+00:13:25,410 --> 00:13:27,910
+So they all use the same database file.
+
+282
+00:13:28,370 --> 00:13:33,250
+So let me go to my terminal and
+
+283
+00:13:33,450 --> 00:13:38,090
+do this. Then let's do
+this spelling error.
+
+284
+00:13:42,710 --> 00:13:45,550
+So Airflow is deliberately
+not one of them.
+
+285
+00:13:45,710 --> 00:13:48,930
+Airflow and my own scheduler
+are two ways of doing the
+
+286
+00:13:48,970 --> 00:13:51,390
+same job. They must never
+run at the same time because
+
+287
+00:13:51,430 --> 00:13:53,630
+DuckDB only allows one writer.
+
+288
+00:13:53,950 --> 00:13:55,450
+So I showed you Airflow earlier.
+
+289
+00:13:55,910 --> 00:13:58,210
+And in Docker, I run my
+own scheduler instead.
+
+290
+00:13:58,410 --> 00:14:02,330
+My scheduler has seven states
+and it exists to save API
+
+291
+00:14:02,370 --> 00:14:04,430
+calls. Checking my calendar is cheap.
+
+292
+00:14:04,830 --> 00:14:06,630
+OneMap and LTA are rate limited.
+
+293
+00:14:07,230 --> 00:14:11,830
+So those only run when my
+event or my destination
+
+294
+00:14:11,870 --> 00:14:15,430
+actually changes. And my keys
+are not inside the image.
+
+295
+00:14:15,490 --> 00:14:17,670
+They are mounted in when it runs.
+
+296
+00:14:17,870 --> 00:14:18,990
+Okay. This is my reflection.
+
+297
+00:14:19,650 --> 00:14:24,050
+The hardest part was a bug that the error
+
+298
+00:14:24,090 --> 00:14:26,450
+message pointed me in the wrong direction.
+
+299
+00:14:26,670 --> 00:14:29,910
+LTA changed the address
+of their bus arrival API.
+
+300
+00:14:30,150 --> 00:14:32,210
+The old one came back saying not found.
+
+301
+00:14:32,630 --> 00:14:35,570
+I read that as my bus stop code was wrong.
+
+302
+00:14:36,070 --> 00:14:38,390
+So I went hunting through stop codes.
+
+303
+00:14:38,630 --> 00:14:40,650
+Every single one failed the same way.
+
+304
+00:14:40,870 --> 00:14:44,410
+Then I checked LTA's current documentation
+The address itself had changed.
+
+305
+00:14:44,670 --> 00:14:48,890
+It was a one-line fix, but it cost me a
+couple of hours.
+
+306
+00:14:49,350 --> 00:14:52,250
+What I learned is that not
+found can mean the thing
+
+307
+00:14:52,290 --> 00:14:53,470
+that I'm calling is gone.
+
+308
+00:14:53,650 --> 00:14:55,990
+It does not always mean my input is wrong.
+
+309
+00:14:56,290 --> 00:15:00,430
+Now I check documentation before
+I start playing my own data.
+
+310
+00:15:00,630 --> 00:15:01,690
+Second reflection,
+
+311
+00:15:02,310 --> 00:15:02,990
+two things.
+
+312
+00:15:03,530 --> 00:15:06,450
+The first is the bus headway gap feature.
+
+313
+00:15:06,890 --> 00:15:10,050
+I built it myself out of
+two numbers I already had.
+
+314
+00:15:10,350 --> 00:15:12,730
+And it cost nothing extra to add.
+
+315
+00:15:12,930 --> 00:15:15,170
+The second one matters more to me.
+
+316
+00:15:15,210 --> 00:15:19,650
+When I found my model was
+actually copying OneMap, I
+
+317
+00:15:19,690 --> 00:15:22,250
+could have just described it more kindly.
+
+318
+00:15:22,370 --> 00:15:25,610
+Instead, I changed the design
+and I built the test that
+
+319
+00:15:25,650 --> 00:15:28,850
+compares my model against
+using no model at all.
+
+320
+00:15:29,210 --> 00:15:31,830
+Today, the test says my
+model is not winning.
+
+321
+00:15:32,230 --> 00:15:33,770
+I still put it in the video.
+
+322
+00:15:33,990 --> 00:15:37,190
+I would rather my project be
+honest than look better than
+
+323
+00:15:37,230 --> 00:15:41,770
+it is, which I am proud
+of for this project.
+
+324
+00:15:41,970 --> 00:15:44,090
+The third reflection, three things.
+
+325
+00:15:44,310 --> 00:15:45,930
+First, the real journey tracking.
+
+326
+00:15:46,350 --> 00:15:49,710
+I log seven days by hand
+to prove my evaluator works
+
+327
+00:15:49,750 --> 00:15:52,070
+and I found a mistake in my own log.
+
+328
+00:15:52,530 --> 00:15:55,710
+two button presses on my phone
+will replace all of that.
+
+329
+00:15:56,330 --> 00:15:59,270
+Second, more history
+and match up properly.
+
+330
+00:15:59,550 --> 00:16:01,490
+Seven days is not enough to
+tell whether my model beats
+
+331
+00:16:01,530 --> 00:16:01,930
+OneMap.
+
+332
+00:16:02,610 --> 00:16:04,710
+The comparison is already built in.
+
+333
+00:16:04,750 --> 00:16:09,330
+It just needs more days and
+hand-logged times on journey that
+
+334
+00:16:09,370 --> 00:16:11,170
+I have a route saved.
+
+335
+00:16:11,810 --> 00:16:12,160
+Third,
+
+336
+00:16:12,630 --> 00:16:13,470
+push instead of pull.
+
+337
+00:16:13,630 --> 00:16:16,150
+Right now, I have to open dashboard.
+
+338
+00:16:16,290 --> 00:16:19,830
+I would rather get a message
+30 minutes before each event.
+
+339
+00:16:21,200 --> 00:16:22,460
+Okay, so let's wrap up.
+
+340
+00:16:22,780 --> 00:16:23,680
+This is my system.
+
+341
+00:16:24,080 --> 00:16:25,460
+These are the five bullets
+that I'm submitting.
+
+342
+00:16:25,600 --> 00:16:29,080
+If I had to pick one,
+it would be number four.
+

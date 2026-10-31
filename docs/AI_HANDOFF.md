@@ -46,7 +46,7 @@ Given a user's next Google Calendar event, the pipeline:
 | Technical Depth & Robustness | 10 | ✅ DONE — fetch_with_retry() exponential backoff; INSERT OR REPLACE idempotency; GPS bounds validation; logging (no print); Parquet raw zone; 7-state adaptive scheduler; DuckDB FK guard; stale event purge |
 | Presentation & Explanation | 30 | ⏳ VIDEO PENDING — docs/video_script.html script ready; Docker is Section 9 (11:00–12:00) |
 
-**Only remaining task: record the 15-minute video.** docs/video_script.html has the full script including a "Start All Services" setup section and timed sections for all 4 demo tools.
+**Only remaining task: record the video.** (No duration is stated in `project_instructions.pdf` — the old "15-minute" figure came from `Prompt.txt`, not the rubric.) docs/video_script.html has the full script including a "Start All Services" setup section and timed sections for all 4 demo tools.
 
 The rubric example: "Generate predictions for the next two hours and compare earlier predictions with actual data. Evaluate the prediction model every day at 8:00 AM." — This is exactly what model.py + the Airflow evaluate_model task must do.
 
@@ -448,7 +448,7 @@ These files exist at the project root and are **not production code** — they a
 ## Mentoring Notes
 
 - Student is new to GitHub — give explicit step-by-step `git add / commit / push` commands
-- Explain WHY before HOW — student presents this in a 15-minute video
+- Explain WHY before HOW — student presents this in a screen-recorded video (no stated time limit)
 - After every concept, include "In your video, say this..." guidance
 - Do not add features beyond what is asked
 - Ask "do you have your LTA API key?" before any session involving LTA API calls

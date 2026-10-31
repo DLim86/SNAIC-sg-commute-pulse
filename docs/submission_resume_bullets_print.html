@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SG Commute Pulse — Submission Bullets</title>
+<style>
+  @page { size: A4; margin: 18mm 18mm 16mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    font-size: 10.6pt; line-height: 1.5; color: #111; background: #fff;
+  }
+  .wrap { max-width: 175mm; margin: 0 auto; }
+  h1 { font-size: 16pt; letter-spacing: -0.2px; margin-bottom: 2mm; }
+  .meta { font-size: 9pt; color: #555; margin-bottom: 1.5mm; }
+  .meta b { color: #111; }
+  .rule { height: 2px; background: #111; margin: 4mm 0 5mm; }
+  .b { margin-bottom: 4.6mm; page-break-inside: avoid; }
+  .b h2 {
+    font-size: 10.8pt; margin-bottom: 1.4mm; color: #0B3C7A;
+    letter-spacing: 0.1px;
+  }
+  .b h2 span { color: #888; font-weight: 600; margin-right: 2mm; }
+  .b p { text-align: justify; }
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 9.6pt;
+    background: #F0F2F5; padding: 0.3mm 1.1mm; border-radius: 2px;
+  }
+  .foot {
+    margin-top: 5mm; padding-top: 3mm; border-top: 1px solid #CCC;
+    font-size: 8.6pt; color: #666;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>SG Commute Pulse — Calendar-Aware Singapore Commute Recommender</h1>
+  <div class="meta"><b>DLim86</b> · Singapore Institute of Technology · Data Engineering, Week 2 Assessment</div>
+  <div class="meta">Python · DuckDB · SQL · Parquet · Airflow · Docker · FastAPI · Streamlit · scikit-learn</div>
+  <div class="rule"></div>
+
+  <div class="b">
+    <h2><span>1</span>What it does</h2>
+    <p>Built a commute recommender that reads my next Google Calendar event and answers one
+    question: when do I need to leave? It replaces checking three separate apps with a single
+    ranked leave-by time, delivered on a live dashboard and through a REST API.</p>
+  </div>
+
+  <div class="b">
+    <h2><span>2</span>The data pipeline</h2>
+    <p>Built a pipeline that combines five sources — Google Calendar, OneMap geocoding and routing,
+    LTA live bus arrivals and train alerts, data.gov.sg weather, and a configured origin location.
+    Raw pulls are saved as dated Parquet files and the cleaned data is loaded into a nine-table
+    DuckDB database, where a SQL view ranks up to three routes using window functions and works out
+    the leave-by time, pushing rainy routes with long walks down the ranking.</p>
+  </div>
+
+  <div class="b">
+    <h2><span>3</span>Making it reliable</h2>
+    <p>Made the pipeline safe to run unattended: failed API calls retry three times with waits of
+    1, 2 and 4 seconds; re-running ingestion replaces rows instead of duplicating them, proven by
+    unchanged row counts; coordinates are checked against Singapore's bounds; and every run is
+    logged with row counts, duration and errors. Packaged the system as three Docker services
+    sharing one database volume, with all keys and tokens kept out of the image and mounted at
+    runtime.</p>
+  </div>
+
+  <div class="b">
+    <h2><span>4</span>Finding and fixing a modelling mistake</h2>
+    <p>Found that my first model was mostly copying its own input: it predicted total journey time
+    while being given the routing engine's journey time, which carried 87.5% of the model's
+    importance and also capped predictions for long routes. I changed it to predict only the extra
+    delay on top of that estimate, cutting the input to about 5% and removing the ceiling. I also
+    built <code>bus_headway_gap</code> — the gap between the next bus and the one after it — as a
+    crowding signal feeding a delay model and a bus-crowding model that score all three routes
+    separately.</p>
+  </div>
+
+  <div class="b">
+    <h2><span>5</span>Measuring whether the model earns its place</h2>
+    <p>Built a daily evaluation that measures the model's average error over a rolling seven days
+    and compares it against using no model at all, with every outcome recording whether it was
+    hand-logged or reconstructed. It currently reports 6.1 minutes against a 10-minute warning
+    threshold, and shows the model is not yet beating the plain routing baseline at 3.7 minutes — a
+    gap I traced to the baseline being scored only on reconstructed outcomes derived from its own
+    schedule.</p>
+  </div>
+
+  <div class="foot">
+    Repository: github.com/DLim86/SNAIC-sg-commute-pulse &nbsp;·&nbsp; All figures verified against
+    running code. Journey outcomes are hand-logged observations or reconstructed estimates, recorded
+    separately; the system has no GPS trip tracking.
+  </div>
+
+</div>
+</body>
+</html>

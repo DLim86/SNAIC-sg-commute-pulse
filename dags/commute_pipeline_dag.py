@@ -1,14 +1,29 @@
+import os
 import sys
 import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from airflow import DAG
-from airflow.operators.bash import BashOperator
-from airflow.operators.python import ShortCircuitOperator
+
+# Airflow 3 moved these operators into the standard provider package. Importing
+# both ways keeps this DAG loadable on Airflow 2.x and 3.x without an edit.
+try:
+    from airflow.providers.standard.operators.bash import BashOperator
+    from airflow.providers.standard.operators.python import ShortCircuitOperator
+except ImportError:
+    from airflow.operators.bash import BashOperator
+    from airflow.operators.python import ShortCircuitOperator
 
 PROJECT_DIR = str(Path(__file__).parent.parent)
-PYTHON = sys.executable
+
+# Airflow orchestrates; it does not have to share the pipeline's environment.
+# COMMUTE_PYTHON lets the tasks run in the project's own uv-locked venv, so a
+# task behaves the same whether Airflow runs it or it is run by hand — and the
+# ML .pkl files are loaded by the scikit-learn version that trained them.
+# Unset (the plain `airflow standalone` case), this is the interpreter Airflow
+# itself runs on, which is the previous behaviour.
+PYTHON = os.environ.get("COMMUTE_PYTHON") or sys.executable
 SGT = timezone(timedelta(hours=8))
 
 log = logging.getLogger(__name__)

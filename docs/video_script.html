@@ -3,950 +3,1440 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Assessment Video Script — SNAIC SG Commute Pulse</title>
+<title>Assessment Video Script — SG Commute Pulse</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: #0F1117;
-    color: #C9D1D9;
+    background: #0F1117; color: #C9D1D9;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 15px;
-    line-height: 1.7;
-    padding: 40px 20px 80px;
+    font-size: 15px; line-height: 1.65; padding: 36px 18px 90px;
   }
-  .page { max-width: 860px; margin: 0 auto; }
+  .page { max-width: 900px; margin: 0 auto; }
+  h1 { color: #58A6FF; font-size: 25px; margin-bottom: 6px; }
+  .subtitle { color: #8B949E; margin-bottom: 14px; font-size: 13px; }
 
-  h1 { color: #58A6FF; font-size: 26px; margin-bottom: 6px; }
-  .subtitle { color: #8B949E; margin-bottom: 40px; font-size: 13px; }
-
-  .section {
-    background: #161B22;
-    border: 1px solid #30363D;
-    border-radius: 10px;
-    margin-bottom: 28px;
-    overflow: hidden;
+  .banner {
+    background: #17222E; border: 1px solid #2C5480; border-left: 4px solid #58A6FF;
+    border-radius: 8px; padding: 14px 18px; margin-bottom: 26px; font-size: 13.5px;
   }
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
-    background: #1C2128;
+  .banner b { color: #E6EDF3; }
+
+  .part {
+    color: #F0883E; font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin: 44px 0 16px; padding-bottom: 8px;
     border-bottom: 1px solid #30363D;
   }
-  .section-num {
-    background: #1F6FEB;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    border-radius: 50%;
-    width: 24px; height: 24px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .section-num.ml  { background: #DA3633; }
-  .section-num.ok  { background: #238636; }
+
+  .obs { background: #161B22; border: 1px solid #30363D; border-radius: 8px;
+         padding: 0; margin-bottom: 12px; overflow: hidden; }
+  .obs-h { background: #1C2128; padding: 10px 16px; font-weight: 600; color: #E6EDF3;
+           font-size: 14px; border-bottom: 1px solid #30363D; display: flex; gap: 10px; }
+  .obs-n { color: #F0883E; flex-shrink: 0; }
+  .obs-b { padding: 12px 16px; font-size: 13.5px; }
+  .quote { display: block; background: #0D1117; border-left: 3px solid #DA3633;
+           padding: 8px 12px; margin: 8px 0; font-family: ui-monospace, monospace;
+           font-size: 12.5px; color: #FF9492; border-radius: 0 5px 5px 0; }
+  .quote.good { border-left-color: #3FB950; color: #7EE787; }
+  .fixnote { color: #7EE787; font-size: 13px; margin-top: 8px; display: block; }
+  .fixnote b { color: #3FB950; }
+
+  .section { background: #161B22; border: 1px solid #30363D; border-radius: 10px;
+             margin-bottom: 24px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; gap: 12px; padding: 13px 18px;
+                    background: #1C2128; border-bottom: 1px solid #30363D; }
+  .section-num { background: #1F6FEB; color: #fff; font-size: 11px; font-weight: 700;
+                 border-radius: 50%; width: 24px; height: 24px; display: flex;
+                 align-items: center; justify-content: center; flex-shrink: 0; }
+  .section-num.ml { background: #DA3633; }
+  .section-num.ok { background: #238636; }
   .section-num.ref { background: #9E6A03; }
   .section-title { font-size: 15px; font-weight: 600; color: #E6EDF3; flex: 1; }
-  .timer {
-    background: #21262D;
-    border: 1px solid #30363D;
-    border-radius: 12px;
-    padding: 2px 10px;
-    font-size: 11px;
-    color: #8B949E;
-    font-family: monospace;
-    white-space: nowrap;
-  }
-  .section-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .timer { background: #21262D; border: 1px solid #30363D; border-radius: 12px;
+           padding: 2px 10px; font-size: 11px; color: #8B949E;
+           font-family: ui-monospace, monospace; white-space: nowrap; }
+  .section-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 
-  /* SAY — blue, main spoken script */
-  .say {
-    background: #0D2137;
-    border-left: 3px solid #1F6FEB;
-    border-radius: 0 6px 6px 0;
-    padding: 14px 16px;
-  }
-  .say-label {
-    font-size: 10px; font-weight: 700; color: #58A6FF;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
-  }
-  .say p { color: #C9D1D9; font-size: 14.5px; }
-  .say p + p { margin-top: 8px; }
+  .goal { font-size: 13.5px; color: #A9B6C3; font-style: italic;
+          border-left: 3px solid #484F58; padding-left: 12px; }
 
-  /* DO — green, screen actions */
-  .do {
-    background: #0D2F1A;
-    border-left: 3px solid #3FB950;
-    border-radius: 0 6px 6px 0;
-    padding: 12px 16px;
-  }
-  .do-label {
-    font-size: 10px; font-weight: 700; color: #3FB950;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
-  }
-  .do ul { padding-left: 18px; }
-  .do li { color: #C9D1D9; font-size: 14px; margin-bottom: 5px; }
+  .blk { border-radius: 0 6px 6px 0; padding: 12px 15px; border-left: 3px solid; }
+  .blk-label { font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+               text-transform: uppercase; margin-bottom: 8px; }
 
-  /* NOTE — amber, informational */
-  .note {
-    background: #2D2000;
-    border-left: 3px solid #D29922;
-    border-radius: 0 6px 6px 0;
-    padding: 12px 16px;
-  }
-  .note-label {
-    font-size: 10px; font-weight: 700; color: #D29922;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
-  }
-  .note p { color: #C9D1D9; font-size: 13.5px; }
-  .note p + p { margin-top: 6px; }
+  .screen { background: #0D2F1A; border-left-color: #3FB950; }
+  .screen .blk-label { color: #7EE787; }
+  .screen ul { margin-left: 18px; font-size: 13.5px; }
+  .screen li { margin-bottom: 3px; }
 
-  /* RUBRIC ALERT — red */
-  .rubric-alert {
-    background: #2D0F0F;
-    border-left: 3px solid #DA3633;
-    border-radius: 0 6px 6px 0;
-    padding: 12px 16px;
-  }
-  .rubric-alert-label {
-    font-size: 10px; font-weight: 700; color: #F85149;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
-  }
-  .rubric-alert p { color: #C9D1D9; font-size: 13.5px; }
+  .say { background: #0D2137; border-left-color: #1F6FEB; }
+  .say .blk-label { color: #58A6FF; }
+  .say p { color: #DCE4EC; font-size: 15.5px; line-height: 1.55; margin-bottom: 3px; }
+  .say .gap { height: 9px; }
+  .say .stage { color: #F0883E; font-size: 13px; font-style: italic; }
+  .say .opt { color: #9AA7B4; }
+  .say .opt-tag { color: #8B949E; font-size: 10.5px; text-transform: uppercase;
+                  letter-spacing: 0.8px; border: 1px solid #30363D; border-radius: 8px;
+                  padding: 0 6px; margin-left: 6px; white-space: nowrap; }
 
-  /* OPTIONAL — dim lime, extra detail if ahead */
-  .optional {
-    background: #141F0F;
-    border-left: 3px solid #56A33A;
-    border-radius: 0 6px 6px 0;
-    padding: 12px 16px;
-  }
-  .optional-label {
-    font-size: 10px; font-weight: 700; color: #7EE787;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
-  }
-  .optional p { color: #C9D1D9; font-size: 13.5px; }
-  .optional p + p { margin-top: 6px; }
+  .edit { background: #2A1D33; border-left-color: #A371F7; }
+  .edit .blk-label { color: #C297FF; }
+  .edit p { font-size: 13.5px; }
 
-  /* SKIP — pale red, do not say */
-  .skip {
-    background: #1F0D0D;
-    border-left: 3px solid #C23B2A;
-    border-radius: 0 6px 6px 0;
-    padding: 12px 16px;
-  }
-  .skip-label {
-    font-size: 10px; font-weight: 700; color: #F85149;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
-  }
-  .skip ul { padding-left: 18px; }
-  .skip li { color: #C9D1D9; font-size: 13.5px; margin-bottom: 4px; }
+  .ev { background: #1E2430; border-left-color: #8B949E; }
+  .ev .blk-label { color: #A9B6C3; }
+  .ev p { font-size: 13px; color: #A9B6C3; }
 
-  /* FALLBACK — purple, if service not loading */
-  .fallback {
-    background: #1A1040;
-    border-left: 3px solid #A371F7;
-    border-radius: 0 6px 6px 0;
-    padding: 12px 16px;
-  }
-  .fallback-label {
-    font-size: 10px; font-weight: 700; color: #C4B5FD;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
-  }
-  .fallback p { color: #C9D1D9; font-size: 13.5px; }
+  .warn { background: #2E1B14; border-left-color: #F0883E; }
+  .warn .blk-label { color: #F0883E; }
+  .warn p, .warn li { font-size: 13.5px; }
+  .warn ul { margin-left: 18px; }
 
-  code {
-    background: #21262D;
-    border: 1px solid #30363D;
-    border-radius: 4px;
-    padding: 1px 6px;
-    font-family: "Cascadia Code", "Fira Code", monospace;
-    font-size: 13px;
-    color: #79C0FF;
-  }
+  code { font-family: ui-monospace, monospace; background: #21262D; color: #79C0FF;
+         padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  .say code { background: #16324D; color: #A5D6FF; }
 
-  .progress-bar {
-    background: #21262D; border-radius: 8px; height: 8px;
-    margin-bottom: 32px; overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #1F6FEB, #DA3633, #3FB950);
-    border-radius: 8px;
-  }
-  .progress-label {
-    display: flex; justify-content: space-between;
-    font-size: 11px; color: #8B949E; margin-bottom: 6px;
-  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #30363D;
+           vertical-align: top; }
+  th { color: #58A6FF; font-weight: 600; background: #1C2128; }
+  td.t { color: #79C0FF; font-family: ui-monospace, monospace; white-space: nowrap; }
 
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
-  .chip {
-    font-size: 11px; padding: 3px 10px;
-    border-radius: 12px; font-weight: 600;
-  }
-  .chip-blue   { background: #1F3A5F; color: #58A6FF; border: 1px solid #1F6FEB; }
-  .chip-green  { background: #0D2F1A; color: #3FB950; border: 1px solid #238636; }
-  .chip-amber  { background: #2D2000; color: #D29922; border: 1px solid #9E6A03; }
-  .chip-red    { background: #2D0F0F; color: #F85149; border: 1px solid #DA3633; }
-  .chip-purple { background: #21103A; color: #C4B5FD; border: 1px solid #7C3AED; }
+  .cheat { background: #161B22; border: 1px solid #30363D; border-radius: 8px;
+           overflow: hidden; margin-bottom: 20px; }
 
-  .total-time {
-    text-align: center; padding: 24px;
-    background: #161B22; border: 1px solid #30363D;
-    border-radius: 10px; margin-bottom: 32px;
-  }
-  .total-time .big { font-size: 42px; font-weight: 700; color: #58A6FF; }
-  .total-time .label { font-size: 13px; color: #8B949E; margin-top: 6px; }
+  .rescue { background: #161B22; border: 1px solid #30363D; border-radius: 8px;
+            padding: 0; overflow: hidden; }
+  .rescue table { font-size: 12.5px; }
+  .rescue td:first-child { color: #F0883E; font-weight: 600; white-space: nowrap; }
+  .rescue td:nth-child(2) { color: #7EE787; }
 
-  .rubric-bar {
-    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 1px; background: #30363D; border: 1px solid #30363D;
-    border-radius: 8px; overflow: hidden; margin-bottom: 32px;
-  }
-  .rubric-cell { background: #161B22; padding: 14px 16px; }
-  .rubric-criterion { font-size: 11px; color: #8B949E; margin-bottom: 4px; font-family: monospace; }
-  .rubric-marks { font-size: 22px; font-weight: 700; }
-  .rubric-marks.pipeline { color: #58A6FF; }
-  .rubric-marks.ml       { color: #F85149; }
-  .rubric-marks.depth    { color: #3FB950; }
-  .rubric-marks.pres     { color: #D29922; }
-  .rubric-note { font-size: 11px; color: #8B949E; margin-top: 3px; }
+  details { background: #161B22; border: 1px solid #30363D; border-radius: 8px;
+            padding: 12px 16px; margin-bottom: 10px; }
+  summary { cursor: pointer; color: #58A6FF; font-weight: 600; font-size: 14px; }
+  details > *:not(summary) { margin-top: 10px; font-size: 13.5px; }
+  details p + p { margin-top: 8px; }
 
-  details {
-    border: 1px solid #30363D;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 28px;
-  }
-  details summary {
-    cursor: pointer;
-    padding: 14px 20px;
-    background: #1C2128;
-    font-weight: 600;
-    font-size: 15px;
-    color: #E6EDF3;
-    list-style: none;
-    user-select: none;
-  }
-  details summary::-webkit-details-marker { display: none; }
-  details summary::before { content: "▶  "; color: #8B949E; font-size: 11px; }
-  details[open] summary::before { content: "▼  "; }
-  details .qa-body {
-    padding: 20px;
-    background: #161B22;
-    display: flex; flex-direction: column; gap: 14px;
-  }
-
-  /* FEATURE SHEET — collapsible ML reference, sits inside a section body */
-  details.feature-sheet { margin-bottom: 0; border-color: #30363D; }
-  details.feature-sheet summary { background: #21103A; color: #C4B5FD; font-size: 14px; }
-  .fs-body { padding: 18px 20px; background: #161B22; }
-  .fs-scroll { overflow-x: auto; margin-bottom: 18px; }
-  .fs-caption { font-size: 12px; color: #8B949E; margin-bottom: 12px; }
-  .fs-h {
-    font-size: 11px; font-weight: 700; color: #58A6FF;
-    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
-  }
-  table.feat {
-    border-collapse: collapse; width: 100%; min-width: 620px;
-    font-size: 12px; line-height: 1.5;
-  }
-  table.feat th {
-    text-align: left; padding: 7px 10px; background: #1C2128;
-    color: #8B949E; font-size: 10px; letter-spacing: .08em;
-    text-transform: uppercase; border-bottom: 1px solid #30363D; white-space: nowrap;
-  }
-  table.feat td {
-    padding: 7px 10px; border-bottom: 1px solid #21262D;
-    color: #C9D1D9; vertical-align: top;
-  }
-  table.feat td:first-child {
-    font-family: "Cascadia Code", "Fira Code", monospace;
-    color: #79C0FF; white-space: nowrap;
-  }
-  table.feat td:nth-child(3) { color: #8B949E; font-size: 11.5px; }
-  table.feat td:last-child { white-space: nowrap; font-size: 11.5px; }
-  table.feat tr.eng td { background: #21103A; }
-  table.feat tr.eng td:first-child { color: #D2B4FF; font-weight: 700; }
-  table.feat tr.eng td:last-child { color: #C4B5FD; font-weight: 700; }
-  .fs-key { font-size: 11.5px; color: #8B949E; margin-top: -6px; margin-bottom: 16px; }
-  .fs-target {
-    font-size: 12px; color: #C9D1D9; background: #0D2137;
-    border-left: 3px solid #1F6FEB; padding: 8px 12px; margin-bottom: 16px;
-  }
+  .pill { display: inline-block; background: #21262D; border: 1px solid #30363D;
+          border-radius: 10px; padding: 1px 9px; font-size: 11px; color: #8B949E;
+          margin-right: 5px; }
+  .pill.prot { background: #1B2E1F; border-color: #2E5C36; color: #7EE787; }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <h1>Assessment Video Script</h1>
-  <p class="subtitle">SNAIC · SG Commute Pulse · Data Engineering Week 2 · DLim86 · Deadline: 14 Sep 2026</p>
+<h1>Assessment Video Script — SG Commute Pulse</h1>
+<p class="subtitle">SNAIC · Data Engineering Week 2 · DLim86 · Deadline 14 Sep 2026 · Rewritten for plain-English delivery</p>
 
-  <div class="note" style="margin-bottom:28px">
-    <div class="note-label">Recording Status — Not Recording Yet</div>
-    <p>The student is <strong>NOT recording yet</strong>. Recording begins only after the SQL project is complete. Do not prompt about video timing or script practice until the student explicitly says they are ready to record. This note is here so a new AI session does not incorrectly assume the video is in progress.</p>
+<div class="banner">
+  <b>What changed in this version.</b> Rebuilt after transcribing all four practice takes. Every
+  sentence in a <b>SAY</b> block is short and carries one idea. The detail that used to be spoken
+  is now shown on screen instead of cut, so no evidence was lost. Numbers you would otherwise have
+  to recall live in <code>docs/recording_cards.md</code>, ready to show.
+</div>
+
+<div class="banner">
+  <b>On length — checked against project_instructions.pdf, 1 Sep 2026.</b>
+  <br><br>
+  <b>The rubric states no time limit.</b> All three pages were searched: the marking table, the
+  four criteria, the reflection questions and the submission instructions. There is no duration,
+  no maximum, no "within X minutes". The submission asks for "one video file" and one PDF, and
+  nothing more about length. The 15-minute figure that shaped earlier drafts came from this
+  project's own notes, not from the assessment document.
+  <br><br>
+  <b>So the pressure is off — but concision is still marked.</b> Presentation and Explanation is
+  worth 30 of the 100 marks, and the top band reads "Clear, <b>concise</b>, well structured, and
+  focused on key code and design decisions." Concision is graded as quality, not enforced as a
+  cutoff. A tight 15 minutes scores better than a padded 12 or a rambling 25.
+  <br><br>
+  Measured across your four takes, your pace is <b>107.7 words per minute</b> including pauses and
+  navigation. This script is <b>1,814 words</b>, or <b>1,709</b> without the lines marked
+  <span class="opt-tag">cut if over time</span>.
+  <table>
+    <tr><th>Your pace</th><th>Full script</th><th>With optional lines cut</th></tr>
+    <tr><td class="t">108 wpm (your measured pace)</td><td><b>16:48</b></td><td>15:49</td></tr>
+    <tr><td class="t">115 wpm</td><td>15:46</td><td>14:51</td></tr>
+    <tr><td class="t">125 wpm</td><td>14:31</td><td>13:40</td></tr>
+  </table>
+  <b>Recommendation: record the full script at your natural pace and let it land around 16 to 17
+  minutes.</b> Do not rush to hit an invented target. Speaking faster than is comfortable is what
+  produced the stumbles in the takes, and rushing costs presentation marks that no time limit is
+  awarding you back.
+  <br><br>
+  <b>One caveat.</b> This says only what the PDF says. If your lecturer set a limit in a lesson,
+  an xSite announcement or a Teams post, that overrides this — check before you record. If a limit
+  does exist, drop the <span class="opt-tag">cut if over time</span> lines first, then trim
+  Section 2, Section 11 and R3. <b>Sections 5, 8, 9 and 10 are protected</b> — they carry the marks.
+</div>
+
+<div class="banner">
+  <b>What the rubric actually rewards — and where this script already hits it.</b>
+  <table>
+    <tr><th>Criterion</th><th>Marks</th><th>Covered by</th></tr>
+    <tr><td>End-to-End Pipeline</td><td class="t">30</td><td>Sections 3, 4, 5, 6 — ingestion, cleaning, storage, transformation, serving</td></tr>
+    <tr><td>ML and Real-Time Output</td><td class="t">30</td><td>Sections 7, 8, 9, 10 — batch, training, inference, daily evaluation, 60-second dashboard</td></tr>
+    <tr><td>Technical Depth and Robustness</td><td class="t">10</td><td>Sections 4, 5, 7, 12 — retries, data checks, logging, deduplication, monitoring</td></tr>
+    <tr><td>Presentation and Explanation</td><td class="t">30</td><td>All, plus R1–R3 (reflection is required)</td></tr>
+  </table>
+  Three things in the rubric are worth knowing about explicitly:
+  <br><br>
+  <b>1. It asks you to "clearly highlight one or two key technical points."</b> Not a tour of
+  everything. This script flags exactly that: Section 5 opens "the part I most want to show", and
+  Section 8 says "one mistake I found, and one feature I built". Those are your two. Keep that
+  framing — it is the difference between focused and a list.
+  <br><br>
+  <b>2. Its own worked example is "Evaluate the prediction model every day at 8:00 AM."</b> That is
+  literally what your <code>gate_evaluate</code> ShortCircuitOperator does. Section 4 demonstrates
+  the rubric's own example, live.
+  <br><br>
+  <b>3. Under Presentation it names exactly what to show for Airflow:</b> "Show when the workflow
+  runs, task dependencies, and how failed tasks are retried." Section 4 now covers all three —
+  the <code>*/30</code> schedule, the seven-task chain, and retries. Worth also pointing at
+  <code>retries: 1</code> in <code>default_args</code>, so you cover Airflow's task-level retry as
+  well as your own API-level backoff. Those are two different retry layers, and naming both is
+  cheap technical-depth evidence.
+</div>
+
+<div class="banner">
+  <b>Per-section budget.</b> You record in segments, so track the running total as you go. Times
+  below assume 120 wpm.
+  <table>
+    <tr><th>Section</th><th>Words</th><th>Budget</th><th>Running total</th></tr>
+    <tr><td>1 · Opening</td><td class="t">103</td><td class="t">0:52</td><td class="t">0:52</td></tr>
+    <tr><td>2 · Three layers</td><td class="t">53</td><td class="t">0:27</td><td class="t">1:19</td></tr>
+    <tr><td>3 · Five data sources</td><td class="t">144</td><td class="t">1:12</td><td class="t">2:31</td></tr>
+    <tr><td>4 · Airflow and retries</td><td class="t">139</td><td class="t">1:10</td><td class="t">3:41</td></tr>
+    <tr><td>5 · Safe to run again</td><td class="t">162</td><td class="t">1:21</td><td class="t">5:02</td></tr>
+    <tr><td>6 · SQL</td><td class="t">111</td><td class="t">0:56</td><td class="t">5:58</td></tr>
+    <tr><td>7 · Dashboard and the bug</td><td class="t">143</td><td class="t">1:12</td><td class="t">7:10</td></tr>
+    <tr><td>8 · ML — the mistake</td><td class="t">178</td><td class="t">1:29</td><td class="t">8:39</td></tr>
+    <tr><td>9 · ML — headway gap</td><td class="t">159</td><td class="t">1:20</td><td class="t">9:59</td></tr>
+    <tr><td>10 · ML — measuring it</td><td class="t">191</td><td class="t">1:36</td><td class="t">11:35</td></tr>
+    <tr><td>11 · API</td><td class="t">53</td><td class="t">0:27</td><td class="t">12:02</td></tr>
+    <tr><td>12 · Docker</td><td class="t">94</td><td class="t">0:47</td><td class="t">12:49</td></tr>
+    <tr><td>R1 · Hardest part</td><td class="t">94</td><td class="t">0:47</td><td class="t">13:36</td></tr>
+    <tr><td>R2 · Most proud of</td><td class="t">81</td><td class="t">0:41</td><td class="t">14:17</td></tr>
+    <tr><td>R3 · More time</td><td class="t">65</td><td class="t">0:33</td><td class="t">14:50</td></tr>
+    <tr><td>W · Wrap-up</td><td class="t">44</td><td class="t">0:22</td><td class="t"><b>15:12</b></td></tr>
+  </table>
+  Speech alone reaches 15:12 at 120 wpm, so the optional cuts are not really optional unless you
+  hit 130. Cutting them brings speech to about 14:14, which leaves roughly 45 seconds for demo
+  results and freeze frames. <b>Sections 5, 8, 9 and 10 are protected</b> — they carry the marks.
+  If you must lose more, take it from Section 2, Section 11, and R3.
+</div>
+
+<div class="part">Part A — What was making the video hard</div>
+
+<div class="banner">
+  <b>Method.</b> All four takes in <code>C:\Users\davli\Videos\</code> were transcribed and read
+  against the old script. The four takes begin at four different sections — opening, data
+  sources, batch pipeline, SQL — so you are already recording in segments and stitching. That is
+  a good instinct, and this script is built for it: every section stands on its own and opens
+  with its own bridge line, so you can re-record one section without touching the others.
+  <br><br>
+  Every observation below is about <b>how the script was written</b>, not about how you speak.
+  In the three places where a take stopped, the sentence you were trying to say had the same
+  shape: the point arrived last, after two or three other ideas.
+</div>
+
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">1</span><span>The word budget assumed you speak faster than you do</span></div>
+  <div class="obs-b">
+    The old script was timed at 150 words per minute. Measured across the takes, your real rate
+    including screen navigation is closer to <b>120</b>. Take 4 spent 1 min 40 s on the SQL
+    section the script allowed 55 s for, and 1 min 35 s on the dashboard section budgeted at 55 s.
+    So 1,950 words was never going to be 13 minutes. It was nearer 16, before any demo waiting.
+    <span class="fixnote"><b>Fix:</b> about 1,570 spoken words, and every timing below is
+    calculated at 120 wpm. The detail you used to speak is now shown on screen instead of cut.</span>
   </div>
+</div>
 
-  <div class="total-time">
-    <div class="big">~12:59–13:54 SAY</div>
-    <div class="label"><strong>TRIMMED 2026-09-01 (final recording-day pass): the SAY blocks now total 1,947 words — 12:59 at 150 wpm, 13:54 at 140 wpm.</strong> That is inside the 1,900–1,950 word target and leaves solid headroom against the 15-minute limit for navigation and pauses. Section 4 (idempotency) and Section 7 (ML redesign + <code>bus_headway_gap</code>, capped ≤400 words) were protected throughout. <strong>7-day MAE is a real, verified number:</strong> 7 days of hand-logged phone observations were backfilled and evaluated via the actual <code>model.py --evaluate</code> code path, giving MAE = 16.3 min — above the 10-minute threshold, so the dashboard's drift warning is genuinely active. Treat that as a warning signal from 7 data points, not proof of concept drift. <code>actual_source</code> distinguishes hand-logged observations from automatically reconstructed proxies — neither is GPS ground truth.</div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">2</span><span>The five data sources had to be counted out loud while scrolling a file</span></div>
+  <div class="obs-b">
+    Take 1 ended here. You were holding the number five, your position in the list, and the file
+    you were scrolling, all at the same time:
+    <span class="quote">"OK, so I have five data source. Basically, I have five data source. [...] Google Calendar over all, I have five data source."</span>
+    Take 2 got through it, but only by counting API keys off the file while talking:
+    <span class="quote">"Over here, I have three API keys, but there are two that doesn't use any API keys."</span>
+    <span class="fixnote"><b>Fix:</b> the list is now numbered out loud — "One. Two. Three." — one
+    short line each, fixed order, and the screen holds still while you say it. The counting sits
+    in your voice, so the file no longer has to carry it.</span>
   </div>
+</div>
 
-  <div class="rubric-bar">
-    <div class="rubric-cell">
-      <div class="rubric-criterion">End-to-End Pipeline</div>
-      <div class="rubric-marks pipeline">30</div>
-      <div class="rubric-note">Sections 2–6</div>
-    </div>
-    <div class="rubric-cell">
-      <div class="rubric-criterion">ML &amp; Real-Time Output</div>
-      <div class="rubric-marks ml">30</div>
-      <div class="rubric-note">Sections 7–8</div>
-    </div>
-    <div class="rubric-cell">
-      <div class="rubric-criterion">Technical Depth</div>
-      <div class="rubric-marks depth">10</div>
-      <div class="rubric-note">Sections 4–9</div>
-    </div>
-    <div class="rubric-cell">
-      <div class="rubric-criterion">Presentation</div>
-      <div class="rubric-marks pres">30</div>
-      <div class="rubric-note">All sections</div>
-    </div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">3</span><span>One sentence reversed its own meaning, in two separate takes</span></div>
+  <div class="obs-b">
+    The old line was "LTA's API <i>does</i> return errors during rush hour" — an emphatic
+    <i>does</i>, which is exactly the word that gains or loses a <i>not</i> under pressure.
+    Takes 2 and 3 both said:
+    <span class="quote">"LTA API does not return errors during rush hour. And without that, one blip at 8 AM would kill the whole run."</span>
+    That cancels your own robustness argument. If the API never fails, the retry logic has no
+    reason to exist.
+    <span class="fixnote"><b>Fix:</b> rewritten as "LTA's API sometimes fails during rush hour."
+    No emphatic verb, and no single word that can flip the claim.</span>
   </div>
+</div>
 
-  <div class="progress-label"><span>Start</span><span>7:10 — ML</span><span>10:15 — Reflection</span><span>15:00</span></div>
-  <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-
-  <!-- ─── SETUP ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num ok">⚙</div>
-      <div class="section-title">Start All Services — Do This Before Recording</div>
-      <div class="timer">Prep · not recorded</div>
-    </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Terminal plan &mdash; read the Airflow note below first</div>
-        <ul>
-          <li><strong>Terminal 1 — Data:</strong> <code>python scripts/ingest.py</code> → <code>python scripts/transform.py</code> → <code>python scripts/model.py --train</code> <em>(first time or new machine — skip if .pkl files already exist)</em> → <code>python scripts/model.py --predict</code></li>
-          <li><strong>Terminal 2 — Streamlit:</strong> <code>streamlit run scripts/serve.py</code> → <a href="http://localhost:8501" style="color:#58A6FF">http://localhost:8501</a></li>
-          <li><strong>Terminal 3 — FastAPI:</strong> <code>uvicorn scripts.api:app --reload --port 8000</code> → <a href="http://localhost:8000/docs" style="color:#58A6FF">http://localhost:8000/docs</a></li>
-          <li><strong>Terminal 4 &mdash; Airflow (only if installed):</strong> <code>airflow standalone</code> &rarr; <a href="http://localhost:8080" style="color:#58A6FF">http://localhost:8080</a>. <strong style="color:#F0883E">Airflow is not in <code>pyproject.toml</code> and does not run natively on Windows.</strong> If you have not installed it under WSL2 and rehearsed it, skip this terminal and use the fallback below.</li>
-          <li><strong>Terminal 5 &mdash; Docker (Section 9 only):</strong> <strong style="color:#F0883E">Stop Terminals 2 and 3 first</strong> &mdash; the containers publish the same ports 8501 and 8000, and if both are up you cannot tell which one the browser is showing. Then <code>docker compose up</code>. Allow ~3 minutes before the dashboard has data: the scheduler runs five 30-second stability checks before it fetches routes.</li>
-        </ul>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback &mdash; if Airflow is not installed (this is fine, and costs almost nothing)</div>
-        <p>Do not attempt <code>airflow standalone</code> on camera unless you have already run it successfully. Instead, open <code>dags/commute_pipeline_dag.py</code> in the editor during Section 4 and say:</p>
-        <p><em>&ldquo;This is the DAG &mdash; seven tasks, a 30-minute schedule, and a ShortCircuitOperator that gates evaluation to the 08:00 run. In Docker I run my own scheduler instead of Airflow, because the two are alternatives and DuckDB only allows one writer. I&rsquo;ll show that scheduler running in Section 9.&rdquo;</em></p>
-        <p>That framing is accurate, it answers the orchestration criterion, and it removes the single biggest live-demo risk in the recording.</p>
-      </div>
-      <div style="background:#0D2137;border-left:3px solid #1F6FEB;border-radius:0 6px 6px 0;padding:14px 16px">
-        <div style="font-size:10px;font-weight:700;color:#58A6FF;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">All URLs</div>
-        <table style="font-family:monospace;font-size:13px;border-collapse:collapse;width:100%">
-          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">Streamlit dashboard</td><td style="color:#C9D1D9">http://localhost:8501</td></tr>
-          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI Swagger UI</td><td style="color:#C9D1D9">http://localhost:8000/docs</td></tr>
-          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI health</td><td style="color:#C9D1D9">http://localhost:8000/health</td></tr>
-          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">FastAPI next recommendation</td><td style="color:#C9D1D9">http://localhost:8000/api/v1/recommendation/next</td></tr>
-          <tr><td style="color:#3FB950;padding:3px 16px 3px 0">Airflow UI</td><td style="color:#C9D1D9">http://localhost:8080</td></tr>
-        </table>
-      </div>
-      <div class="note">
-        <div class="note-label">Pre-flight &mdash; run this 20 minutes before recording</div>
-        <p><code>python scripts/schema.py</code> → <code>python scripts/ingest.py</code> → <code>python scripts/transform.py</code> → <code>python scripts/model.py --train</code> (first time only) → <code>python scripts/model.py --predict</code> → then start Streamlit, FastAPI, Airflow.</p>
-      </div>
-      <div class="rubric-alert">
-        <div class="rubric-alert-label">Pre-flight &mdash; Google Calendar authorisation (do this the day before, not on the day)</div>
-        <p>The recording must show a Calendar integration that genuinely works. The runtime fallback is there for robustness &mdash; it is not a substitute for a live token on camera.</p>
-        <p><strong>If <code>ingest.py</code> logs <code>invalid_grant</code>, the stored token has expired or been revoked.</strong> Re-authorise like this:</p>
-        <p>1. Rename or delete <code>token.json</code> in the project root (rename is safer &mdash; <code>token_old.json</code> keeps a rollback).<br />
-           2. Run <code>python scripts/ingest.py</code> locally, on a machine with a browser.<br />
-           3. Complete the Google consent screen in the browser window that opens. A fresh <code>token.json</code> is written to the project root.<br />
-           4. Re-run <code>python scripts/ingest.py</code> and confirm the log names your real calendar event, not a time-of-day fallback destination.</p>
-        <p><strong>Testing-mode expiry:</strong> while the OAuth consent screen is still in <em>Testing</em> status in Google Cloud Console, refresh tokens are invalidated after <strong>7 days</strong>. So re-authorise <em>within 7 days of the recording date</em>, and re-run the check on the morning of the recording. Publishing the app removes the 7-day limit; leaving it in Testing does not.</p>
-        <p><strong>Docker:</strong> the container mounts <code>token.json</code> from the project root &mdash; generate it locally first, then <code>docker compose up</code>. The container cannot open a browser to consent.</p>
-        <p style="color:#F85149"><strong>Do not open, display, or screen-share <code>token.json</code> or <code>credentials.json</code> at any point.</strong> Show the terminal log line, not the file.</p>
-      </div>
-      <div style="background:#2D0F0F;border-left:3px solid #DA3633;border-radius:0 6px 6px 0;padding:12px 16px">
-        <div style="font-size:10px;font-weight:700;color:#F85149;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Never show on screen</div>
-        <p style="color:#C9D1D9;font-size:13.5px"><code>config.py</code> contents &nbsp;·&nbsp; <code>credentials.json</code> &nbsp;·&nbsp; <code>token.json</code> &nbsp;·&nbsp; any actual API key value</p>
-      </div>
-    </div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">4</span><span>Two words in the script are not speakable at pace</span></div>
+  <div class="obs-b">
+    <code>upsert</code> and <code>idempotent</code> both came out wrong in take 3:
+    <span class="quote">"So the ingestion is absurd. The same record is replaced instead of inserting twice."</span>
+    <span class="quote">"That's what makes the ingestion independent..."</span>
+    You clearly know the concept — the sentence right after "absurd" explains it correctly. The
+    words themselves are the problem, not the understanding.
+    <span class="fixnote"><b>Fix:</b> you never say "upsert" out loud. You say "it replaces the row
+    that is already there", and the word appears on screen in the code. "Idempotency" is said
+    <b>once</b>, as a short labelling sentence after the idea is already explained and proven —
+    never in the middle of an argument.</span>
   </div>
+</div>
 
-  <!-- ─── SECTION 1 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">1</div>
-      <div class="section-title">Opening — Problem &amp; What I Built</div>
-      <div class="timer">0:00 → 1:10 · ~150 words</div>
-    </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Show GitHub repo: <code>github.com/DLim86/SNAIC-sg-commute-pulse</code></li>
-          <li>Camera on face for the first 10 seconds if allowed, then switch to screen</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>Hi, I&rsquo;m a Data Engineering student at SIT. This is my Week 2 assessment &mdash; SG Commute Pulse.</p>
-        <p>Here&rsquo;s the problem I actually had. I have a calendar event somewhere in Singapore, and working out when to leave means checking three different apps &mdash; one for the route, one for the bus, one for the weather &mdash; and none of them know my calendar.</p>
-        <p>So I built a pipeline that answers one question: when do I need to leave? It reads my next calendar event, geocodes it, fetches routes, live bus arrivals, train alerts and weather, and stores it in DuckDB. SQL ranks the routes and works out the leave-by time, and a model adds a predicted delay on top. The result: leave by this time, take this bus then this line, and a rain warning if it applies.</p>
-      </div>
-      <div class="skip">
-        <div class="skip-label">Skip / Do Not Say</div>
-        <ul>
-          <li>Don't describe the GitHub folder structure — just show the repo and move on</li>
-        </ul>
-      </div>
-    </div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">5</span><span>The sentences that stopped you all kept the point until last</span></div>
+  <div class="obs-b">
+    Take 2 stopped dead here:
+    <span class="quote">"Now, the part that I want to highlight, I make the ingestion safe to return. So, um, okay."</span>
+    Take 3 reached the same sentence and broke it in the wrong place:
+    <span class="quote">"That's what makes the ingestion independent and it's property. Let me run this on a schedule without watching it."</span>
+    The original was one sentence carrying four ideas: safe to rerun, the crash case, the upsert
+    mechanism, and an abstract "it is the property that lets me...". Three of them have to be held
+    in memory before the sentence pays off.
+    <span class="fixnote"><b>Fix:</b> one idea per sentence, cause before effect. "If the pipeline
+    crashes halfway, I want to just run it again. I do not want a second copy of everything."
+    Nothing to hold.</span>
   </div>
+</div>
 
-  <!-- ─── SECTION 2 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">2</div>
-      <div class="section-title">System Architecture — 3 Layers</div>
-      <div class="timer">1:10 → 2:20 · ~150 words</div>
-    </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Open <code>docs/roadmap.html</code> in browser</li>
-          <li>Point at each of the 3 phases as you name them</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>The system has three layers, and I separated them because they solve different problems.</p>
-        <p>Layer one is the batch pipeline &mdash; it fetches the data sources, stores them in DuckDB, and runs a SQL transformation. That&rsquo;s the core data engineering work.</p>
-        <p>Layer two is ML &mdash; a Random Forest predicts delay on top of the routing engine&rsquo;s schedule, and a second predicts bus crowding.</p>
-        <p>Layer three is serving &mdash; Streamlit, refreshing every 60 seconds, and a FastAPI layer exposing the same data as REST endpoints.</p>
-        <p>For storage, I land the raw pulls as partitioned Parquet under <code>data/raw</code>, then load the cleaned, typed version into DuckDB &mdash; that&rsquo;s what the dashboard and API actually query.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>Why two storage layers at all: Parquet is cheap append-only file storage that keeps what each API gave me, and DuckDB is a columnar analytical engine that makes the joins and window functions fast. Different jobs, so I kept them separate.</p>
-        <p>On the schema: <code>route_options</code> is the central table with the measures — duration, walking distance, transfers, fare — and a real foreign key to the calendar event. Weather, bus arrival and train alert tables join on a natural key and a time window instead, so it's star-shaped around <code>route_options</code> but not a formal dimensional star schema — no surrogate keys, no date dimension.</p>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if roadmap.html is slow</div>
-        <p>"The roadmap is in docs/roadmap.html — I'll describe the three layers while it loads."</p>
-      </div>
-    </div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">6</span><span>The idempotency proof had no prepared numbers, so it became hedging</span></div>
+  <div class="obs-b">
+    This is your strongest piece of engineering evidence. On camera it became:
+    <span class="quote">"So now it's as you can see it's 1am. it might not have any changes alright so as you can see the ingestion did not double by right if I'm running on the morning this might change quite a bit okay okay you also fetch the time timestamp which is the primary key"</span>
+    The old script said "show the row-count, re-run ingest, same counts" but gave you no command to
+    run, no numbers to expect, and nothing to say while it ran. So you filled the gap by
+    apologising for the time of day, and the bus-arrivals exception came out as a fragment.
+    <span class="fixnote"><b>Fix:</b> Section 5 now gives you the exact query, both counts visible
+    on one screen, one scripted sentence for each, and the bus-arrivals exception as its own small
+    paragraph with its own point.</span>
   </div>
+</div>
 
-  <!-- ─── SECTION 3 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">3</div>
-      <div class="section-title">Data Sources — Where the Data Comes From</div>
-      <div class="timer">2:20 → 3:30 · ~145 words</div>
-    </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Open <code>config_example.py</code> in VS Code — show the placeholder structure only, never real values</li>
-          <li>Point to <code>LTA_API_KEY</code>, <code>ONEMAP_EMAIL</code>, <code>ONEMAP_PASSWORD</code> placeholders</li>
-          <li>Show LTA DataMall approval email briefly (cover or blur the actual key value)</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>I have five data sources.</p>
-        <p>Google Calendar over OAuth2 is the entry point &mdash; scans my next ten events, geocodes the first with a location, with a time-of-day fallback if the token expires.</p>
-        <p>OneMap geocodes and routes, returning up to three options with duration, walk distance and fare. It tries a postal code first &mdash; more reliable than street names.</p>
-        <p>LTA DataMall gives live bus arrivals and MRT disruption alerts, via a gitignored key.</p>
-        <p>data.gov.sg gives the two-hour forecast for 47 areas, open, no key needed &mdash; flagged rainy on rain, shower, thunder or drizzle in the text.</p>
-        <p>And ip-api.com gives a routing origin without GPS permissions. But on the day I recorded this, it put me in Woodlands, then twenty kilometres away in Jurong forty minutes later, while I sat in Punggol the whole time &mdash; it geolocates my ISP, not my device. So origin now comes from a configured postal code first, ip-api only as fallback.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>The geocoder fallback chain: 6-digit postal code → full address → strip ", Singapore" → first comma token. OneMap's JWT expires every 3 days — the pipeline always calls for a fresh token at startup, never caches it to disk.</p>
-      </div>
-      <div class="skip">
-        <div class="skip-label">Skip / Do Not Say</div>
-        <ul>
-          <li>Don't describe the 8–10 AM / 4–6 PM / after-6 PM heuristic in detail — say "time-of-day fallback" only</li>
-          <li>Don't explain what OAuth2 is — just name it</li>
-        </ul>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if asked about security</div>
-        <p>"All API keys live in <code>config.py</code> which is in <code>.gitignore</code>. The template is <code>config_example.py</code> — placeholders only, committed to the repo. Running <code>git status</code> confirms config.py is not tracked."</p>
-      </div>
-    </div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">7</span><span>Your most valuable number came out backwards</span></div>
+  <div class="obs-b">
+    Take 4, at 4:44, on the single highest-scoring claim in the whole assessment:
+    <span class="quote">"The baseline importance dropped by 87%."</span>
+    The script said "dropped from 87% to about 5%". Spoken at pace, "from X to Y" collapses into
+    "by X" — a different and wrong claim, and the 5% disappears completely.
+    <span class="fixnote"><b>Fix:</b> never one sentence. "That one input was 87.5% of the model."
+    Then, several sentences later: "After the change, it dropped to about 5%." Both numbers are on
+    screen on Card 2 of <code>docs/recording_cards.md</code>, so you read them instead of
+    recalling them.</span>
   </div>
+</div>
 
-  <!-- ─── SECTION 4 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">4</div>
-      <div class="section-title">Batch Pipeline — Ingestion, Retry, Parquet, Idempotency &amp; Data Quality</div>
-      <div class="timer">3:30 → 5:05 · ~200 words</div>
-    </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li><strong>AIRFLOW IS NOT INSTALLED — use the DAG-code path.</strong> Open <code>dags/commute_pipeline_dag.py</code> in VS Code instead of the UI. Do not open <code>localhost:8080</code>.</li>
-          <li>Scroll to the bottom of the file — point at the 7-task chain on the <code>&gt;&gt;</code> line</li>
-          <li>Scroll up to <code>_is_evaluation_window()</code> — point at <code>local.hour == 8 and local.minute &lt; 30</code> as you tell the twice-a-day story</li>
-          <li>Terminal: show the row-count → re-run ingest → same counts (the idempotency proof)</li>
-          <li>Show a Parquet file in <code>data/raw/</code> in VS Code Explorer</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>This is the batch pipeline, and there&rsquo;s one part here I especially want to show you.</p>
-        <p>I wrote an Airflow DAG with seven tasks in a chain: schema check, ingest, transform, predict, backfill, a gate, and evaluate. The gate is a ShortCircuitOperator that only lets the daily model evaluation through on the 08:00 run, not every 30-minute tick.</p>
-        <p>Every API call goes through a retry wrapper with exponential backoff &mdash; three attempts, and the wait doubles each time: one second, then two, then four. LTA&rsquo;s API does return errors during rush hour, and without that, one blip at 8 AM would kill the whole run.</p>
-        <p>Now the part I want to highlight. I made the ingestion safe to rerun. If the pipeline dies halfway, I don&rsquo;t want the next run to duplicate everything, so every ingestion write is an upsert &mdash; the same record is replaced instead of inserted twice. That&rsquo;s what makes the ingestion idempotent, and it&rsquo;s the property that lets me run this on a schedule without watching it.</p>
-        <p>I can show you that it actually holds. Here are the row counts. I run the ingestion again &mdash; same counts. The one table that does grow is bus arrivals, and that&rsquo;s deliberate &mdash; the fetch timestamp is part of its primary key, because I want to keep those as a time series rather than overwrite them.</p>
-        <p>Before anything goes into DuckDB I also write the extracted records out to date-partitioned Parquet as a staging layer &mdash; one file per source per day, not a full replayable archive of the raw API responses. That&rsquo;s honestly on my list to fix.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>On idempotency specifically: DuckDB's <code>INSERT OR REPLACE</code> matches on the primary key, so the key choice <em>is</em> the design. <code>route_options</code> and <code>route_legs</code> are keyed on <code>option_id</code>, so a re-run replaces them and the row counts are unchanged &mdash; that is the verification. <code>bus_arrivals</code> includes <code>fetched_at</code> in the key, so a re-run deliberately appends a new snapshot rather than overwriting the time series. Same statement, deliberately different behaviour.</p>
-        <p>On data quality: coordinates are bounds-checked against Singapore (lat 1.15&ndash;1.47, lng 103.6&ndash;104.1) before they reach DuckDB, because OneMap returns (0, 0) for an address it cannot resolve, and every run &mdash; success or failure &mdash; is written to the <code>pipeline_runs</code> monitoring table with row counts, duration and error text.</p>
-      </div>
-      <div class="skip">
-        <div class="skip-label">Skip / Do Not Say</div>
-        <ul>
-          <li>Don't preview the scheduler.py state machine here — save it for Section 9</li>
-        </ul>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if Airflow is loading</div>
-        <p>"Airflow takes a few seconds — you can already see the 7-task graph here while the run history loads."</p>
-      </div>
-    </div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">8</span><span>Screen choreography competed with explaining</span></div>
+  <div class="obs-b">
+    Three habits, all caused by the script rather than by you.
+    <br><br>
+    <b>Pointing while explaining.</b> The SQL section had you locating code mid-sentence — "and
+    reach route over here", "so it's over here", "which is over here" — and the view's name
+    <code>v_enriched_routes</code> dropped out of the narration entirely.
+    <br><br>
+    <b>Two forward references in twenty seconds.</b> Take 4: "right now is genuine grief covered by
+    the ML section which I will explain later", then immediately "Right now, it's a drift that I
+    will explain later." The old script made you defer the same thing twice.
+    <br><br>
+    <b>Improvising next to secrets.</b> Take 1: "I have a separate real config file here." Nothing
+    was exposed, but the script left you improvising beside <code>config.py</code>.
+    <span class="fixnote"><b>Fix:</b> each section names one window and stays in it. Point
+    <i>first</i>, then talk. The dashboard warning is deferred exactly once, in scripted words. The
+    config file is a still screen with one scripted line and no scrolling.</span>
   </div>
+</div>
 
-  <!-- ─── SECTION 5 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">5</div>
-      <div class="section-title">SQL Transformation — Ranking Routes &amp; Leave-By Time</div>
-      <div class="timer">5:05 → 6:00 · ~115 words</div>
-    </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Open <code>scripts/schema.py</code> in VS Code — scroll to the <code>v_enriched_routes</code> VIEW definition</li>
-          <li>Point at the <code>ROW_NUMBER() OVER (PARTITION BY event_id ...)</code> window function</li>
-          <li>Run <code>python scripts/transform.py</code> in terminal — show LEAVE LATEST, LEAVE NOW, step-by-step legs in output</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>The transformation layer is a SQL view, <code>v_enriched_routes</code>, joining route options to destination weather and any active train alerts.</p>
-        <p>The leave-by time is event start minus journey duration minus a 10-minute walking buffer.</p>
-        <p>Ranking is a window function: <code>ROW_NUMBER() OVER (PARTITION BY event_id ORDER BY penalty, duration)</code>. The penalty is more than just &ldquo;pick the fastest&rdquo; &mdash; a rainy route with over 400 metres of walking gets pushed down even if it&rsquo;s quicker.</p>
-        <p>The &ldquo;why chosen&rdquo; line is SQL too &mdash; nine reasons, worked out with <code>MIN() OVER (PARTITION BY event_id)</code> against the other routes.</p>
-        <p>Disruption warnings are filtered to the rail lines the route uses, so a bus-only route shows none.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>Live bus arrivals show actual clock times — "09:34 (~4 min)" — not a relative wait. MRT headways use fixed estimates: ~4 min MRT, ~7 min LRT — Singapore does not publish a public real-time MRT arrival API for developers. Alt routes always show two alternatives: OneMap hard-caps at 3 total itineraries. Alt routes query <code>route_options</code> directly — not the enriched view — because the view's weather join and ranking aren't needed for the alternatives.</p>
-      </div>
-      <div class="skip">
-        <div class="skip-label">Skip / Do Not Say</div>
-        <ul>
-          <li>Don't describe the walk-only inline display in detail — mention it only if the demo happens to show a walk route</li>
-          <li>Don't say the view cross-joins 47 weather areas — the view uses <code>nearest_weather_area</code> (destination-specific) after the Round 2 fix</li>
-        </ul>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if transform.py is running</div>
-        <p>"I'll run transform.py now — the SQL output appears in the terminal as it completes."</p>
-      </div>
-    </div>
+<div class="obs">
+  <div class="obs-h"><span class="obs-n">+</span><span>What was already working, and is now built in</span></div>
+  <div class="obs-b">
+    Your best delivery across all four takes is a story told in your own words. The ip-api passage
+    in take 2 is fluent and needs no help at all:
+    <span class="quote good">"I was experimenting something to see whether I can trigger my current location without any GPS permission. But when I'm recording this, it put me at Woodland while I'm sitting at Punggol the whole time. So it geolocates me my ISP instead of my actual device location."</span>
+    You also write your own bridges as you go — "Okay, next I will show you...", "Alright, let's
+    move on to the next one, which is...", "There's one part that I especially wanted to show you."
+    <span class="fixnote"><b>Kept:</b> the ip-api story stays close to the words you actually used.
+    Every section now opens with one of your own bridge lines, written in, so you never invent a
+    transition while also changing windows.</span>
   </div>
+</div>
 
-  <!-- ─── SECTION 6 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">6</div>
-      <div class="section-title">Live Dashboard — Streamlit Real-Time Output</div>
-      <div class="timer">6:00 → 6:55 · ~115 words</div>
-    </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Open Streamlit at <code>http://localhost:8501</code></li>
-          <li>Point at: event title, leave-by metric, ML prediction, fare, weather warning if shown</li>
-          <li>Show the step-by-step legs section</li>
-          <li>Point at the "Running…" spinner or the auto-refresh caption at the bottom</li>
-          <li>Expand alt route [2] or [3] — show the "🤖 ML:" caption at the bottom of the expander</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>This is the live output layer &mdash; refreshing every 60 seconds, re-querying DuckDB with no external API calls.</p>
-        <p>There&rsquo;s a database problem I hit twice here, worth explaining. DuckDB allows one writer at a time. My first version cached the connection at startup, so the dashboard never saw new rows at all. Removing the cache wasn&rsquo;t enough &mdash; the script then held that connection open while sleeping for 60 seconds, blocking the pipeline&rsquo;s writes for almost the entire minute. The fix was to run every query up front, close the connection, and only then render and sleep &mdash; open for milliseconds instead of a minute. Tested both ways: the old pattern throws a lock error on write, the new one doesn&rsquo;t.</p>
-        <p>On the page: leave-by, duration and fare are the headline numbers, weather and disruption warnings from SQL, an ML panel per alt route, and a model health strip &mdash; right now a genuine drift warning, covered in the ML section.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>The two bugs in order. First, <code>@st.cache_resource</code> caches the decorated function's return value across every rerun in the process, so the connection object &mdash; and the snapshot it was holding &mdash; never changed. Removing it fixed staleness. Second, the connection was still open during <code>time.sleep(60)</code>, which blocked the writer. Draining every query into memory before rendering fixed that. Two different bugs with the same symptom.</p>
-      </div>
-      <div class="skip">
-        <div class="skip-label">Skip / Do Not Say</div>
-        <ul>
-          <li>Don't describe the alt route ML panel in detail here — it's covered in Section 7</li>
-        </ul>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if dashboard is loading</div>
-        <p>"The dashboard opens a fresh read-only DuckDB connection on every rerun — it may take a moment on first load."</p>
-      </div>
-    </div>
+<div class="part">Part B — The new script</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ok">P</span>
+    <span class="section-title">Before you record — prep, not recorded</span>
+    <span class="timer">do this first</span>
   </div>
+  <div class="section-body">
 
-  <!-- ─── SECTION 7 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num ml">ML</div>
-      <div class="section-title">ML Predictions — Train, Predict, Backfill, Evaluate</div>
-      <div class="timer">7:10 → 8:35 · ~185 words</div>
+    <div class="blk warn">
+      <div class="blk-label">Do this the day before — it decides whether you have data on camera</div>
+      <p><b>Put a real calendar event in the next day or two, with a real Singapore address.</b></p>
+      <p>This was tested today and it matters more than anything else in this list. OneMap will not
+      route to a far-future date. Measured on the live API, same origin and destination:</p>
+      <table>
+        <tr><th>Event date</th><th>OneMap routing result</th></tr>
+        <tr><td class="t">today</td><td>HTTP 200 — <b>3 route options</b></td></tr>
+        <tr><td class="t">tomorrow</td><td>HTTP 200 — 2 route options</td></tr>
+        <tr><td class="t">+7 days</td><td>HTTP 200 — 2 route options</td></tr>
+        <tr><td class="t">+14 to +30 days</td><td>HTTP 200 — only 1 route option</td></tr>
+        <tr><td class="t">+59 days</td><td><b>HTTP 400 — no routes at all</b></td></tr>
+      </table>
+      <p>Your current next event is a <i>video consultation</i> on 30 October. It has no physical
+      address, so geocoding falls back, and the date is 59 days out, so routing returns 400. Right
+      now <code>route_options</code> is empty for it, and your dashboard has nothing fresh to show.</p>
+      <p>Sections 6, 7, 9 and 10 all depend on having <b>three</b> routes — "all three routes are
+      scored separately" is one of your best claims. Only a same-day or next-day event gives you
+      three. So: create an event for the recording day itself, with a street address or postal code.</p>
     </div>
-    <div class="section-body">
-      <div class="rubric-alert">
-        <div class="rubric-alert-label">Rubric — ML and Real-Time Output (30 marks)</div>
-        <p>Cover all four steps: training ✅ · prediction ✅ · backfill actual ✅ · evaluation ✅. Also confirm: live refreshed dashboard ✅ · batch processing ✅. This section earns the 30-mark ML criterion.</p>
-      </div>
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Open <code>scripts/model.py</code> — show the <code>train()</code> function header and the <code>predict()</code> loop over all route options</li>
-          <li>Show <code>models/commute_predictor.pkl</code> and <code>models/crowd_predictor.pkl</code> in Explorer</li>
-          <li>Run <code>python scripts/model.py --predict</code> in terminal — show 3 log lines, one per route option</li>
-          <li><strong>Expand the feature sheet for 3–5 seconds while you are talking about <code>bus_headway_gap</code></strong> — either the "Full ML Feature Set" block below, or the ML station in <code>docs/roadmap.html</code>. Leave it up long enough to be readable if the assessor pauses, then move on.</li>
-          <li><strong>Do NOT read the features out.</strong> The table is there to be paused, not narrated — keep talking about the two design choices while it is on screen.</li>
-          <li>Switch to Streamlit — point at the ML panel. <strong>Today it reads: Predicted journey ~45 min · crowd 🟡 Standing (SDA) · 7-day MAE 16.3 min, with a red drift-warning banner above it (threshold is 10 min).</strong> This is a real computed number: I hand-logged my actual leave/arrival times for the last 7 days on my phone and backfilled them into <code>predictions</code> tonight so the evaluator had real pairs to compute against. Say that plainly.</li>
-          <li>Expand alt route [2] or [3] and show that each option carries its own ML prediction — the three routes are visibly scored differently. Don't quote specific alt-route minutes; they change with live context, and hardcoding a value here would go stale like the "74/75 min" figures this line used to carry.</li>
-          <li><strong>Airflow is not installed — do not switch to it.</strong> Point instead at the <code>predict_commute</code>, <code>backfill_actuals</code> and <code>evaluate_model</code> tasks in <code>dags/commute_pipeline_dag.py</code>, and say the Docker scheduler runs the same daily evaluation</li>
-        </ul>
-      </div>
 
-      <details class="feature-sheet">
-        <summary>Full ML Feature Set — pause here if interested</summary>
-        <div class="fs-body">
-          <div class="fs-caption">I will explain only two design choices verbally; this table is on screen for the assessor to pause and inspect.</div>
+    <div class="blk screen">
+      <div class="blk-label">Terminals and windows — start in this order</div>
+      <ul>
+        <li><b>Pre-flight data:</b> <code>uv run python scripts/ingest.py</code> then
+            <code>uv run python scripts/transform.py</code> then
+            <code>uv run python scripts/model.py --predict</code>.
+            Confirm the log names your real calendar event and that three routes came back.</li>
+        <li><b>Airflow:</b> <code>docker compose -f docker-compose.airflow.yml up -d</code> →
+            <code>http://localhost:8080</code>. Give it about 30 seconds. Get the login password
+            once with
+            <code>docker compose -f docker-compose.airflow.yml exec airflow cat /opt/airflow/standalone_admin_password.txt</code>
+            (user is <code>admin</code>). Unpause the <code>commute_pipeline</code> DAG and trigger
+            one run <b>before</b> recording, so the graph already shows green boxes on camera.</li>
+        <li><b>Streamlit:</b> <code>uv run streamlit run scripts/serve.py</code> →
+            <code>http://localhost:8501</code></li>
+        <li><b>FastAPI:</b> <code>uv run uvicorn scripts.api:app --reload --port 8000</code> →
+            <code>http://localhost:8000/docs</code></li>
+        <li><b>Docker (Section 12 only):</b> stop Streamlit and FastAPI first — the containers use
+            the same ports 8501 and 8000. Then <code>docker compose up</code>.</li>
+      </ul>
+    </div>
 
-          <div class="fs-h">A · Delay model — <code>RandomForestRegressor</code> · 13 features</div>
-          <div class="fs-target"><strong>Target:</strong> <code>delay_min</code> — minutes <em>on top of</em> the OneMap scheduled duration, not the total journey. Predicted total = OneMap baseline + predicted delay.</div>
-          <div class="fs-scroll">
-          <table class="feat">
-            <thead><tr><th>Feature</th><th>Meaning</th><th>Source</th><th>Engineered?</th></tr></thead>
-            <tbody>
-              <tr><td>base_duration</td><td>OneMap's scheduled duration for this route option, in minutes. Kept as context for how much exposure a journey has — it no longer contains the answer.</td><td>OneMap routing → <code>route_options.total_duration_min</code></td><td>No — renamed passthrough</td></tr>
-              <tr><td>next_bus_mins</td><td>Minutes until the next bus of this route's first transit service reaches the boarding stop.</td><td>LTA <code>v3/BusArrival</code> → <code>bus_arrivals</code></td><td>No</td></tr>
-              <tr><td>next_bus2_mins</td><td>Minutes until the bus <em>after</em> that one, same service. Originally stored only to render "one after that in 11 min".</td><td>LTA <code>v3/BusArrival</code> → <code>bus_arrivals</code></td><td>No</td></tr>
-              <tr class="eng"><td>bus_headway_gap</td><td><code>next_bus2_mins &minus; next_bus_mins</code>, floored at 0. A wide gap means the service is running irregularly, so passengers have had longer to accumulate and the bus that arrives is fuller and slower to board. Invisible to a model given only the first arrival time.</td><td>Derived from two LTA fields — no extra API call</td><td>★ Engineered</td></tr>
-              <tr><td>walk_distance_m</td><td>Total walking metres on this route option.</td><td>OneMap → <code>route_options</code></td><td>No</td></tr>
-              <tr><td>num_transfers</td><td>Number of changes on this route option.</td><td>OneMap → <code>route_options</code></td><td>No</td></tr>
-              <tr><td>is_rainy</td><td>1 when the forecast text contains rain, shower, thunder or drizzle, for the <strong>weather area nearest the destination</strong> (<code>calendar_events.nearest_weather_area</code>) — the same area the SQL recommendation uses, and the same predicate in training and serving.</td><td>data.gov.sg forecast text, keyword-flagged at ingest</td><td>◆ Derived at ingest</td></tr>
-              <tr class="eng"><td>rain_exposure</td><td><code>is_rainy × walk_distance_m / 1000</code> — kilometres of walking actually done in the rain. Separates a wet 1.2 km walk from a wet 50 m walk, which a rain flag on its own cannot.</td><td>Derived from <code>is_rainy</code> + <code>walk_distance_m</code></td><td>★ Engineered</td></tr>
-              <tr class="eng"><td>rush_hour</td><td>1 when <code>hour_of_day ∈ {7, 8, 17, 18, 19}</code> <em>and</em> the day is Mon–Fri, i.e. <code>day_of_week ∉ {0, 6}</code>. DuckDB's <code>EXTRACT(DOW)</code> numbers Sunday as 0, so a <code>&lt; 5</code> test would call Sunday a weekday and Friday a weekend — that bug was found and fixed. The strongest single driver of predicted delay.</td><td>Derived from event start time</td><td>★ Engineered</td></tr>
-              <tr class="eng"><td>is_weekend</td><td>1 when <code>day_of_week ∈ {0, 6}</code> — Sunday or Saturday under DuckDB's <code>EXTRACT(DOW)</code> numbering. Weekend roads are clearer, so delay drops independently of the hour.</td><td>Derived from event start time</td><td>★ Engineered</td></tr>
-              <tr><td>hour_of_day</td><td>Event start hour, converted to SGT.</td><td>Google Calendar → <code>calendar_events.start_time</code></td><td>◆ Derived (timezone extract)</td></tr>
-              <tr><td>day_of_week</td><td>Event start day-of-week, converted to SGT (DuckDB <code>EXTRACT(DOW)</code>).</td><td>Google Calendar → <code>calendar_events.start_time</code></td><td>◆ Derived (timezone extract)</td></tr>
-              <tr class="eng"><td>bus_crowd_score</td><td>LTA's <code>Load</code> code ordinal-encoded <code>SEA=0, SDA=1, LSD=2</code>, so "fuller" becomes an ordered magnitude a tree can split on rather than three unrelated labels.</td><td>LTA <code>v3/BusArrival</code> → <code>bus_arrivals.load</code></td><td>★ Engineered (ordinal encoding)</td></tr>
-            </tbody>
-          </table>
-          </div>
+    <div class="blk warn">
+      <div class="blk-label">One writer at a time — the rule that avoids a crash on camera</div>
+      <p>Airflow and <code>docker compose up</code> both run the pipeline, and DuckDB allows only
+      one writer. <b>Never have both up at once.</b> Before Section 12, run
+      <code>docker compose -f docker-compose.airflow.yml down</code>. This is not a limitation to
+      hide — it is the reason your architecture has two alternative orchestrators, and you say so
+      on camera in Section 12.</p>
+    </div>
 
-          <div class="fs-h">B · Crowd model — <code>RandomForestClassifier</code> · 10 features</div>
-          <div class="fs-target"><strong>Target:</strong> <code>actual_crowd</code> — LTA's observed <code>Load</code> at the boarding stop, as SEA / SDA / LSD. Scored per route option, so all three routes get their own crowd label.</div>
-          <div class="fs-scroll">
-          <table class="feat">
-            <thead><tr><th>Feature</th><th>Meaning</th><th>Source</th><th>Engineered?</th></tr></thead>
-            <tbody>
-              <tr><td>leave_hour</td><td>Hour of the recommended leave-by time in SGT — when you are actually standing at the stop, which is not the hour the event starts. Falls back to the event hour if no recommendation exists yet.</td><td>SQL transform → <code>recommendations.leave_by</code></td><td>◆ Derived (transform output)</td></tr>
-              <tr><td>day_of_week</td><td>Event start day-of-week in SGT.</td><td>Google Calendar → <code>calendar_events.start_time</code></td><td>◆ Derived (timezone extract)</td></tr>
-              <tr><td>is_rainy</td><td>1 when the forecast text contains rain, shower, thunder or drizzle, for the weather area nearest the destination. Rain pushes people off walking and onto buses.</td><td>data.gov.sg forecast text, keyword-flagged at ingest</td><td>◆ Derived at ingest</td></tr>
-              <tr class="eng"><td>rush_hour</td><td>1 when <code>leave_hour ∈ {7, 8, 17, 18, 19}</code> <em>and</em> the day is Mon–Fri (<code>day_of_week ∉ {0, 6}</code>). Computed from the leave-by hour here, not the event hour.</td><td>Derived from <code>leave_hour</code> + <code>day_of_week</code></td><td>★ Engineered</td></tr>
-              <tr><td>next_bus_mins</td><td>Minutes until the next bus of this route's first transit service.</td><td>LTA <code>v3/BusArrival</code> → <code>bus_arrivals</code></td><td>No</td></tr>
-              <tr><td>next_bus2_mins</td><td>Minutes until the bus after that, same service.</td><td>LTA <code>v3/BusArrival</code> → <code>bus_arrivals</code></td><td>No</td></tr>
-              <tr class="eng"><td>bus_headway_gap</td><td><code>next_bus2_mins &minus; next_bus_mins</code>, floored at 0. This is the feature the crowd model was built around: a bus in 3 minutes with another right behind it is a completely different crowd from a bus in 3 minutes and then nothing for 20, even though the first number is identical.</td><td>Derived from two LTA fields</td><td>★ Engineered</td></tr>
-              <tr><td>walk_distance_m</td><td>Walking metres on this route option — route context, so the three options are not all scored the same.</td><td>OneMap → <code>route_options</code></td><td>No</td></tr>
-              <tr><td>num_transfers</td><td>Changes on this route option. More interchanges means more boarding points where a crowd can build.</td><td>OneMap → <code>route_options</code></td><td>No</td></tr>
-              <tr><td>base_duration</td><td>OneMap's scheduled duration for this option — route context only.</td><td>OneMap → <code>route_options.total_duration_min</code></td><td>No</td></tr>
-            </tbody>
-          </table>
-          </div>
+    <div class="blk screen">
+      <div class="blk-label">Open these VS Code tabs in this order, before you start</div>
+      <p>This removes almost all the "find the code while talking" problem from the old takes.
+      Every section below just says which tab to click.</p>
+      <ul>
+        <li>Tab 1 — <code>config_example.py</code></li>
+        <li>Tab 2 — <code>dags/commute_pipeline_dag.py</code></li>
+        <li>Tab 3 — <code>scripts/ingest.py</code>, already scrolled to <code>fetch_with_retry</code></li>
+        <li>Tab 4 — <code>scripts/schema.py</code>, already scrolled to the <code>v_enriched_routes</code> view</li>
+        <li>Tab 5 — <code>scripts/model.py</code>, already scrolled to <code>FEATURE_COLS_DUR</code></li>
+        <li>Tab 6 — <code>docs/recording_cards.md</code> — your numbers. Zoom to about 200%.</li>
+      </ul>
+    </div>
 
-          <div class="fs-key">★ <strong>Engineered</strong> = constructed by me from other fields, not returned by any API. &nbsp;◆ <strong>Derived</strong> = a transformation of one source field (extract, timezone convert, keyword flag). &nbsp;<strong>No</strong> = used essentially as the API returned it.</div>
-          <div class="fs-key">Note: <code>bus_crowd_score</code> feeds the <em>delay</em> model only. In the crowd model, LTA's <code>Load</code> is the label — feeding it back in as a feature would make the model predict its own target.</div>
-        </div>
-      </details>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>There are two models here, and I want to spend most of this section on one design decision and one feature.</p>
-        <p>First the design decision. My first model predicted the total journey time, using OneMap&rsquo;s own duration as one of its inputs &mdash; and that single input accounted for 87% of the model. It was mostly re-deriving OneMap&rsquo;s estimate, not learning delay, and because a Random Forest can&rsquo;t predict outside its training range, every route capped out at the same value regardless of how long it really was.</p>
-        <p>So I changed what the model predicts: the delay on top of OneMap&rsquo;s schedule, not the journey from scratch. The number you see is the baseline plus the predicted delay. That fixed both problems &mdash; the baseline&rsquo;s importance dropped from 87% to about 5%, and the prediction ceiling disappeared, because the total is anchored to OneMap&rsquo;s figure.</p>
-        <p>Now the feature I&rsquo;m most pleased with. LTA&rsquo;s arrival API gives you the next bus and the one after it. I originally stored that second time only for the display. Later I realised the gap between those two times was itself a signal, so I engineered <code>bus_headway_gap</code>: <code>next_bus2_mins</code> minus <code>next_bus_mins</code>. A wide gap means the service is running irregularly, so passengers have had longer to build up, and the bus that arrives is fuller &mdash; even when the first arrival time looks identical to a well-spaced service. That feeds both models, and all three route options are scored individually.</p>
-        <p>Then the MLOps loop: train, predict, backfill, evaluate, drift check. For the last seven days I manually logged my own departure and arrival times on my phone &mdash; those are real observations, just not GPS-tracked. Other backfilled rows are a reconstruction instead: schedule plus observed boarding wait, or a published headway allowance. <code>actual_source</code> keeps the two types separate, so one is never mistaken for the other.</p>
-        <p>The evaluator runs daily and computes a rolling seven-day MAE once at least seven pairs exist. With those seven hand-logged days, it computes a real number &mdash; 16.3 minutes &mdash; above my 10-minute threshold, so the dashboard raises a genuine warning. With only seven observations, I treat that as a warning signal, not proof that concept drift has definitely occurred.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>The delay model uses 13 features: <code>base_duration</code>, <code>next_bus_mins</code>, <code>next_bus2_mins</code>, <code>bus_headway_gap</code>, <code>walk_distance_m</code>, <code>num_transfers</code>, <code>is_rainy</code>, <code>rain_exposure</code>, <code>rush_hour</code>, <code>is_weekend</code>, <code>hour_of_day</code>, <code>day_of_week</code>, <code>bus_crowd_score</code>. Measured importances on the currently trained model (<code>random_state=42</code>; the exact digits shift a little as real rows join the synthetic bootstrap): rush_hour 0.36, next_bus2_mins 0.17, next_bus_mins 0.14, rain_exposure 0.12 &mdash; and base_duration only 0.05, which is the point. Outcome reconstruction: BUS uses the observed boarding wait from the live LTA feed; MRT and LRT add a published headway allowance plus 20 minutes if a HEAVY disruption was active; walking routes are deterministic. Each row stores which method was used in <code>actual_source</code>.</p>
-      </div>
-      <div class="skip">
-        <div class="skip-label">Skip / Do Not Say</div>
-        <ul>
-          <li>Don't list all 13 features in the SAY — name the top few by importance and move on. The full feature sheet is on screen for exactly that reason; reading it aloud costs a minute and gains nothing</li>
-          <li>Never say "actual journey time" or "GPS ground truth" for either outcome type. Say "hand-logged observation" for the 7 manually-logged days, and "reconstructed outcome estimate" for automatically backfilled rows. Never claim the drift warning proves concept drift — with 7 points it's a warning signal, not proof.</li>
-          <li>Don't mention MLflow — the models are saved as <code>.pkl</code> files via joblib; MLflow is a future production enhancement only</li>
-        </ul>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if --predict is running slowly</div>
-        <p>"The .pkl files are in models/ — I can show them in Explorer while the predict run completes."</p>
-      </div>
+    <div class="blk warn">
+      <div class="blk-label">Never on screen</div>
+      <p><code>config.py</code> contents · <code>credentials.json</code> ·
+      <code>token.json</code> · any real API key value. Show the terminal log line, never the file.
+      In Section 3 you show <code>config_example.py</code>, which is placeholders only and is
+      committed to the repo on purpose.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">1</span>
+    <span class="section-title">Opening — the problem and what I built</span>
+    <span class="timer">0:00 → 1:00 · 110 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: make the assessor understand the problem and the answer before any code appears.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>Browser on your GitHub repo page. Nothing else.</li>
+        <li>Do not scroll. Do not open any folder.</li>
+      </ul>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Hi, I am David, a Data Engineering student at SIT. This is my Week 2 assessment, SG Commute Pulse.</p>
+<div class="gap"></div>
+      <p>Here is a real problem I have. I have a calendar event somewhere in Singapore.</p>
+      <p>To work out when to leave, I check three apps. Route, bus, weather.</p>
+      <p>None of them know my calendar.</p>
+<div class="gap"></div>
+      <p>So I built one pipeline to answer one question. When do I need to leave?</p>
+<div class="gap"></div>
+      <p>It reads my next event, finds the location, then pulls routes, live buses, train alerts and weather into DuckDB.</p>
+      <p>SQL picks the best route and the leave-by time. Then a model adds a predicted delay.</p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Nothing to cut. If you want a face shot, use the first two lines only, then cut to screen.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Presentation — problem framing, and a stated scope you then deliver against.</p>
     </div>
   </div>
+</div>
 
-  <!-- ─── SECTION 8 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">8</div>
-      <div class="section-title">FastAPI — REST Endpoint &amp; Swagger UI</div>
-      <div class="timer">8:35 → 9:25 · ~100 words</div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">2</span>
+    <span class="section-title">Three layers — how the system is put together</span>
+    <span class="timer">1:00 → 1:50 · 90 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: give the assessor a map, so every later section has somewhere to sit.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li><code>docs/roadmap.html</code> in the browser.</li>
+        <li>Point at each phase <b>before</b> you name it, then stop moving the mouse and talk.</li>
+      </ul>
     </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Open <code>http://localhost:8000/docs</code> — Swagger UI</li>
-          <li>Expand <code>GET /api/v1/recommendation/next</code> — click "Try it out" → Execute — show JSON response</li>
-          <li>Show <code>GET /api/v1/pipeline/status</code> — Execute — show recent pipeline run rows</li>
-          <li>Point to the 6 endpoints listed in the sidebar</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>Streamlit reads DuckDB directly &mdash; I added FastAPI so anything else can get the same data, like a mobile app or a teammate&rsquo;s script.</p>
-        <p>Six endpoints: health, next recommendation, recommendation and prediction by event id, pipeline status, and alerts &mdash; all Swagger-documented from Pydantic response models, so I can click Try it out and run a live call right now.</p>
-        <p>The pipeline status endpoint reads the <code>pipeline_runs</code> monitoring table &mdash; success, row count, duration and error per source. And like the dashboard, the API opens a read-only DuckDB connection per request and closes it immediately, so only the pipeline writes.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>FastAPI uses a <code>contextmanager get_db()</code> — opens a fresh <code>read_only=True</code> DuckDB connection per request and closes it in the finally block. Multiple simultaneous read-only connections are safe in DuckDB.</p>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if Swagger is loading</div>
-        <p>"While Swagger loads, I'll hit <code>localhost:8000/health</code> directly to show the API is live."</p>
-      </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Next, how it is put together. Three layers, because they do different jobs.</p>
+<div class="gap"></div>
+      <p>Layer one is the pipeline. Layer two is machine learning. Layer three is serving.</p>
+<div class="gap"></div>
+      <p>I store the data twice. Raw pulls go to Parquet files.</p>
+      <p>The cleaned version goes into DuckDB, and that is what the dashboard and API read.</p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>If the roadmap page is slow to load, cut the load out and start speaking on the loaded page.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Architecture and design intent · separation of raw staging from the query layer.</p>
     </div>
   </div>
+</div>
 
-  <!-- ─── SECTION 9 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num">9</div>
-      <div class="section-title">Docker Compose — One Command to Start Everything</div>
-      <div class="timer">9:25 → 10:15 · ~115 words</div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">3</span>
+    <span class="section-title">Five data sources</span>
+    <span class="timer">1:50 → 3:05 · 135 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: name five sources cleanly, then tell one real story about the fifth.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>VS Code <b>Tab 1</b> — <code>config_example.py</code>. Placeholders only.</li>
+        <li><b>Do not scroll and do not count off the file.</b> The screen stays still. You count
+            with your voice.</li>
+      </ul>
     </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Open <code>docker-compose.yml</code> in VS Code — point at the 3 services and the <code>python scripts/scheduler.py</code> command on the pipeline service</li>
-          <li>Open <code>scripts/scheduler.py</code> briefly — show the 7 state constant names at the top</li>
-          <li>Run <code>docker compose up</code> in terminal (or show it already running)</li>
-          <li>Show <code>docker compose logs pipeline -f</code> — scheduler state transitions in the log stream</li>
-          <li>Confirm <code>localhost:8501</code> and <code>localhost:8000/docs</code> are still accessible</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p><code>docker compose up</code> starts three runtime services &mdash; pipeline, API, dashboard. Airflow is deliberately not one of these: it and my own scheduler are alternative orchestrators, and must never run together, since DuckDB allows only one writer.</p>
-        <p>The pipeline container runs <code>scripts/scheduler.py</code>, a seven-state machine: no event, event detected, watching, leave window, in transit, arrival verify, cooldown. It exists for cost &mdash; the calendar check is cheap, but OneMap and LTA are rate-limited, so those calls fire only when the event or destination changes. It also runs the daily evaluation, matching Airflow&rsquo;s MLOps loop.</p>
-        <p>Secrets stay out of the image &mdash; config and OAuth credentials mount in at runtime &mdash; and all three services share one named volume for the DuckDB file.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time</div>
-        <p>EVENT_DETECTED_BURST: confirms a new event is stable over five 30-second checks before calling OneMap — avoids wasted API calls if you're still editing the event. LEAVE_WINDOW: 1-second burst for the first 60 seconds, then 30-second backoff. Weather refreshes every 30 minutes independent of all states.</p>
-      </div>
-      <div class="fallback">
-        <div class="fallback-label">Fallback — if Docker is starting up</div>
-        <p>"Docker is pulling images on first run — the scheduler state transition logs will appear once the pipeline container starts."</p>
-      </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Next, where the data comes from. This is my config template, with placeholders only.</p>
+<div class="gap"></div>
+      <p>I have five data sources.</p>
+<div class="gap"></div>
+      <p>One. Google Calendar. My next event and its location.</p>
+      <p>Two. OneMap. It turns that into coordinates, and gives up to three routes, with duration, walking distance and fare.</p>
+      <p>Three. LTA DataMall. Live bus arrivals and MRT alerts.</p>
+      <p>Four. Data dot gov dot S G. A two-hour forecast for 47 areas. Open, no key.</p>
+      <p>Five. My own starting location.</p>
+<div class="gap"></div>
+      <p>That last one has a story.</p>
+      <p>I wanted my location without GPS permission, so I used a service that guesses it from your internet connection.</p>
+      <p>On the day I tested it, it put me in Woodlands, then Jurong. I was in Punggol the whole time.</p>
+      <p>It reads my provider, not my device. So now I set my own postal code, and that service is only a backup.</p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>The five-source list is the one place worth a retake if you stumble. It is only 90 seconds
+      in, so a retake costs almost nothing.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Five distinct sources · three auth styles · secrets kept out of the repo · a real fault
+      you found by testing, and the design change you made because of it.</p>
     </div>
   </div>
+</div>
 
-  <!-- ─── SECTION 10 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num ref">R</div>
-      <div class="section-title">Reflection — 3 Mandatory Questions</div>
-      <div class="timer">10:15 → 12:15 · ~255 words</div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">4</span>
+    <span class="section-title">Orchestration and retries — the real Airflow UI</span>
+    <span class="timer">3:05 → 4:10 · 115 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: show the pipeline as a task graph that really runs, and explain retries once, simply.</p>
+
+    <div class="blk warn">
+      <div class="blk-label">This changed — Airflow now actually runs</div>
+      <p>Airflow is installed and tested in a container. It parses your DAG with no import errors,
+      and a full run was completed: six tasks green and <code>evaluate_model</code> skipped by the
+      gate. So you show the <b>real UI</b>, not just the DAG file. Start it before recording and
+      trigger one run, so the graph is already coloured when you arrive here.</p>
     </div>
-    <div class="section-body">
-      <div class="rubric-alert">
-        <div class="rubric-alert-label">Required — answer all 3 questions</div>
-        <p>A short reflection is part of the rubric. Don't skip any question. Keep each answer tight — the timings here assume ~100 words per question at a natural pace.</p>
-      </div>
-      <div class="say">
-        <div class="say-label">Question 1 &mdash; Most Challenging Part</div>
-        <p>The hardest part was a bug where the error message pointed me the wrong way.</p>
-        <p>LTA changed their Bus Arrival endpoint from <code>BusArrivalv2</code> to <code>v3/BusArrival</code>, and the old path 404&rsquo;d with &ldquo;the requested API was not found&rdquo;. I read that as my bus stop code being wrong and went looking there &mdash; every stop failed the same way. Only LTA&rsquo;s current API docs showed the URL had changed. One-line fix; the lesson was that a 404 can mean the endpoint is gone, not my input.</p>
-        <p>A second one I liked: bus stop codes rejected as invalid. The cause was pandas &mdash; a single null row promotes the stop-code column to float, so &ldquo;65721&rdquo; becomes &ldquo;65721.0&rdquo;, and LTA won&rsquo;t accept a decimal point. A data-typing problem surfacing as an API error two layers away.</p>
-      </div>
-      <div class="say">
-        <div class="say-label">Question 2 &mdash; Most Proud Of</div>
-        <p>The part I&rsquo;m most proud of is a feature I engineered myself. LTA&rsquo;s bus arrival API gives you the next bus and the one after it. I stored that second time for the display, then realised the gap between the two was itself a crowding signal &mdash; that became <code>bus_headway_gap</code>, and it cost nothing extra to add.</p>
-        <p>I&rsquo;m also glad about how I handled the honesty side of the ML. When I found my duration model was mostly re-deriving OneMap&rsquo;s own estimate, I changed what it predicts rather than describing it generously. And where I&rsquo;m using a proxy instead of a real measurement, I record which proxy it was.</p>
-      </div>
-      <div class="say">
-        <div class="say-label">Question 3 &mdash; If I Had More Time</div>
-        <p>Three things. First, fully automated ground truth &mdash; I hand-logged my actual departure and arrival for the last seven days to prove the evaluator works, but a real trip-tracking log, even two button presses on my phone, would replace that manual step. Second, more history &mdash; seven days is enough to trigger a drift warning, not enough to know if the model reliably beats the baseline; that comparison is already built into evaluation. Third, push instead of pull &mdash; a message 30 minutes before each event, rather than me remembering to open the dashboard.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — only if ahead of time (Q3 extension)</div>
-        <p>If this scaled to thousands of simultaneous commuters: replace FastAPI with NVIDIA Triton Inference Server for batched ML inference, replace pandas with cuDF from the RAPIDS ecosystem. But the Day 5 Technology Selection Exercise maps "low-traffic prediction API" to FastAPI and "100MB daily data" to pandas — which is exactly what I built. Knowing when not to use a technology is as important as knowing how to use it.</p>
-      </div>
-      <div class="optional">
-        <div class="optional-label">Optional — stale event bug (Q1 extension if time)</div>
-        <p>After rescheduling calendar events, the pipeline kept showing the wrong destination. Three bugs acting together: routing origin was geocoded from HOME_ADDRESS (fix: use where the user actually is &mdash; a configured postal code, with IP geolocation only as fallback); rescheduling doesn't remove old DB rows (fix: <code>_purge_stale_events()</code>); DuckDB's INSERT OR REPLACE on route_options failed because route_legs held a FK reference (fix: pre-delete route_legs before upserting route_options).</p>
-      </div>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>Browser on <code>http://localhost:8080</code>, the <code>commute_pipeline</code> graph view.</li>
+        <li>Point at the chain <b>before</b> you start the sentence about it. Then stop moving.</li>
+        <li>When you mention the gate, point at <code>gate_evaluate</code> and the greyed-out
+            <code>evaluate_model</code> box next to it.</li>
+        <li>Then switch to VS Code <b>Tab 3</b> for the retry code. One switch only.</li>
+      </ul>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Next, the pipeline. This is Airflow, and this is my pipeline as a graph.</p>
+      <p>Seven tasks in order. Schema, ingest, transform, predict, fill in what happened, a gate, then evaluate.</p>
+<div class="gap"></div>
+      <p class="stage">[point at gate_evaluate and the grey box beside it]</p>
+      <p>This is the part I like. It runs every 30 minutes, but I do not need to test my model that often.</p>
+      <p>So I added a gate. Only the 8 AM run gets through to evaluation.</p>
+      <p>You can see it working. The gate ran, and the box after it is grey. Skipped.</p>
+      <p>In Airflow, that gate is a ShortCircuitOperator.</p>
+<div class="gap"></div>
+      <p class="stage">[switch to VS Code Tab 3]</p>
+      <p>Next, what happens when an API fails.</p>
+      <p>LTA's API sometimes fails during rush hour, so I try three times.</p>
+      <p>I wait one second, then two, then four. The wait doubles each time.</p>
+      <p>That is called exponential backoff.</p>
+      <p class="opt">Without it, one failed call at 8 AM would kill the whole run. <span class="opt-tag">cut if over time</span></p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Optional and strong if you have it: open the <code>ingest</code> task log in Airflow. A real
+      run today logged <code>Attempt 1 failed ... retry in 1s</code> then <code>Attempt 2 failed ...
+      retry in 2s</code>. If your run shows that, freeze on it for two seconds — it is the retry
+      logic proving itself with no narration needed.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Orchestration with a real scheduler · task dependencies · conditional branching
+      (ShortCircuitOperator) · retry with exponential backoff · fault tolerance reasoning.</p>
     </div>
   </div>
+</div>
 
-  <!-- ─── SECTION 11 ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num ok">✓</div>
-      <div class="section-title">Wrap-Up — Resume Bullets</div>
-      <div class="timer">12:15 → 12:45 · ~30 words spoken + show bullets</div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">5</span>
+    <span class="section-title">Safe to run again — the proof</span>
+    <span class="timer">4:10 → 5:35 · 150 words</span>
+    <span class="pill prot">protected</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: prove with two numbers that re-running does not duplicate data. This is your strongest engineering evidence — it gets its own section and its own screen.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen — terminal only, nothing else</div>
+      <p>Have this query ready to paste. Run it, run ingest, then run it again. Both results stay
+      visible in the scroll-back, which is what makes the proof readable.</p>
+      <ul>
+        <li><code>uv run python -c "import duckdb; c=duckdb.connect('db/commute.duckdb',read_only=True); [print(t, c.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0]) for t in ['calendar_events','route_options','route_legs','bus_arrivals']]"</code></li>
+        <li>then <code>uv run python scripts/ingest.py</code></li>
+        <li>then the same count query again</li>
+      </ul>
     </div>
-    <div class="section-body">
-      <div class="do">
-        <div class="do-label">Screen / Do</div>
-        <ul>
-          <li>Return to GitHub repo page for the final shot</li>
-          <li>Show the README or this section on screen — point at the 5 bullets as you name them</li>
-        </ul>
-      </div>
-      <div class="say">
-        <div class="say-label">Say</div>
-        <p>That&rsquo;s the system &mdash; these are the five bullets I&rsquo;m submitting as the PDF.</p>
-        <p>If I had to pick one thing out of all of it, it&rsquo;s the fourth one &mdash; where I measured my own model, found it was mostly repeating the routing engine, and changed the design instead of the description. Thanks for watching.</p>
-      </div>
-      <div class="note">
-        <div class="note-label">Resume Bullets &mdash; full text in docs/submission_resume_bullets.md</div>
-        <p><strong>1 &middot; Problem and outcome.</strong> Built a calendar-aware commute recommender that answers one question &mdash; when do I need to leave? &mdash; by joining the user&rsquo;s next Google Calendar event to live Singapore transport and weather data, replacing a three-app manual check with one ranked leave-by recommendation on a live dashboard and REST API.</p>
-        <p><strong>2 &middot; End-to-end pipeline.</strong> Engineered a five-source ingestion pipeline (Google Calendar OAuth2, OneMap geocoding and routing, LTA DataMall live bus arrivals and rail alerts, data.gov.sg weather, configured-postal origin with IP-geolocation fallback) landing date-partitioned Parquet and loading a typed nine-table DuckDB store, ranking three route options and deriving leave-by time in a SQL view using window functions with a weather-based ranking penalty.</p>
-        <p><strong>3 &middot; Production robustness.</strong> Hardened the pipeline with exponential-backoff retries, idempotent upserts proven by unchanged row counts on re-run, coordinate-bounds validation, graceful degradation from expired OAuth credentials to a time-of-day fallback, and a <code>pipeline_runs</code> monitoring table; containerised as three Docker Compose services over a shared named-volume DuckDB with all secrets excluded from the image and mounted at runtime.</p>
-        <p><strong>4 &middot; Machine learning and real-time output.</strong> Diagnosed target-proxy dominance in an initial duration model &mdash; the routing baseline carried 0.875 feature importance because the training target was itself largely derived from that baseline, so the model re-derived the schedule rather than learning contextual delay &mdash; and redesigned it to predict the residual delay over that baseline, cutting the feature to 0.05 and removing a hard prediction ceiling; engineered <code>bus_headway_gap</code> as a crowd-buildup signal feeding both a delay regressor and a crowding classifier, scoring all three routes individually and refreshing dashboard and API every 60 seconds.</p>
-        <p><strong>5 &middot; Measurable evaluation and monitoring.</strong> Implemented a once-daily automated MLOps evaluation computing rolling 7-day MAE against available outcome data and a no-ML OneMap baseline, with <code>actual_source</code> distinguishing hand-logged journey observations from reconstructed proxies; evaluation results are written to pipeline monitoring and trigger a dashboard warning when MAE exceeds the configured 10-minute threshold.</p>
-      </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Now the part I most want to show. I made my pipeline safe to run again.</p>
+<div class="gap"></div>
+      <p>If it crashes halfway, I want to just run it again. I do not want a second copy of everything.</p>
+<div class="gap"></div>
+      <p>Let me prove it.</p>
+      <p class="stage">[run the count query]</p>
+      <p>These are my row counts now.</p>
+      <p class="stage">[run ingest.py, speed up in editing]</p>
+      <p>Now I run the whole ingestion again.</p>
+      <p class="stage">[run the count query again]</p>
+      <p>Here are the counts again. They did not double. They are the same.</p>
+<div class="gap"></div>
+      <p>That is because I do not add a new row. I replace the row already there, matching on the primary key.</p>
+      <p>The word for this is idempotency.</p>
+<div class="gap"></div>
+      <p>One table does grow, and I want it to. Bus arrivals.</p>
+      <p>Every fetch is a snapshot, so the fetch time is part of its key. A new run adds a snapshot instead of replacing it, which gives me a time series.</p>
+<div class="gap"></div>
+      <p>Same SQL command, different behaviour, because I chose different keys.</p>
+      <p class="opt">One honest note. My Parquet layer is staging, one file per source per day. It is not a full archive of every raw response. <span class="opt-tag">cut if over time</span></p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Speed up or cut the ingest run. Do not talk over it. Say the line before it, then let the
+      result appear, then say the line after it.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Idempotent writes, demonstrated rather than claimed · deliberate primary-key design ·
+      time-series versus current-state modelling · honest statement of a known limitation.</p>
     </div>
   </div>
+</div>
 
-  <!-- ─── CHECKLIST ─── -->
-  <div class="section">
-    <div class="section-header">
-      <div class="section-num ok">✓</div>
-      <div class="section-title">Before You Record — Final Checklist</div>
-      <div class="timer">Prep</div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">6</span>
+    <span class="section-title">SQL — picking the route and the leave-by time</span>
+    <span class="timer">5:35 → 6:35 · 110 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: show that the recommendation is made in SQL, and that ranking is more than "fastest wins".</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>VS Code <b>Tab 4</b> — <code>scripts/schema.py</code>, already at the
+            <code>v_enriched_routes</code> view. <b>Already scrolled. Do not hunt for it.</b></li>
+        <li>Point at the <code>ROW_NUMBER()</code> line once, then stop and talk.</li>
+        <li>Optionally switch to Tab 6 and show Card 4 for the leave-by formula.</li>
+      </ul>
     </div>
-    <div class="section-body">
-      <div class="chips">
-        <span class="chip chip-amber">Airflow NOT installed — show dags/commute_pipeline_dag.py, never localhost:8080</span>
-        <span class="chip chip-green">Streamlit at localhost:8501 — shows leave-by, prediction, fare</span>
-        <span class="chip chip-green">FastAPI at localhost:8000/docs — Try it out works live</span>
-        <span class="chip chip-green">docker compose up starts all 3 services cleanly</span>
-        <span class="chip chip-green">python scripts/model.py --predict logs 3 lines (one per route option)</span>
-        <span class="chip chip-green">python scripts/transform.py shows LEAVE LATEST + LEAVE NOW + legs</span>
-        <span class="chip chip-green">predictions table has at least a few rows in DuckDB</span>
-        <span class="chip chip-green">config.py NOT in git status output</span>
-        <span class="chip chip-amber">Terminal font size ≥ 16px for screen recording readability</span>
-        <span class="chip chip-amber">LTA approval email ready to show (blur the key value)</span>
-        <span class="chip chip-amber">Calendar event with a Singapore location set for next week</span>
-        <span class="chip chip-amber">Resume PDF prepared with the 5 bullets from Section 11</span>
-        <span class="chip chip-red">NEVER show config.py contents on screen</span>
-        <span class="chip chip-red">NEVER show credentials.json or token.json on screen</span>
-      </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Next, the SQL. This is where the recommendation is actually made.</p>
+      <p>This view joins my route options to the weather at the destination, and to any train alerts.</p>
+<div class="gap"></div>
+      <p>The leave-by time is event start, minus the journey time, minus a 10-minute walking buffer.</p>
+<div class="gap"></div>
+      <p>To rank the routes I use a window function. It numbers the routes for each event, best first.</p>
+      <p>But I do not just pick the fastest. If it is raining and a route has a long walk, I push it down.</p>
+      <p>So a slower, drier route can win.</p>
+<div class="gap"></div>
+      <p class="opt">The "why chosen" line is also SQL. It compares this route against the others and picks one of nine reasons. <span class="opt-tag">cut if over time</span></p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>If you also want to run <code>transform.py</code>, do it here and cut the wait. But the code
+      on screen is enough evidence — the dashboard in the next section shows the output anyway.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>SQL transformation layer · window functions (<code>ROW_NUMBER()</code>,
+      <code>MIN() OVER (PARTITION BY ...)</code>) · a business rule encoded in ranking, not
+      hard-coded · derived output columns.</p>
     </div>
   </div>
+</div>
 
-  <!-- ─── Q&A REFERENCE ─── -->
-  <details>
-    <summary>Q&amp;A Reference — Not part of the recording script · expand for backup answers</summary>
-    <div class="qa-body">
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">7</span>
+    <span class="section-title">The dashboard, and a bug that took two tries</span>
+    <span class="timer">6:35 → 7:45 · 130 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: show the live output, then tell one debugging story as a story.</p>
 
-      <div class="note">
-        <div class="note-label">If asked: Is this a star schema?</div>
-        <p>Not a formal one, and I'd rather say so. <code>route_options</code> is the central fact-like table &mdash; one row per commute option, with the measures on it &mdash; and it has a genuine foreign key to <code>calendar_events</code>, which acts as the event dimension. But <code>weather_forecast</code>, <code>bus_arrivals</code> and <code>train_alerts</code> are time-series snapshots that I join on a natural key and a time window, not conformed dimensions with surrogate keys. A real star would need surrogate keys, a date dimension and a consistent grain. Mine is star-shaped, and I designed it around query patterns rather than around dimensional modelling rules.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: Is <code>actual_min</code> a real journey time?</div>
-        <p>No, and I&rsquo;m careful about that word. I have no GPS trip tracking, so a true door-to-door time isn&rsquo;t observable in this system. What I store is a reconstructed outcome estimate: OneMap&rsquo;s scheduled duration, plus the wait that was genuinely observed at the boarding stop from the live LTA feed, plus a published headway allowance for rail where there&rsquo;s no live feed, plus a disruption penalty when LTA reported one. Each row records which method produced it in <code>actual_source</code>. The crowd label is different &mdash; that one <em>is</em> a real observation, LTA&rsquo;s Load field, though it&rsquo;s the load of the next bus rather than the exact bus I boarded.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: How do you know the model isn&rsquo;t just repeating OneMap?</div>
-        <p>That&rsquo;s exactly what it was doing in my first version, and I caught it in the feature importances &mdash; OneMap&rsquo;s duration accounted for 87.5% of the model, because the target I was training on was itself largely derived from that same baseline. So I changed the target. It now predicts the delay on top of the schedule rather than the total, which means the target isn&rsquo;t contained in any input. That dropped the baseline&rsquo;s importance to about 5%, and the top drivers became rush hour and the two bus-timing features. The evaluation also computes the error of the plain OneMap schedule alongside the model&rsquo;s, so I can see directly whether the model is earning its place.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: Wasn&rsquo;t that just target leakage?</div>
-        <p>Not in the strict sense, and I&rsquo;d rather be precise about it. Classic target leakage means a feature that would not be available at inference time. OneMap&rsquo;s duration <em>is</em> available at inference time &mdash; I have it before the journey starts &mdash; so using it as an input was not inherently invalid.</p>
-        <p>The real problem was on the target side. My synthetic bootstrap and my reconstructed outcomes were themselves heavily derived from that same OneMap baseline, so the target was largely a function of one of the inputs. The model dutifully re-derived OneMap&rsquo;s number instead of learning the delay around it, and <code>base_duration</code> came out at 0.875 importance. The accurate name for that is <strong>target-proxy dominance</strong>, or circular target construction &mdash; not leakage.</p>
-        <p>Predicting the residual over the baseline breaks the circularity: the target is now what the baseline <em>fails</em> to account for. <code>base_duration</code> dropped to about 0.05 and the top drivers became rush hour and the two bus-timing features. It also removed the prediction ceiling, since the total is anchored to OneMap&rsquo;s figure rather than bounded by the training range.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: What is model drift? How do you detect it?</div>
-        <p>Three types from Day 4: <strong>Data drift</strong> — input feature distributions change (e.g. my commute hour shifts from 8 AM to 10 AM). <strong>Concept drift</strong> — the relationship between features and target changes (e.g. a new MRT line opens; same hour now predicts shorter journey). <strong>Training-serving skew</strong> — a feature is computed differently in training vs. production (e.g. <code>is_rainy</code> encoded as True/False in training but 1/0 in the pipeline). My primary signal is the 7-day MAE threshold — rising MAE is a symptom of all three regardless of root cause. Statistical tests like PSI or KS-test per feature can be added later.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: Why Random Forest and not Linear Regression?</div>
-        <p>Random Forest handles non-linear interactions — rush hour combined with rain has a different effect than either alone. Linear Regression would require manual feature engineering for that. RF also handles small datasets gracefully, which matters because I'm bootstrapping with synthetic data until enough real runs accumulate.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: Why batch processing and not real-time streaming (Kafka)?</div>
-        <p>Bus arrival data refreshes every 2 minutes. Weather updates every 2 hours. Airflow runs the batch DAG every 30 minutes; the Docker scheduler adaptively polls for live snapshots — nothing changes faster than that. Kafka would add infrastructure complexity (brokers, consumer groups, partitions) with no benefit at this data velocity.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: What would you do differently if the system scaled to many users?</div>
-        <p>Replace FastAPI with NVIDIA Triton Inference Server for high-throughput batched ML inference; replace pandas with cuDF from the RAPIDS ecosystem for GPU-accelerated data processing; add Metabase as a BI dashboard for non-technical staff. But the Day 5 Technology Selection Exercise maps "low-traffic prediction API" to FastAPI and "100MB daily data" to pandas — which is exactly what I built. Knowing when not to use a tool is as important as knowing how to use one.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: How does the geocoder handle varied address formats?</div>
-        <p>Progressive fallback: (1) extract a 6-digit postal code with <code>re.findall(r'\b\d{6}\b', address)</code> — postal codes geocode with near-perfect accuracy on OneMap; (2) full address string; (3) address with ", Singapore" stripped; (4) first comma-delimited token. Word boundary <code>\b</code> prevents matching 7-digit phone numbers.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: Why is the 7-day MAE so high (16.3 min)?</div>
-        <p>Two things are compounding. First, the sample is tiny — 7 manually-logged days, not weeks — so a couple of unlucky commutes move the average a lot. Second, I cross-checked one of my own routes against Google Maps at the same departure time (Tuesday 9 AM) and found OneMap's stored duration for the Punggol NE-line-plus-bus-100 itinerary is 38 minutes, while Google's own itinerary for the identical route — same stations, same bus — comes out at 53&ndash;55 minutes. That's a roughly 15&ndash;20 minute gap in the baseline schedule itself, before my model even adds a delay on top. So some of what the drift warning is catching is probably OneMap's own duration estimate running optimistic for this route, not just my model being wrong. I'd want more days of data before concluding that firmly, but it's a lead I'd chase first if I kept working on this.</p>
-      </div>
-
-      <div class="note">
-        <div class="note-label">If asked: How does the stale event fix work?</div>
-        <p>After ingest, <code>_purge_stale_events(con, event_id)</code> deletes all future <code>calendar_events</code> rows whose primary key is not the current active <code>event_id</code>, along with their <code>route_options</code> and <code>route_legs</code> children. Cascading delete order: route_legs first (FK child), then route_options, then calendar_events. Without this, a rescheduled event leaves both the old and new start_time in the DB and transform picks whichever appears first.</p>
-      </div>
-
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>Browser on <code>http://localhost:8501</code>.</li>
+        <li>Point at leave-by, then duration, then fare. One at a time, then stop.</li>
+        <li>Expand one alternative route so its own ML line is visible.</li>
+        <li><b>Do not switch to code during the bug story.</b> Tell it on the dashboard. The code is
+            optional and only if you have time to spare.</li>
+      </ul>
     </div>
-  </details>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Now the dashboard. This is the live output.</p>
+      <p>It refreshes every 60 seconds, re-reading DuckDB. No API calls.</p>
+      <p>Leave-by time, duration, fare. The warnings come from the SQL, and each route has its own prediction.</p>
+      <p>There is a model health line here too. I will come back to it.</p>
+<div class="gap"></div>
+      <p>Now a bug I hit here. It took me two tries.</p>
+<div class="gap"></div>
+      <p>DuckDB only allows one writer at a time.</p>
+<div class="gap"></div>
+      <p>My first version opened one connection at startup and reused it, so the dashboard never saw new data. I removed that, and it still broke.</p>
+      <p>The dashboard held the connection open while it slept for 60 seconds, so my pipeline could not write for almost the whole minute.</p>
+<div class="gap"></div>
+      <p>The fix was the order. Run the queries, close the connection, then draw the page and sleep.</p>
+      <p>Now it is open for milliseconds instead of a minute.</p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Leave a real pause after "DuckDB only allows one writer at a time." That one fact is what
+      makes both bugs make sense, and it needs a beat to land.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Live serving layer · real-time refresh · a concurrency constraint understood and designed
+      around · debugging two faults with the same symptom · connection lifetime management.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ml">8</span>
+    <span class="section-title">ML part 1 — the mistake I found in my own model</span>
+    <span class="timer">7:45 → 9:15 · 165 words</span>
+    <span class="pill prot">protected</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: tell the redesign as a story, in order, with both numbers read off the screen.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>VS Code <b>Tab 6</b> — <code>docs/recording_cards.md</code>, showing <b>Card 2</b>,
+            zoomed to about 200%.</li>
+        <li><b>Leave Card 2 on screen for this whole section.</b> Both numbers are on it. You read
+            them, you do not recall them.</li>
+        <li>Do not switch windows while telling this story.</li>
+      </ul>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Now the machine learning. Two models.</p>
+      <p>I want to spend this section on one mistake I found, and one feature I built.</p>
+<div class="gap"></div>
+      <p>First, the mistake.</p>
+      <p>My first model tried to predict the whole journey time.</p>
+      <p>And I gave it OneMap's journey time as one of the inputs.</p>
+<div class="gap"></div>
+      <p>Then I checked which inputs the model was actually using.</p>
+      <p>That one input was 87.5% of the model.</p>
+<div class="gap"></div>
+      <p>So it was mostly copying OneMap. It was not learning about delay.</p>
+<div class="gap"></div>
+      <p>There was a second problem. A Random Forest cannot predict beyond its training range, so every long route got capped at the same number.</p>
+<div class="gap"></div>
+      <p>So I changed the question.</p>
+      <p>Instead of the whole journey, it now predicts only the extra delay.</p>
+      <p>My final answer is OneMap's time, plus that predicted delay.</p>
+<div class="gap"></div>
+      <p>After the change, OneMap's input dropped to about 5%.</p>
+<div class="gap"></div>
+      <p>Now rush hour, bus timing and rain matter more.</p>
+      <p>And the ceiling is gone, because the total is anchored to OneMap's number.</p>
+      <p class="opt">The technical name is target-proxy dominance. What I was predicting was mostly built from one of my own inputs. <span class="opt-tag">cut if over time</span></p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Pause after "That one input was 87.5% of the model." and again after "dropped to about 5%."
+      These are the two numbers the assessor is listening for. Do not let them run into the next
+      sentence — that is exactly what went wrong in take 4.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Feature-importance analysis · a defect found by measuring, not guessing · target redesign
+      (predicting the residual) · understanding of tree-model extrapolation limits · a measured
+      before-and-after.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ml">9</span>
+    <span class="section-title">ML part 2 — the feature I built myself</span>
+    <span class="timer">9:15 → 10:10 · 110 words</span>
+    <span class="pill prot">protected</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: explain one engineered feature so clearly that a non-technical viewer gets it.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>VS Code <b>Tab 6</b>, scroll to <b>Card 1</b>. The numbers 3, 20 and 17 are on screen.</li>
+        <li>After you name the column, switch to <b>Tab 5</b> (<code>model.py</code>) and let
+            <code>FEATURE_COLS_DUR</code> sit on screen while you finish talking.</li>
+        <li>Do not read the feature list aloud. It is there to be paused, not narrated.</li>
+      </ul>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Now the feature I am most pleased with.</p>
+      <p>LTA tells me the next bus, and the bus after that.</p>
+<div class="gap"></div>
+      <p>Say the next bus is 3 minutes away.</p>
+      <p>If the one after is 6 minutes away, the service is running normally.</p>
+      <p>But if the one after is 20 minutes away, there is a big gap behind it.</p>
+      <p>People keep arriving during those 20 minutes, so the bus that turns up is fuller and slower to board.</p>
+<div class="gap"></div>
+      <p>So I made one new column. The gap between bus one and bus two.</p>
+      <p>Three minutes, then twenty. The gap is seventeen. I called it bus headway gap.</p>
+<div class="gap"></div>
+      <p>Here is the point. In both cases the first bus is 3 minutes away. That number looks identical.</p>
+      <p>A model that only sees the first bus cannot tell them apart. Mine can.</p>
+<div class="gap"></div>
+      <p class="stage">[switch to Tab 5, model.py]</p>
+      <p>LTA already sent me both numbers, so this cost no extra API calls.</p>
+      <p>It feeds both models, and all three routes are scored separately.</p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Freeze on Card 1 for two seconds when you say "the gap is seventeen". Freeze on
+      <code>FEATURE_COLS_DUR</code> for three seconds at the end, so the assessor can pause and read
+      all 13 features without you saying any of them.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Original feature engineering with a stated physical rationale · reuse of data already
+      fetched · per-option scoring · 13-feature delay model and 10-feature crowd model visible
+      on screen.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ml">10</span>
+    <span class="section-title">ML part 3 — measuring whether it works</span>
+    <span class="timer">10:10 → 11:25 · 145 words</span>
+    <span class="pill prot">protected</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: complete the MLOps loop, and report the result honestly — including the part that is not flattering.</p>
+
+    <div class="blk warn">
+      <div class="blk-label">These numbers changed today — use these, not the old ones</div>
+      <p>Your hand-logged actuals were corrected by 9 minutes and the evaluator was re-run. Verified
+      output of <code>model.py --evaluate</code>:</p>
+      <table>
+        <tr><th>Measure</th><th>Value</th><th>Meaning</th></tr>
+        <tr><td>Model 7-day MAE</td><td class="t">6.1 min</td><td>over 9 outcomes</td></tr>
+        <tr><td>Warning threshold</td><td class="t">10 min</td><td>6.1 is under it — dashboard says healthy</td></tr>
+        <tr><td>OneMap-only 7-day MAE</td><td class="t">3.7 min</td><td>over 3 outcomes — currently closer than the model</td></tr>
+      </table>
+      <p>The old script said 16.3 minutes and an active drift warning. <b>Both are now wrong.</b>
+      There is no drift warning any more. Card 5 and Card 6 have the replacement numbers.</p>
+    </div>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>Terminal: run <code>uv run python scripts/model.py --evaluate</code>. It prints both
+            numbers in two lines. Let those two lines be the screen for most of this section.</li>
+        <li>Then VS Code <b>Tab 6</b>, <b>Card 6</b>, while you explain why the comparison is not
+            fair yet.</li>
+      </ul>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Then the full loop. Train, predict, fill in what actually happened, evaluate.</p>
+<div class="gap"></div>
+      <p>Filling in what actually happened is the hard part.</p>
+      <p>For seven days I logged my own leave and arrive times on my phone.</p>
+      <p>Those are real observations, but not GPS tracked.</p>
+      <p>Checking them today, I found I had over-recorded by 9 minutes, and I corrected it.</p>
+<div class="gap"></div>
+      <p>Other rows are reconstructed instead, and I store which method was used for every row.</p>
+      <p>So a logged time and an estimate never get mixed up.</p>
+<div class="gap"></div>
+      <p class="stage">[run --evaluate]</p>
+      <p>The evaluator runs daily and measures my average error over seven days.</p>
+      <p>Right now it is 6.1 minutes. My threshold is 10, so the dashboard says healthy.</p>
+<div class="gap"></div>
+      <p>But I built in the comparison that matters more.</p>
+      <p>What if I used no model, and just trusted OneMap? That gives 3.7 minutes.</p>
+<div class="gap"></div>
+      <p>So today my model does not beat just trusting OneMap. I would rather say that than hide it.</p>
+<div class="gap"></div>
+      <p class="stage">[show Card 6]</p>
+      <p>But the test is not fair yet. OneMap was only scored on three outcomes, and those three were reconstructed from OneMap's own schedule.</p>
+<div class="gap"></div>
+      <p>To make it fair I need hand-logged times for journeys that also have a route saved.</p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Do not rush the last four lines. This is the strongest honesty evidence in the whole video:
+      you built the test that could show your own model was not needed, you ran it, you reported the
+      result, and then you diagnosed why the test itself is still weak.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Complete MLOps loop — train, predict, backfill, evaluate · rolling 7-day MAE · a no-ML
+      baseline comparison · drift threshold and monitoring · provenance tracking of outcome data ·
+      correct, careful language about what is and is not ground truth.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">11</span>
+    <span class="section-title">The API</span>
+    <span class="timer">11:25 → 12:05 · 75 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: show the same data is available to other programs, and prove it with one live call.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>Browser on <code>http://localhost:8000/docs</code>.</li>
+        <li>Expand <code>GET /api/v1/recommendation/next</code>, click Try it out, then Execute.</li>
+        <li>Then Execute <code>GET /api/v1/pipeline/status</code>.</li>
+      </ul>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>The dashboard reads DuckDB directly. I added an API so anything else can get the same answer.</p>
+      <p>Six endpoints. Health, next recommendation, recommendation or prediction by event, pipeline status, and alerts.</p>
+      <p class="stage">[Try it out, Execute]</p>
+      <p>That is the real recommendation, as JSON.</p>
+      <p class="stage">[Execute pipeline/status]</p>
+      <p class="opt">And this is my pipeline history. Every run, with row counts, duration and any error. <span class="opt-tag">cut if over time</span></p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Cut the moment between clicking Execute and the response appearing.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>REST serving layer · auto-generated schema documentation · a monitoring endpoint backed by
+      the <code>pipeline_runs</code> table · the same read-only connection discipline as the dashboard.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">12</span>
+    <span class="section-title">Docker — one command starts everything</span>
+    <span class="timer">12:05 → 12:55 · 90 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: show it is packaged and runnable, and explain why Airflow is not one of the containers.</p>
+
+    <div class="blk warn">
+      <div class="blk-label">Do this before recording this section</div>
+      <p>Stop Airflow: <code>docker compose -f docker-compose.airflow.yml down</code>. Stop your local
+      Streamlit and FastAPI too — the containers use the same ports. Then
+      <code>docker compose up</code>. Allow about 3 minutes before the dashboard has data: the
+      scheduler runs five 30-second stability checks before it fetches routes.</p>
+    </div>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <ul>
+        <li>VS Code on <code>docker-compose.yml</code>. Point at the three service names.</li>
+        <li>Then terminal showing <code>docker compose up</code> log output.</li>
+      </ul>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Last piece. One command starts the whole thing.</p>
+      <p>Three services. Pipeline, API, dashboard, sharing one volume so they use the same database file.</p>
+<div class="gap"></div>
+      <p>Airflow is deliberately not one of them.</p>
+      <p>Airflow and my own scheduler do the same job, so they must never run together. One writer, again.</p>
+<div class="gap"></div>
+      <p>It has seven states, and it exists to save API calls.</p>
+      <p>The calendar check is cheap. OneMap and LTA are rate limited, so those only run when my event or destination changes.</p>
+      <p class="opt">And my keys are not in the image. They are mounted in at runtime. <span class="opt-tag">cut if over time</span></p>
+    </div>
+
+    <div class="blk edit">
+      <div class="blk-label">Edit</div>
+      <p>Cut the container startup entirely. Show the compose file, then cut to the running logs.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Containerisation · multi-service composition over a shared volume · secrets excluded from
+      the image · a deliberate orchestration trade-off explained rather than hidden · cost-aware
+      adaptive scheduling.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ref">R1</span>
+    <span class="section-title">Reflection 1 — the hardest part</span>
+    <span class="timer">12:55 → 13:30 · 95 words</span>
+  </div>
+  <div class="section-body">
+    <p class="goal">Goal: one real debugging story, told as problem, confusion, discovery, lesson.</p>
+
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <p>Nothing technical. Face, or the GitHub repo page. Stop demoing — this is you talking.</p>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>The hardest part was a bug where the error pointed me the wrong way.</p>
+      <p>LTA changed the address of their bus arrival API, and the old one said "not found".</p>
+<div class="gap"></div>
+      <p>I read that as my bus stop code being wrong, so I went hunting through stop codes. Every one failed the same way.</p>
+      <p>Then I checked LTA's current docs. The address itself had changed.</p>
+      <p>A one-line fix, and I had lost hours.</p>
+<div class="gap"></div>
+      <p>What I learned is that "not found" can mean the thing I am calling is gone, not that my input is wrong.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Reflection · debugging method · a transferable lesson stated plainly.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ref">R2</span>
+    <span class="section-title">Reflection 2 — what I am most proud of</span>
+    <span class="timer">13:30 → 14:00 · 85 words</span>
+  </div>
+  <div class="section-body">
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Two things.</p>
+      <p>First, the bus headway gap feature. I built it from two numbers I already had, and it cost nothing extra.</p>
+<div class="gap"></div>
+      <p>The second matters more to me.</p>
+      <p>When I found my model was mostly copying OneMap, I could have described it more kindly. Instead I changed the design.</p>
+      <p>And I built the test that compares my model against using no model at all.</p>
+      <p>Today that test says my model is not winning, and I still put it in the video.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Reflection · original contribution · intellectual honesty as a deliberate engineering choice.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ref">R3</span>
+    <span class="section-title">Reflection 3 — what I would do with more time</span>
+    <span class="timer">14:00 → 14:30 · 90 words</span>
+  </div>
+  <div class="section-body">
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>Three things.</p>
+      <p>First, real journey tracking. I logged seven days by hand, and found a mistake in my own log. Two button presses on my phone would replace that.</p>
+<div class="gap"></div>
+      <p>Second, more days, matched properly. Seven days cannot tell me whether my model really beats OneMap.</p>
+<div class="gap"></div>
+      <p>Third, push instead of pull. I would rather get a message 30 minutes before each event than open the dashboard.</p>
+    </div>
+
+    <div class="blk ev">
+      <div class="blk-label">Evidence shown</div>
+      <p>Reflection · knows the specific weakness of the evaluation, not a generic wish list ·
+      prioritised next steps.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-num ok">W</span>
+    <span class="section-title">Wrap-up</span>
+    <span class="timer">14:30 → 14:50 · 45 words</span>
+  </div>
+  <div class="section-body">
+    <div class="blk screen">
+      <div class="blk-label">Screen</div>
+      <p>The GitHub repo page, or your five submission bullets.</p>
+    </div>
+
+    <div class="blk say">
+      <div class="blk-label">Say</div>
+      <p>That is the system. These are the five bullets I am submitting.</p>
+<div class="gap"></div>
+      <p>If I had to pick one, it is the fourth.</p>
+      <p>I measured my own model, found it was mostly repeating OneMap, and changed the design instead of the wording.</p>
+<div class="gap"></div>
+      <p>Thanks for watching.</p>
+    </div>
+  </div>
+</div>
+
+<div class="part">Part C — The five submission bullets</div>
+
+<div class="banner">
+  Full text is in <code>docs/submission_resume_bullets.md</code>. Bullet 5 was rewritten today
+  because the evaluation numbers changed. A recruiter should understand the achievement; an
+  assessor should still see the evidence.
+</div>
+
+<div class="section">
+  <div class="section-body">
+    <div class="blk ev">
+      <div class="blk-label">1 — What it does</div>
+      <p>Built a commute recommender that reads my next Google Calendar event and answers one
+      question: when do I need to leave? It replaces checking three separate apps with a single
+      ranked leave-by time, delivered on a live dashboard and through a REST API.</p>
+    </div>
+    <div class="blk ev">
+      <div class="blk-label">2 — The data pipeline</div>
+      <p>Built a pipeline that combines five sources: Google Calendar, OneMap geocoding and routing,
+      LTA live bus arrivals and train alerts, data.gov.sg weather, and a configured origin location.
+      Raw pulls are saved as dated Parquet files and the cleaned data is loaded into a nine-table
+      DuckDB database, where a SQL view ranks up to three routes using window functions and works
+      out the leave-by time, pushing rainy routes with long walks down the ranking.</p>
+    </div>
+    <div class="blk ev">
+      <div class="blk-label">3 — Making it reliable</div>
+      <p>Made the pipeline safe to run unattended: failed API calls retry three times with waits of
+      1, 2 and 4 seconds; re-running ingestion replaces rows instead of duplicating them, proven by
+      unchanged row counts; coordinates are checked against Singapore's bounds; and every run is
+      logged with row counts, duration and errors. Packaged the system as three Docker services
+      sharing one database volume, with all keys and tokens kept out of the image and mounted at
+      runtime.</p>
+    </div>
+    <div class="blk ev">
+      <div class="blk-label">4 — Finding and fixing a modelling mistake</div>
+      <p>Found that my first model was mostly copying its own input: it predicted total journey time
+      while being given OneMap's journey time, which carried 87.5% of the model's importance and
+      also capped predictions for long routes. I changed it to predict only the extra delay on top
+      of OneMap's estimate, cutting that input to about 5% and removing the ceiling. I also built
+      <code>bus_headway_gap</code> — the gap between the next bus and the one after it — as a
+      crowding signal feeding a delay model and a bus-crowding model that score all three routes
+      separately.</p>
+    </div>
+    <div class="blk ev">
+      <div class="blk-label">5 — Measuring whether the model earns its place</div>
+      <p>Built a daily evaluation that measures the model's average error over a rolling seven days
+      and compares it against using no model at all, with every outcome recording whether it was
+      hand-logged or reconstructed. It currently reports 6.1 minutes against a 10-minute warning
+      threshold, and shows the model is not yet beating the plain routing baseline at 3.7 minutes —
+      a gap I traced to the baseline being scored on reconstructed outcomes derived from its own
+      schedule.</p>
+    </div>
+  </div>
+</div>
+
+<div class="part">Part D — Technical words you still need</div>
+
+<div class="cheat">
+  <table>
+    <tr><th style="width:32%">Word</th><th>What you say if asked</th></tr>
+    <tr><td class="t">Idempotency</td><td>I can run the same job again safely. It replaces the row that is already there instead of adding a duplicate.</td></tr>
+    <tr><td class="t">Upsert</td><td>One command that inserts a row if it is new, or replaces it if the key already exists.</td></tr>
+    <tr><td class="t">Primary key</td><td>The column or columns that identify a row. Choosing it decides whether a re-run replaces or adds.</td></tr>
+    <tr><td class="t">Exponential backoff</td><td>When a call fails I retry, and I double the wait each time. One second, two, four.</td></tr>
+    <tr><td class="t">Window function</td><td>SQL that compares a row against the other rows in its group without collapsing them. I use it to rank routes per event.</td></tr>
+    <tr><td class="t">ShortCircuitOperator</td><td>An Airflow gate. If it returns false, everything after it is skipped. I use it so evaluation only runs at 8 AM.</td></tr>
+    <tr><td class="t">DAG</td><td>The pipeline written as tasks with an order. Airflow runs it and shows it as a graph.</td></tr>
+    <tr><td class="t">Parquet</td><td>A compressed column-based file format. I use it as a staging layer for the raw pulls.</td></tr>
+    <tr><td class="t">Columnar / OLAP</td><td>DuckDB stores data by column, which makes the joins and aggregations in my transformation fast.</td></tr>
+    <tr><td class="t">Single writer</td><td>DuckDB allows only one process to write at a time. It shaped my dashboard fix and why Airflow and my scheduler never run together.</td></tr>
+    <tr><td class="t">Residual / delay target</td><td>Instead of predicting the whole journey, I predict what OneMap misses. Total = OneMap time + predicted delay.</td></tr>
+    <tr><td class="t">Target-proxy dominance</td><td>What I was predicting was mostly built from one of my own inputs, so the model just copied that input.</td></tr>
+    <tr><td class="t">Feature importance</td><td>How much the model relies on each input. This is how I caught the problem: one input was 87.5%.</td></tr>
+    <tr><td class="t">Extrapolation ceiling</td><td>A Random Forest cannot predict beyond the range it trained on, so long routes were all capped at the same value.</td></tr>
+    <tr><td class="t">MAE</td><td>Mean absolute error. On average, how many minutes I am off by. Mine is 6.1 over the last seven days.</td></tr>
+    <tr><td class="t">Baseline</td><td>The result with no model at all — just OneMap's schedule. If I cannot beat it, my model is not earning its place.</td></tr>
+    <tr><td class="t">Data drift</td><td>My inputs change — for example my commute hour shifts. Concept drift is when the relationship changes, like a new MRT line opening.</td></tr>
+    <tr><td class="t">Training-serving skew</td><td>A feature computed one way in training and another way in production. I use the same rain rule in both.</td></tr>
+    <tr><td class="t">Ordinal encoding</td><td>Turning ordered labels into ordered numbers, so the model knows fuller is more. LTA loads become 0, 1, 2.</td></tr>
+    <tr><td class="t">Star schema</td><td>Mine is star-shaped, not a formal star schema. No surrogate keys and no date dimension. I would rather say that than claim it.</td></tr>
+  </table>
+</div>
+
+<div class="part">Part E — Recording rescue sheet</div>
+
+<div class="banner">
+  Keep only this beside you while recording. One line per section. If you lose your place, find the
+  row and the next thing to say is in the Say column.
+</div>
+
+<div class="rescue">
+  <table>
+    <tr><th style="width:20%">Show</th><th style="width:44%">Say (the opening line)</th><th>Result to land on</th></tr>
+    <tr><td>1 · GitHub repo</td><td>"Hi, I am David... This is a real problem I have."</td><td>Three apps, none know my calendar. One question: when do I leave?</td></tr>
+    <tr><td>2 · roadmap.html</td><td>"It has three layers. I kept them separate."</td><td>Pipeline, ML, serving. Parquet raw, DuckDB clean.</td></tr>
+    <tr><td>3 · config_example.py<br>(still screen)</td><td>"I have five data sources. One. Two. Three..."</td><td>Woodlands, then Jurong, while I sat in Punggol. So I use my own postal code now.</td></tr>
+    <tr><td>4 · Airflow 8080<br>then Tab 3</td><td>"This is my pipeline as a graph. Seven tasks."</td><td>Gate ran, next box grey = skipped. Retry: 1, 2, 4 seconds.</td></tr>
+    <tr><td>5 · Terminal only</td><td>"I made my pipeline safe to run again. Let me prove it."</td><td>Counts did not double. Bus arrivals grows on purpose.</td></tr>
+    <tr><td>6 · schema.py (Tab 4)</td><td>"This is where the recommendation is actually made."</td><td>Rainy route with a long walk gets pushed down.</td></tr>
+    <tr><td>7 · Dashboard 8501</td><td>"This is the live output. It refreshes every 60 seconds."</td><td>DuckDB allows one writer. Query first, close, then sleep.</td></tr>
+    <tr><td>8 · Card 2 (Tab 6)</td><td>"First, the mistake. My first model predicted the whole journey."</td><td>87.5% ... then ... about 5%. Two separate sentences.</td></tr>
+    <tr><td>9 · Card 1, then Tab 5</td><td>"LTA tells me the next bus, and the bus after that."</td><td>3 and 20, gap is 17. Same first number, different crowd.</td></tr>
+    <tr><td>10 · Terminal --evaluate<br>then Card 6</td><td>"Then the full loop. Train, predict, fill in, evaluate."</td><td>6.1 vs threshold 10 = healthy. But OneMap alone is 3.7, and that test is not fair yet.</td></tr>
+    <tr><td>11 · Swagger 8000/docs</td><td>"I added an API so anything else can get the same answer."</td><td>Live JSON. Pipeline status shows every run.</td></tr>
+    <tr><td>12 · compose file, logs</td><td>"One command starts the whole thing. Three services."</td><td>Airflow and my scheduler never run together. One writer.</td></tr>
+    <tr><td>R1 · face</td><td>"The hardest part was a bug where the error pointed the wrong way."</td><td>"Not found" can mean the endpoint is gone.</td></tr>
+    <tr><td>R2 · face</td><td>"Two things. First, the bus headway gap feature."</td><td>I built the test that says my model is not winning, and kept it in.</td></tr>
+    <tr><td>R3 · face</td><td>"Three things. First, real journey tracking."</td><td>More days, matched properly. Then push instead of pull.</td></tr>
+    <tr><td>W · repo / bullets</td><td>"That is the system. These are my five bullets."</td><td>Pick bullet four. Thanks for watching.</td></tr>
+  </table>
+</div>
+
+<div class="part">Q&amp;A — backup answers, not part of the recording</div>
+
+<details>
+  <summary>Is this a star schema?</summary>
+  <p>Not a formal one, and I would rather say so. <code>route_options</code> is the central
+  fact-like table, one row per commute option with the measures on it, and it has a real foreign key
+  to the calendar event. But weather, bus arrivals and train alerts are time-series snapshots that I
+  join on a natural key and a time window, not proper dimensions with surrogate keys. A real star
+  would need surrogate keys, a date dimension and a consistent grain. Mine is star-shaped, and I
+  designed it around the queries I actually run.</p>
+</details>
+
+<details>
+  <summary>Is actual_min a real journey time?</summary>
+  <p>No, and I am careful with that word. I have no GPS trip tracking, so a true door-to-door time
+  is not observable in this system. Six of my recent outcomes are hand-logged on my phone — real
+  observations, but not GPS. The rest are reconstructed: the schedule, plus the boarding wait I
+  actually saw from the live LTA feed, plus a published headway allowance for rail, plus a penalty
+  when LTA reported a disruption. Every row records which method produced it in
+  <code>actual_source</code>. The crowd label is different — that one is LTA's own observed load,
+  though it is the load of the next bus rather than the exact bus I boarded.</p>
+</details>
+
+<details>
+  <summary>Your model does not beat the baseline. Isn't that a failure?</summary>
+  <p>It is an honest result, and the fact that I can see it at all is the point — I built the
+  baseline comparison into the evaluator so I would find out. Today the model is at 6.1 minutes and
+  the plain OneMap schedule is at 3.7.</p>
+  <p>But I checked what that comparison is actually made of, and it is not a fair test yet. My model
+  was scored on nine outcomes. The baseline could only be scored on three, because the other six are
+  hand-logged days that have no route row to compare against. And those three reconstructed
+  outcomes were built from OneMap's own scheduled duration, so the baseline is being marked against
+  a number partly derived from itself.</p>
+  <p>So the correct statement is that I cannot yet show the model earns its place. To settle it I
+  need hand-logged times on journeys that also have a route saved, over more than seven days.</p>
+</details>
+
+<details>
+  <summary>How do you know the model isn't just repeating OneMap?</summary>
+  <p>That is exactly what it was doing in my first version, and I caught it in the feature
+  importances — OneMap's duration was 87.5% of the model, because what I was training on was itself
+  largely derived from that same baseline. So I changed the target. It now predicts the delay on top
+  of the schedule rather than the total, which means the answer is not contained in any single
+  input. That dropped OneMap's importance to about 5%, and the top drivers became rush hour and the
+  two bus-timing features.</p>
+</details>
+
+<details>
+  <summary>Wasn't that just target leakage?</summary>
+  <p>Not in the strict sense. Classic leakage means using a feature that would not exist at
+  prediction time. OneMap's duration does exist before the journey, so using it as an input was not
+  wrong by itself.</p>
+  <p>The problem was on the target side. My synthetic bootstrap and my reconstructed outcomes were
+  themselves largely built from that same OneMap baseline, so the target was mostly a function of
+  one of the inputs. The model re-derived OneMap's number instead of learning the delay around it.
+  The accurate name is target-proxy dominance, or circular target construction — not leakage.
+  Predicting the residual breaks the circle: the target becomes what the baseline fails to account
+  for.</p>
+</details>
+
+<details>
+  <summary>What is model drift and how do you detect it?</summary>
+  <p>Three kinds. Data drift is when the inputs change — my commute hour shifting from 8 AM to
+  10 AM. Concept drift is when the relationship changes — a new MRT line opens and the same hour now
+  means a shorter journey. Training-serving skew is when a feature is computed differently in
+  training than in production, like a rain flag encoded as true/false one side and 1/0 the other.
+  My main signal is the rolling 7-day error against a 10-minute threshold, because a rising error is
+  a symptom of all three. Per-feature statistical tests like PSI could be added later.</p>
+</details>
+
+<details>
+  <summary>Why Random Forest and not linear regression?</summary>
+  <p>Rush hour combined with rain does not behave like rush hour plus rain, and a forest picks up
+  that interaction without me hand-building it. It also copes with a small dataset, which matters
+  because I am still bootstrapping with synthetic rows until enough real journeys accumulate.</p>
+</details>
+
+<details>
+  <summary>Why batch and not streaming with Kafka?</summary>
+  <p>Nothing in my data moves fast enough to need it. Bus arrivals refresh every couple of minutes
+  and weather every two hours. Airflow runs the batch every 30 minutes and my own scheduler polls
+  adaptively when an event is close. Kafka would add brokers, partitions and consumer groups for no
+  benefit at this data rate.</p>
+</details>
+
+<details>
+  <summary>Why did routing fail for your October event?</summary>
+  <p>OneMap will not route to a date that far ahead. I tested the same origin and destination across
+  different dates: today returns three itineraries, a week out returns two, two to four weeks out
+  returns one, and about two months out returns HTTP 400 with nothing. My October event is 59 days
+  away, so it gets no routes. It is also a video consultation, so it has no physical address to
+  geocode, and the pipeline falls back to my configured work address. That fallback is deliberate,
+  but the honest answer is that the system needs a near-term event with a real address to produce a
+  full three-route recommendation.</p>
+</details>
+
+<details>
+  <summary>What would you change if this scaled to many users?</summary>
+  <p>For high-throughput batched inference I would move the model behind something like Triton
+  instead of FastAPI, and switch pandas for a GPU dataframe library if the data grew a lot. But the
+  Day 5 technology selection exercise maps a low-traffic prediction API to FastAPI and around 100 MB
+  of daily data to pandas, which is exactly what I built. Knowing when not to reach for a tool
+  matters as much as knowing how to use it.</p>
+</details>
+
+<details>
+  <summary>How does the geocoder handle messy addresses?</summary>
+  <p>It tries in order: a six-digit postal code pulled out of the text, which geocodes almost
+  perfectly on OneMap; then the full address; then the address with ", Singapore" removed; then just
+  the first part before a comma. The word-boundary check stops it matching a seven-digit phone
+  number. And if every candidate fails, it falls back to my configured work address rather than
+  crashing — which is what happened with the video-consultation event.</p>
+</details>
 
 </div>
 </body>

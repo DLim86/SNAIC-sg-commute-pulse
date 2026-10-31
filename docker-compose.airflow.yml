@@ -1,0 +1,51 @@
+# Airflow — the orchestration demo, run separately from docker-compose.yml.
+#
+# NEVER run this at the same time as the `pipeline` service in docker-compose.yml.
+# Airflow and scripts/scheduler.py are two alternative orchestrators for the same
+# pipeline, and DuckDB allows only a single writer. Stop one before starting the other.
+#
+#   docker compose -f docker-compose.airflow.yml up --build     # start Airflow
+#   docker compose -f docker-compose.airflow.yml down           # stop it
+#
+# The whole project is bind-mounted at /opt/airflow/project, and DAGS_FOLDER points
+# inside it. The DAG derives PROJECT_DIR from its own file location, so it finds
+# scripts/ and db/ with no change to the DAG code.
+
+services:
+
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "True"
+      # The DAG's BashOperators run scripts that import config.py from the project root.
+      PYTHONPATH: /opt/airflow/project
+      # Run the pipeline tasks in the project's own locked environment, not
+      # Airflow's. The DAG picks this up; unset locally, it falls back to
+      # sys.executable so nothing changes when you run Airflow another way.
+      COMMUTE_PYTHON: /opt/project-venv/bin/python
+      TZ: Asia/Singapore
+    volumes:
+      # Airflow's metadata DB and generated admin password persist here, so the
+      # login stays the same across restarts during a recording session.
+      - airflow_home:/opt/airflow
+      # Project source. db/ is included, so Airflow writes the same DuckDB file
+      # the local Streamlit dashboard reads.
+      - ./dags:/opt/airflow/project/dags
+      - ./scripts:/opt/airflow/project/scripts
+      - ./db:/opt/airflow/project/db
+      - ./data:/opt/airflow/project/data
+      - ./models:/opt/airflow/project/models
+      - ./config.py:/opt/airflow/project/config.py:ro
+      - ./token.json:/opt/airflow/project/token.json
+      - ./credentials.json:/opt/airflow/project/credentials.json:ro
+    restart: unless-stopped
+
+volumes:
+  airflow_home:

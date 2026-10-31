@@ -10,7 +10,7 @@ It gives complete context so you can mentor and build without needing prior chat
 You are both **project mentor** and **project manager** for this SIT Data Engineering assessment.
 
 - Explain WHY before HOW — the student needs to understand decisions, not just copy code
-- After every new concept, include a **"In your video, say this..."** block so the student can present it confidently in a 15-minute assessment video
+- After every new concept, include a **"In your video, say this..."** block so the student can present it confidently in the assessment video
 - When giving git commands, be step-by-step — the student is new to GitHub
 - Ask "do you have your LTA API key yet?" at the start of any session involving API calls
 - Keep code comments minimal: only when the WHY is non-obvious (a hidden constraint, a workaround, a business rule)
@@ -28,7 +28,7 @@ You are both **project mentor** and **project manager** for this SIT Data Engine
 | Python level | Comfortable |
 | DE tools | New — explain from first principles |
 | GitHub | New — give explicit `git add / commit / push` commands |
-| Assessment format | 15-minute screen-recorded video of the working system |
+| Assessment format | Screen-recorded video of the working system. **No duration is stated in `project_instructions.pdf`** — see the Assessment Rubric section below. |
 | Target submission | August 2026 (deadline: Sept 14 2026) |
 
 ---
@@ -46,6 +46,41 @@ You are both **project mentor** and **project manager** for this SIT Data Engine
 If a file contains a real key or token, flag it before reading it aloud or including it in output.
 
 ---
+
+---
+
+## Assessment Rubric — read from `project_instructions.pdf`, verified 2026-09-01
+
+**There is no time limit in the assessment document.** All three pages were checked. The
+"15-minute video" figure that appears throughout this project's older notes originated in
+`Prompt.txt` line 5 — the student's own initial brief — **not** the rubric. Do not enforce it as a
+constraint. If the lecturer stated a limit elsewhere (lesson, xSite announcement), that overrides
+this note.
+
+Also note: the PDF says **"You do not need to submit your source code."** A public GitHub repo is
+still worth having and showing, but it is not a submission requirement.
+
+| Criterion | Marks | Top band ("Good", 80–100%) |
+|---|---|---|
+| End-to-End Pipeline | 30 | Clear and functional pipeline from data ingestion to serving |
+| ML and Real-Time Output | 30 | Includes batch processing, MLOps, and a live or regularly refreshed dashboard |
+| Technical Depth and Robustness | 10 | Relevant advanced tools + robustness: retries, data checks, logging, deduplication, monitoring |
+| Presentation and Explanation | 30 | Clear, **concise**, well structured, focused on key code and design decisions |
+
+Key wording worth designing to:
+
+- "Clearly highlight **one or two** key technical points" — the rubric wants focus, not a tour.
+- "**Evaluate the prediction model every day at 8:00 AM**" is one of the rubric's own worked
+  examples. The `gate_evaluate` ShortCircuitOperator does exactly this.
+- For Airflow it names what to show: "when the workflow runs, task dependencies, and how failed
+  tasks are retried." Two retry layers exist here — Airflow `default_args retries=1`, and
+  `fetch_with_retry` backoff in `ingest.py`. Naming both is cheap technical-depth evidence.
+- "A project that only trains a machine learning or deep learning model, without a proper data
+  pipeline, will not receive a high score."
+- A short **reflection is required**: most challenging part, most proud of, what you would improve.
+
+**Submission:** xSite → Assessments → Dropbox → Week 02, by 14 Sep 2026 11:59 PM. Two files —
+one video, and one PDF with 3–5 resume-style bullet points.
 
 ## Project Overview
 
@@ -76,7 +111,10 @@ Given a next calendar event, the pipeline:
 | `README.md` | Complete |
 | `docs/roadmap.html` | Complete — 12-station roadmap. **2026-06-28: Station D5 unlocked** (GPU/Triton/BI/Technology Selection Exercise). Phase 4 divider updated. |
 | `docs/AI_HANDOFF.md` | Complete — full handoff context. **2026-06-28: rubric table updated to ALL DONE, Day 5 section added, file list updated to D38** |
-| `docs/video_script.html` | Complete — timed 15-min script. **2026-06-28: "Start All Services" setup section added at top; Docker showcase is Section 9 (11:00–12:00); Q3 4th paragraph covers Day 5 GPU/Triton rationale; RUNBOOK.md merged in** |
+| `docs/video_script.html` | **REWRITTEN 2026-09-01** — rebuilt for plain-English delivery after transcribing all four practice takes. Structure is now Goal / SCREEN / SAY / EDIT / Evidence per section, 16 sections, 1,814 spoken words (1,709 with optional lines cut). Measured delivery pace from the takes is **107.7 wpm**, so the doc carries the length arithmetic and a per-section budget. Contains Part A (why the old script was hard, with transcript quotes), Part B (the script), Part C (bullets), Part D (term cheat sheet), Part E (one-page rescue sheet), plus a Q&A section. Airflow section now uses the **real UI**. 
+| `docs/recording_cards.md` | **NEW 2026-09-01** — big-text number cards to show on camera (headway gap 3/20/17, 87.5% -> 5%, retry 1/2/4, leave-by formula, MAE 6.1 vs baseline 3.7, why that comparison is unfair, honesty phrasing). Exists so no number is recalled live. |
+| `docs/submission_resume_bullets_print.html` | **NEW 2026-09-01** — A4 print stylesheet for the bullets. The PDF is generated from it with headless Chrome (`--headless --print-to-pdf`). |
+| `Dockerfile.airflow` / `docker-compose.airflow.yml` | **NEW 2026-09-01** — working Airflow 2.11 setup; see Known Issues for how to run it and why it uses a separate project venv. |
 | `scripts/__init__.py` | Empty — required for Airflow DAG imports |
 | `scripts/schema.py` | **DONE** — 9 tables + `v_enriched_routes` view. `predictions` table added (session 4). **session 6 — `recommendation_reason` CASE expanded to 9 dynamic labels using `MIN() OVER (PARTITION BY event_id)` window functions.** **session 8 — 4 new `predictions` columns: `option_id`, `boarding_stop_code`, `alighting_stop_code`, `transit_service_no`.** Run once (or re-run to refresh view). |
 | `scripts/ingest.py` | **DONE** — Calendar + 4 APIs + retry/backoff + Parquet + legs + idempotent upsert + IP-geolocation origin (always) + progressive geocoding fallback + WORK_ADDRESS fallback + `get_smart_default()` + `v3/BusArrival` + 5-nearest-stop fallback + float-suffix strip + **`_purge_stale_events()`** (session 5) + **`next_bus2_mins`** (session 5) + **FK fix in `ingest_routes`** (session 5) + **postal code extraction in `geocode()`** (session 7) + **location-change detection log** (session 7) + **session 9 — 3 argparse modes: `--mode calendar-check` (Group 1: cached geocode, no ip-api during IMMINENT), `--mode routes` (Group 2: OneMap + LTA, triggered only on event/dest change), `--mode weather` (Group 3: data.gov.sg only). Default (no flag) = full pipeline, unchanged.** |
@@ -228,6 +266,15 @@ git push
 ---
 
 ## Known Issues / Gotchas
+
+- **OneMap routing rejects far-future dates (verified 2026-09-01)** — routing degrades then fails as the event date moves away. Same origin/destination, measured on the live API: today = HTTP 200 with **3** itineraries; +1 day = 2; +7 days = 2; +14 to +30 days = **1**; +59 days = **HTTP 400, no routes at all**. Consequence for the demo: the "up to three routes" and "all three routes scored" claims only hold for a **same-day or next-day** event. A far-future event silently yields an empty `route_options`, and then `transform.py` logs `v_enriched_routes returned no rows` and `model.py --predict` logs `No upcoming event found` — both exit 0, so nothing looks broken. Always create a near-term calendar event with a real street address or postal code before recording or demoing.
+- **Airflow now runs, in Docker (added 2026-09-01)** — `Dockerfile.airflow` + `docker-compose.airflow.yml`. Airflow 2.11.0 on python3.12. Start with `docker compose -f docker-compose.airflow.yml up -d` then open `http://localhost:8080`; the generated admin password is at `/opt/airflow/standalone_admin_password.txt` inside the container (`docker compose -f docker-compose.airflow.yml exec airflow cat /opt/airflow/standalone_admin_password.txt`), user `admin`. Verified: DAG parses with **zero import errors**, and a full triggered run gave 6 tasks `success` with `evaluate_model` `skipped` by the ShortCircuit gate.
+- **Airflow orchestrates only — it does not share the pipeline's Python env** — `Dockerfile.airflow` builds the project's own uv-locked venv at `/opt/project-venv` from `pyproject.toml` + `uv.lock`, and `docker-compose.airflow.yml` passes `COMMUTE_PYTHON=/opt/project-venv/bin/python`. The DAG reads that env var (`PYTHON = os.environ.get("COMMUTE_PYTHON") or sys.executable`), so tasks run in the same environment as a local `uv run`. This was not cosmetic: installing the pipeline's packages into Airflow's own env got scikit-learn **1.6.1** (Airflow's constraint) while the `.pkl` models were trained on **1.9.0**, producing `InconsistentVersionWarning: ... may lead to breaking code or invalid results` on every `--predict`. With the separate venv the versions match local exactly (sklearn 1.9.0, joblib 1.5.3, numpy 2.5.1, pandas 3.0.3) and the warning is gone.
+- **DAG imports are Airflow 2/3 tolerant** — `dags/commute_pipeline_dag.py` tries `airflow.providers.standard.operators.*` first and falls back to `airflow.operators.*`, so it loads on either major version.
+- **DuckDB over a Windows bind mount works** — the Airflow container writes `/opt/airflow/project/db/commute.duckdb` (bind-mounted from `./db`) with no locking problems. Tested: `schema_check`, `ingest`, `transform`, `predict_commute`, `backfill_actuals` all succeed.
+- **Never run Airflow and `docker compose up` together** — both orchestrate the same DuckDB file and DuckDB allows one writer. `docker compose -f docker-compose.airflow.yml down` before `docker compose up`, and vice versa.
+- **Hand-logged actuals were corrected by −9 min (2026-09-01)** — the 7 `manual_phone_log` rows had been over-recorded by 9 minutes. After `UPDATE predictions SET actual_min = actual_min - 9 WHERE actual_source='manual_phone_log'`, the real `model.py --evaluate` output is: **model 7-day MAE 6.1 min over 9 predictions**, and **OneMap-only baseline MAE 3.7 min**, i.e. *the model does NOT beat the baseline by 2.4 min*. 6.1 is **below** the 10-min `DRIFT_THRESHOLD_MIN`, so **there is no active drift warning any more** — every doc claiming "16.3 min MAE with an active drift warning" is out of date. A backup of the pre-change DB is at `db/commute.duckdb.bak-20260901-201243`.
+- **The baseline comparison in `evaluate()` is not yet a fair test** — `baseline_pairs` only includes rows where `route_options.total_duration_min` is non-null, i.e. rows with an `option_id`. The 6 hand-logged rows have no `option_id`, so the baseline is scored on **only the 3 reconstructed rows**, whose `actual_min` was itself derived from `total_duration_min` (`headway_allowance` / `schedule_only`). The baseline is therefore marked against a number partly built from itself. To make it fair, hand-logged actuals are needed for predictions that also have a route row.
 
 - **OneMap token TTL:** expires every 3 days — call `get_onemap_token()` on every pipeline run, never cache it to disk
 - **LTA Bus Arrival endpoint URL:** correct URL is `https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival` — the old `BusArrivalv2` path was retired in LTA DataMall API v6.0 (August 2024) and returns "The requested API was not found" (404) for ALL stop codes. This was fixed in `ingest.py` session 4.

@@ -1,0 +1,27 @@
+# Airflow image for the SG Commute Pulse DAG.
+#
+# Airflow does not run natively on Windows, so the demo runs it in a container.
+#
+# Design: Airflow ORCHESTRATES ONLY. It does not share a Python environment with
+# the pipeline. The tasks run in the project's own uv-locked environment, built
+# here at /opt/project-venv from the same pyproject.toml + uv.lock used locally.
+# That means a task behaves identically whether Airflow runs it or you run it by
+# hand, and Airflow's pinned dependencies can never drift the pipeline's. It also
+# matters for ML: the .pkl models are unpickled by the same scikit-learn version
+# that trained them, instead of whatever version Airflow happens to constrain.
+FROM apache/airflow:2.11.0-python3.12
+
+USER root
+
+# libgomp1 is required by scikit-learn for parallel tree fitting
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+RUN install -d -o airflow -g 0 /opt/project-venv /opt/project-src
+
+USER airflow
+
+COPY --chown=airflow:0 pyproject.toml uv.lock /opt/project-src/
+RUN cd /opt/project-src \
+    && UV_PROJECT_ENVIRONMENT=/opt/project-venv uv sync --locked --no-install-project

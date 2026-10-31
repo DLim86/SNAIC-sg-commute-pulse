@@ -1,0 +1,1351 @@
+{
+  "source_duration_seconds": 1063.4026875,
+  "edited_duration_seconds": 990.1126875000003,
+  "removed_seconds": 73.28999999999965,
+  "cut_count": 70,
+  "caption_count": 342,
+  "visual_gaps_preserved": [
+    2,
+    6,
+    18,
+    19,
+    23,
+    26,
+    31,
+    35,
+    36,
+    37,
+    38,
+    39,
+    44,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    69,
+    74
+  ],
+  "gap_decisions": [
+    {
+      "index": 1,
+      "start": 35.6,
+      "end": 36.86,
+      "duration": 1.259999999999998,
+      "before": "top.",
+      "after": "Next,",
+      "visual_change_first_to_middle": 0.10731520715630885,
+      "visual_change_middle_to_last": 0.007410349968612681,
+      "visual_change_first_to_last": 0.10660408819836786,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.879999999999998,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 2,
+      "start": 38.94,
+      "end": 40.92,
+      "duration": 1.980000000000004,
+      "before": "together.",
+      "after": "It",
+      "visual_change_first_to_middle": 11.435494154111739,
+      "visual_change_middle_to_last": 0.11577016635279347,
+      "visual_change_first_to_last": 11.528076938166981,
+      "kept_seconds": 1.55,
+      "removed_seconds": 0.43000000000000393,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 3,
+      "start": 46.3,
+      "end": 47.2,
+      "duration": 0.9000000000000057,
+      "before": "pipeline.",
+      "after": "It",
+      "visual_change_first_to_middle": 0.05620291902071563,
+      "visual_change_middle_to_last": 0.1236464218455744,
+      "visual_change_first_to_last": 0.16175258945386065,
+      "kept_seconds": 0.9000000000000057,
+      "removed_seconds": 0.0,
+      "reason": "natural pause"
+    },
+    {
+      "index": 4,
+      "start": 68.58,
+      "end": 69.94,
+      "duration": 1.3599999999999994,
+      "before": "else.",
+      "after": "I",
+      "visual_change_first_to_middle": 0.10530936126804771,
+      "visual_change_middle_to_last": 0.10753589924670433,
+      "visual_change_first_to_last": 0.024756748273697428,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.9799999999999994,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 5,
+      "start": 85.04,
+      "end": 87.1,
+      "duration": 2.059999999999988,
+      "before": "reads.",
+      "after": "Next,",
+      "visual_change_first_to_middle": 0.012496076585059636,
+      "visual_change_middle_to_last": 0.11785448053986189,
+      "visual_change_first_to_last": 0.12355324074074074,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.579999999999988,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 6,
+      "start": 90.36,
+      "end": 91.77,
+      "duration": 1.4099999999999966,
+      "before": "from.",
+      "after": "Over",
+      "visual_change_first_to_middle": 14.895906897363465,
+      "visual_change_middle_to_last": 2.3636171924042686,
+      "visual_change_first_to_last": 15.059282799748901,
+      "kept_seconds": 1.1,
+      "removed_seconds": 0.3099999999999965,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 7,
+      "start": 96.95,
+      "end": 98.01,
+      "duration": 1.0600000000000023,
+      "before": "keys.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.019435616760828625,
+      "visual_change_middle_to_last": 0.003913606403013183,
+      "visual_change_first_to_last": 0.01843514595103578,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.6800000000000023,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 8,
+      "start": 120.2,
+      "end": 122.48,
+      "duration": 2.280000000000001,
+      "before": "fare.",
+      "after": "Next",
+      "visual_change_first_to_middle": 0.012849183929692405,
+      "visual_change_middle_to_last": 0.016973673885750155,
+      "visual_change_first_to_last": 0.01585550062774639,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.8000000000000012,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 9,
+      "start": 141.7,
+      "end": 142.82,
+      "duration": 1.1200000000000045,
+      "before": "here.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.3155896892655367,
+      "visual_change_middle_to_last": 0.19044746547394853,
+      "visual_change_first_to_last": 0.14209137633396107,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.7400000000000045,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 10,
+      "start": 144.2,
+      "end": 145.28,
+      "duration": 1.0800000000000125,
+      "before": "location.",
+      "after": "I",
+      "visual_change_first_to_middle": 0.1310616760828625,
+      "visual_change_middle_to_last": 0.0925582627118644,
+      "visual_change_first_to_last": 0.2039636299435028,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.7000000000000125,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 11,
+      "start": 146.74,
+      "end": 148.08,
+      "duration": 1.3400000000000034,
+      "before": "this,",
+      "after": "when",
+      "visual_change_first_to_middle": 0.20585177338355304,
+      "visual_change_middle_to_last": 0.006885593220338983,
+      "visual_change_first_to_last": 0.20564579409918393,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.9600000000000034,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 12,
+      "start": 154.6,
+      "end": 156.34,
+      "duration": 1.740000000000009,
+      "before": "permission.",
+      "after": "I",
+      "visual_change_first_to_middle": 0.01052456057752668,
+      "visual_change_middle_to_last": 0.007013104205900816,
+      "visual_change_first_to_last": 0.014163527934714376,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.3600000000000092,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 13,
+      "start": 179.84,
+      "end": 180.98,
+      "duration": 1.1399999999999864,
+      "before": "myself.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.028356481481481483,
+      "visual_change_middle_to_last": 0.021956410860012553,
+      "visual_change_first_to_last": 0.041808890458254866,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.7599999999999864,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 14,
+      "start": 183.48,
+      "end": 185.04,
+      "duration": 1.5600000000000023,
+      "before": "backup.",
+      "after": "Next",
+      "visual_change_first_to_middle": 0.2600782721280603,
+      "visual_change_middle_to_last": 0.2339041902071563,
+      "visual_change_first_to_last": 0.11992408192090395,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.1800000000000024,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 15,
+      "start": 207.96,
+      "end": 208.98,
+      "duration": 1.0199999999999818,
+      "before": "model.",
+      "after": "This",
+      "visual_change_first_to_middle": 0.017174748901443816,
+      "visual_change_middle_to_last": 0.008930673258003766,
+      "visual_change_first_to_last": 0.021976027934714374,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.6399999999999818,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 16,
+      "start": 219.22,
+      "end": 220.58,
+      "duration": 1.3600000000000136,
+      "before": "here.",
+      "after": "Only",
+      "visual_change_first_to_middle": 0.02194169805398619,
+      "visual_change_middle_to_last": 0.02200054927809165,
+      "visual_change_first_to_last": 0.023520872567482736,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.9800000000000136,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 17,
+      "start": 224.02,
+      "end": 225.38,
+      "duration": 1.3599999999999852,
+      "before": "evaluation.",
+      "after": "You",
+      "visual_change_first_to_middle": 0.016193895166352792,
+      "visual_change_middle_to_last": 0.014295943188951664,
+      "visual_change_first_to_last": 0.023241329252981797,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.9799999999999852,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 18,
+      "start": 228.72,
+      "end": 229.87,
+      "duration": 1.1500000000000057,
+      "before": "gate.",
+      "after": "In",
+      "visual_change_first_to_middle": 0.03475655210295041,
+      "visual_change_middle_to_last": 1.0101567404268676,
+      "visual_change_first_to_last": 0.9803731167608286,
+      "kept_seconds": 0.95,
+      "removed_seconds": 0.20000000000000573,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 19,
+      "start": 239.97,
+      "end": 240.95,
+      "duration": 0.9799999999999898,
+      "before": "code.",
+      "after": "If",
+      "visual_change_first_to_middle": 0.24152542372881355,
+      "visual_change_middle_to_last": 3.7861052259887007,
+      "visual_change_first_to_last": 3.927240269930948,
+      "kept_seconds": 0.85,
+      "removed_seconds": 0.1299999999999898,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 20,
+      "start": 243.35,
+      "end": 245.29,
+      "duration": 1.9399999999999977,
+      "before": "script,",
+      "after": "LTA",
+      "visual_change_first_to_middle": 0.17436146421845575,
+      "visual_change_middle_to_last": 0.041279229441305715,
+      "visual_change_first_to_last": 0.18081057752667923,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.5599999999999978,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 21,
+      "start": 263.19,
+      "end": 265.58,
+      "duration": 2.3899999999999864,
+      "before": "run.",
+      "after": "Okay,",
+      "visual_change_first_to_middle": 0.13526463433772756,
+      "visual_change_middle_to_last": 0.5097153562460766,
+      "visual_change_first_to_last": 0.5009023854362837,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.9099999999999864,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 22,
+      "start": 267.56,
+      "end": 268.5,
+      "duration": 0.9399999999999977,
+      "before": "you,",
+      "after": "I",
+      "visual_change_first_to_middle": 0.034697700878844946,
+      "visual_change_middle_to_last": 0.040729951349654736,
+      "visual_change_first_to_last": 0.008651129943502825,
+      "kept_seconds": 0.9399999999999977,
+      "removed_seconds": 0.0,
+      "reason": "natural pause"
+    },
+    {
+      "index": 23,
+      "start": 282.18,
+      "end": 284.71,
+      "duration": 2.5299999999999727,
+      "before": "terminal.",
+      "after": "We",
+      "visual_change_first_to_middle": 0.23785212649089768,
+      "visual_change_middle_to_last": 0.1746949544883867,
+      "visual_change_first_to_last": 0.3200035310734463,
+      "kept_seconds": 2.1,
+      "removed_seconds": 0.4299999999999726,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 24,
+      "start": 293.97,
+      "end": 295.1,
+      "duration": 1.1299999999999955,
+      "before": "again.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.10215101224105462,
+      "visual_change_middle_to_last": 0.07392204174513496,
+      "visual_change_first_to_last": 0.1266184086629002,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.7499999999999954,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 25,
+      "start": 298.92,
+      "end": 300.9,
+      "duration": 1.9799999999999613,
+      "before": "all.",
+      "after": "Lastly,",
+      "visual_change_first_to_middle": 0.08006709039548023,
+      "visual_change_middle_to_last": 0.10339179221594476,
+      "visual_change_first_to_last": 0.14985483364720653,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.5999999999999615,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 26,
+      "start": 303.92,
+      "end": 306.65,
+      "duration": 2.7299999999999613,
+      "before": "terminal.",
+      "after": "Okay,",
+      "visual_change_first_to_middle": 0.5005541823603264,
+      "visual_change_middle_to_last": 0.2529180398618958,
+      "visual_change_first_to_last": 0.44183537350910235,
+      "kept_seconds": 2.4,
+      "removed_seconds": 0.32999999999996144,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 27,
+      "start": 312.03,
+      "end": 313.56,
+      "duration": 1.5300000000000296,
+      "before": "128.",
+      "after": "12,",
+      "visual_change_first_to_middle": 0.5729608050847458,
+      "visual_change_middle_to_last": 0.038733913998744506,
+      "visual_change_first_to_last": 0.5665852558066541,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.1500000000000297,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 28,
+      "start": 315.9,
+      "end": 318.82,
+      "duration": 2.920000000000016,
+      "before": "128.",
+      "after": "They",
+      "visual_change_first_to_middle": 0.029258866917765223,
+      "visual_change_middle_to_last": 0.12141497959824231,
+      "visual_change_first_to_last": 0.12122861738857502,
+      "kept_seconds": 0.48,
+      "removed_seconds": 2.440000000000016,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 29,
+      "start": 330.7,
+      "end": 331.86,
+      "duration": 1.160000000000025,
+      "before": "indempotency.",
+      "after": "There",
+      "visual_change_first_to_middle": 0.009519185499058381,
+      "visual_change_middle_to_last": 0.010397049591964845,
+      "visual_change_first_to_last": 0.007675180477087257,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.780000000000025,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 30,
+      "start": 368.78,
+      "end": 371.6,
+      "duration": 2.82000000000005,
+      "before": "future.",
+      "after": "Next",
+      "visual_change_first_to_middle": 0.2984492702448211,
+      "visual_change_middle_to_last": 0.09535860012554928,
+      "visual_change_first_to_last": 0.2996164861895794,
+      "kept_seconds": 0.48,
+      "removed_seconds": 2.34000000000005,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 31,
+      "start": 387.06,
+      "end": 389.26,
+      "duration": 2.1999999999999886,
+      "before": "simple.",
+      "after": "To",
+      "visual_change_first_to_middle": 0.1007091572504708,
+      "visual_change_middle_to_last": 0.0230991054613936,
+      "visual_change_first_to_last": 0.11808007689893284,
+      "kept_seconds": 1.75,
+      "removed_seconds": 0.44999999999998863,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 32,
+      "start": 408.14,
+      "end": 409.46,
+      "duration": 1.3199999999999932,
+      "before": "win.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.13160604990583805,
+      "visual_change_middle_to_last": 0.07821818110483365,
+      "visual_change_first_to_last": 0.06842435655994979,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.9399999999999932,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 33,
+      "start": 416.86,
+      "end": 418.1,
+      "duration": 1.240000000000009,
+      "before": "reasons.",
+      "after": "Destruction",
+      "visual_change_first_to_middle": 0.10356834588826114,
+      "visual_change_middle_to_last": 0.009229833647206528,
+      "visual_change_first_to_last": 0.10864916823603264,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.8600000000000091,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 34,
+      "start": 428.16,
+      "end": 429.7,
+      "duration": 1.5399999999999636,
+      "before": "all.",
+      "after": "So",
+      "visual_change_first_to_middle": 0.04459941933458882,
+      "visual_change_middle_to_last": 0.0873793549905838,
+      "visual_change_first_to_last": 0.12129727715003139,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.1599999999999637,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 35,
+      "start": 436.1,
+      "end": 437.89,
+      "duration": 1.7899999999999636,
+      "before": "here.",
+      "after": "Okay,",
+      "visual_change_first_to_middle": 1.2730745841180162,
+      "visual_change_middle_to_last": 0.552230461393597,
+      "visual_change_first_to_last": 1.7187745213433774,
+      "kept_seconds": 1.35,
+      "removed_seconds": 0.43999999999996353,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 36,
+      "start": 448.23,
+      "end": 449.87,
+      "duration": 1.6399999999999864,
+      "before": "time.",
+      "after": "Here",
+      "visual_change_first_to_middle": 0.18434655524168236,
+      "visual_change_middle_to_last": 0.0965258160703076,
+      "visual_change_first_to_last": 0.25220201663527936,
+      "kept_seconds": 1.25,
+      "removed_seconds": 0.38999999999998636,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 37,
+      "start": 451.27,
+      "end": 452.49,
+      "duration": 1.2200000000000273,
+      "before": "duration.",
+      "after": "Here",
+      "visual_change_first_to_middle": 0.06818895166352794,
+      "visual_change_middle_to_last": 0.06668334118016321,
+      "visual_change_first_to_last": 0.0305290725047081,
+      "kept_seconds": 0.9,
+      "removed_seconds": 0.32000000000002726,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 38,
+      "start": 452.97,
+      "end": 454.1,
+      "duration": 1.1299999999999955,
+      "before": "fare.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.021887751098556184,
+      "visual_change_middle_to_last": 0.01505120056497175,
+      "visual_change_first_to_last": 0.01781230382925298,
+      "kept_seconds": 0.85,
+      "removed_seconds": 0.2799999999999955,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 39,
+      "start": 462.38,
+      "end": 468.02,
+      "duration": 5.639999999999986,
+      "before": "2.",
+      "after": "There",
+      "visual_change_first_to_middle": 4.450280524168236,
+      "visual_change_middle_to_last": 0.21108462806026365,
+      "visual_change_first_to_last": 4.407981206842436,
+      "kept_seconds": 4.6,
+      "removed_seconds": 1.0399999999999867,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 40,
+      "start": 472.46,
+      "end": 474.17,
+      "duration": 1.7100000000000364,
+      "before": "section.",
+      "after": "Now",
+      "visual_change_first_to_middle": 0.05396166823603264,
+      "visual_change_middle_to_last": 0.02345711707470182,
+      "visual_change_first_to_last": 0.05949858757062147,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.3300000000000365,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 41,
+      "start": 516.49,
+      "end": 519.12,
+      "duration": 2.6299999999999955,
+      "before": "doesn't.",
+      "after": "Now,",
+      "visual_change_first_to_middle": 0.014874646892655368,
+      "visual_change_middle_to_last": 0.06871370841180163,
+      "visual_change_first_to_last": 0.06651169177652229,
+      "kept_seconds": 0.48,
+      "removed_seconds": 2.1499999999999955,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 42,
+      "start": 535.5,
+      "end": 536.59,
+      "duration": 1.0900000000000318,
+      "before": "input.",
+      "after": "Then",
+      "visual_change_first_to_middle": 0.0032564344005021973,
+      "visual_change_middle_to_last": 0.012309714375392342,
+      "visual_change_first_to_last": 0.012917843691148775,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.7100000000000318,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 43,
+      "start": 591.16,
+      "end": 592.08,
+      "duration": 0.9200000000000728,
+      "before": "dominance.",
+      "after": "What",
+      "visual_change_first_to_middle": 0.007248509102322662,
+      "visual_change_middle_to_last": 0.007675180477087257,
+      "visual_change_first_to_last": 0.010696209981167609,
+      "kept_seconds": 0.9200000000000728,
+      "removed_seconds": 0.0,
+      "reason": "natural pause"
+    },
+    {
+      "index": 44,
+      "start": 596.76,
+      "end": 599.98,
+      "duration": 3.2200000000000273,
+      "before": "input.",
+      "after": "Now",
+      "visual_change_first_to_middle": 0.11876667451349655,
+      "visual_change_middle_to_last": 2.6611935028248586,
+      "visual_change_first_to_last": 2.6143135985561834,
+      "kept_seconds": 2.35,
+      "removed_seconds": 0.8700000000000272,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 45,
+      "start": 609.9,
+      "end": 611.35,
+      "duration": 1.4500000000000455,
+      "before": "away.",
+      "after": "And",
+      "visual_change_first_to_middle": 0.7981599183929693,
+      "visual_change_middle_to_last": 0.7560469632768362,
+      "visual_change_first_to_last": 0.5967170825486503,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.0700000000000456,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 46,
+      "start": 619.83,
+      "end": 621.18,
+      "duration": 1.349999999999909,
+      "before": "away,",
+      "after": "there",
+      "visual_change_first_to_middle": 0.10203821406151915,
+      "visual_change_middle_to_last": 0.04114190991839297,
+      "visual_change_first_to_last": 0.11340140458254865,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.969999999999909,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 47,
+      "start": 631.0,
+      "end": 631.98,
+      "duration": 0.9800000000000182,
+      "before": "toward.",
+      "after": "So",
+      "visual_change_first_to_middle": 0.0031093063402385436,
+      "visual_change_middle_to_last": 0.005007258317639674,
+      "visual_change_first_to_last": 0.006468730382925298,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.6000000000000182,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 48,
+      "start": 649.01,
+      "end": 650.55,
+      "duration": 1.5399999999999636,
+      "before": "identical.",
+      "after": "A",
+      "visual_change_first_to_middle": 0.009195503766478343,
+      "visual_change_middle_to_last": 0.011093455743879472,
+      "visual_change_first_to_last": 0.01332489799121155,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.1599999999999637,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 49,
+      "start": 667.35,
+      "end": 668.81,
+      "duration": 1.4599999999999227,
+      "before": "option",
+      "after": "separately.",
+      "visual_change_first_to_middle": 0.028533035153797865,
+      "visual_change_middle_to_last": 0.032348556183301944,
+      "visual_change_first_to_last": 0.053407485875706213,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.0799999999999228,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 50,
+      "start": 669.25,
+      "end": 674.21,
+      "duration": 4.960000000000036,
+      "before": "separately.",
+      "after": "Then",
+      "visual_change_first_to_middle": 0.4369703389830508,
+      "visual_change_middle_to_last": 0.0565118879472693,
+      "visual_change_first_to_last": 0.4677053907721281,
+      "kept_seconds": 0.65,
+      "removed_seconds": 4.310000000000036,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 51,
+      "start": 676.45,
+      "end": 677.63,
+      "duration": 1.17999999999995,
+      "before": "model.",
+      "after": "Predict.",
+      "visual_change_first_to_middle": 0.009779111738857501,
+      "visual_change_middle_to_last": 0.05681104833647207,
+      "visual_change_first_to_last": 0.061764359698681735,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.79999999999995,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 52,
+      "start": 681.07,
+      "end": 683.12,
+      "duration": 2.0499999999999545,
+      "before": "evaluate.",
+      "after": "We",
+      "visual_change_first_to_middle": 0.12371998587570622,
+      "visual_change_middle_to_last": 0.4151757689893283,
+      "visual_change_first_to_last": 0.47125608129315755,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.5699999999999545,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 53,
+      "start": 685.5,
+      "end": 687.17,
+      "duration": 1.669999999999959,
+      "before": "see.",
+      "after": "Filling",
+      "visual_change_first_to_middle": 0.3508415725047081,
+      "visual_change_middle_to_last": 0.1400659133709981,
+      "visual_change_first_to_last": 0.3926357501569366,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.2899999999999592,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 54,
+      "start": 726.83,
+      "end": 729.2,
+      "duration": 2.3700000000000045,
+      "before": "up.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.016473438480853735,
+      "visual_change_middle_to_last": 0.0676249607658506,
+      "visual_change_first_to_last": 0.0700623822975518,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.8900000000000046,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 55,
+      "start": 756.78,
+      "end": 760.14,
+      "duration": 3.3600000000000136,
+      "before": "it.",
+      "after": "Although",
+      "visual_change_first_to_middle": 3.3007052338355303,
+      "visual_change_middle_to_last": 0.204493290960452,
+      "visual_change_first_to_last": 3.2774737131198997,
+      "kept_seconds": 2.55,
+      "removed_seconds": 0.8100000000000138,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 56,
+      "start": 791.76,
+      "end": 792.76,
+      "duration": 1.0,
+      "before": "apart.",
+      "after": "Okay,",
+      "visual_change_first_to_middle": 0.007841925612052731,
+      "visual_change_middle_to_last": 9.132341690207156,
+      "visual_change_first_to_last": 9.131542294413057,
+      "kept_seconds": 0.9,
+      "removed_seconds": 0.09999999999999998,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 57,
+      "start": 796.36,
+      "end": 797.75,
+      "duration": 1.3899999999999864,
+      "before": "dashboard.",
+      "after": "Okay,",
+      "visual_change_first_to_middle": 135.1038184635907,
+      "visual_change_middle_to_last": 0.058606010671688635,
+      "visual_change_first_to_last": 135.12867329723792,
+      "kept_seconds": 1.25,
+      "removed_seconds": 0.13999999999998636,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 58,
+      "start": 817.82,
+      "end": 818.8,
+      "duration": 0.9799999999999045,
+      "before": "recommendation.",
+      "after": "Next,",
+      "visual_change_first_to_middle": 0.03605127903327056,
+      "visual_change_middle_to_last": 16.61306791431262,
+      "visual_change_first_to_last": 16.613847693032014,
+      "kept_seconds": 0.9,
+      "removed_seconds": 0.07999999999990448,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 59,
+      "start": 821.36,
+      "end": 826.92,
+      "duration": 5.559999999999945,
+      "before": "This",
+      "after": "is",
+      "visual_change_first_to_middle": 8.927441344946642,
+      "visual_change_middle_to_last": 20.45729362837414,
+      "visual_change_first_to_last": 25.95299258474576,
+      "kept_seconds": 4.7,
+      "removed_seconds": 0.8599999999999453,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 60,
+      "start": 830.3,
+      "end": 836.31,
+      "duration": 6.009999999999991,
+      "before": "JSON.",
+      "after": "Let's",
+      "visual_change_first_to_middle": 0.08472124136848713,
+      "visual_change_middle_to_last": 36.20397343848085,
+      "visual_change_first_to_last": 36.203497724419336,
+      "kept_seconds": 5.0,
+      "removed_seconds": 1.009999999999991,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 61,
+      "start": 837.87,
+      "end": 841.77,
+      "duration": 3.8999999999999773,
+      "before": "well.",
+      "after": "And",
+      "visual_change_first_to_middle": 33.834348516949156,
+      "visual_change_middle_to_last": 0.2762476459510358,
+      "visual_change_first_to_last": 33.90886397520402,
+      "kept_seconds": 3.1,
+      "removed_seconds": 0.7999999999999772,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 62,
+      "start": 851.97,
+      "end": 854.65,
+      "duration": 2.67999999999995,
+      "before": "away.",
+      "after": "Last",
+      "visual_change_first_to_middle": 0.052554143126177025,
+      "visual_change_middle_to_last": 0.040048258003766476,
+      "visual_change_first_to_last": 0.06822818581293158,
+      "kept_seconds": 0.48,
+      "removed_seconds": 2.19999999999995,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 63,
+      "start": 855.29,
+      "end": 856.19,
+      "duration": 0.900000000000091,
+      "before": "piece,",
+      "after": "one",
+      "visual_change_first_to_middle": 0.002864092906465788,
+      "visual_change_middle_to_last": 0.007969436597614564,
+      "visual_change_first_to_last": 0.008401012241054613,
+      "kept_seconds": 0.900000000000091,
+      "removed_seconds": 0.0,
+      "reason": "natural pause"
+    },
+    {
+      "index": 64,
+      "start": 869.79,
+      "end": 871.58,
+      "duration": 1.7900000000000773,
+      "before": "me",
+      "after": "go",
+      "visual_change_first_to_middle": 0.016836354362837414,
+      "visual_change_middle_to_last": 0.012147873509102323,
+      "visual_change_first_to_last": 0.018489092906465786,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.4100000000000774,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 65,
+      "start": 874.78,
+      "end": 875.87,
+      "duration": 1.0900000000000318,
+      "before": "and",
+      "after": "do",
+      "visual_change_first_to_middle": 0.26660585373509105,
+      "visual_change_middle_to_last": 0.08423081450094162,
+      "visual_change_first_to_last": 0.2825005885122411,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.7100000000000318,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 66,
+      "start": 876.35,
+      "end": 878.7,
+      "duration": 2.3500000000000227,
+      "before": "this.",
+      "after": "Then",
+      "visual_change_first_to_middle": 0.18541568581293158,
+      "visual_change_middle_to_last": 0.12620645009416195,
+      "visual_change_first_to_last": 0.18587668706842436,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.8700000000000228,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 67,
+      "start": 878.7,
+      "end": 881.01,
+      "duration": 2.3099999999999454,
+      "before": "Then",
+      "after": "let's",
+      "visual_change_first_to_middle": 0.06486385750156937,
+      "visual_change_middle_to_last": 0.0940344475831764,
+      "visual_change_first_to_last": 0.14567639673571878,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.8299999999999454,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 68,
+      "start": 882.45,
+      "end": 884.62,
+      "duration": 2.169999999999959,
+      "before": "this",
+      "after": "spelling",
+      "visual_change_first_to_middle": 0.06344652385436284,
+      "visual_change_middle_to_last": 0.012687343063402386,
+      "visual_change_first_to_last": 0.06735522598870057,
+      "kept_seconds": 0.48,
+      "removed_seconds": 1.689999999999959,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 69,
+      "start": 885.72,
+      "end": 891.95,
+      "duration": 6.230000000000018,
+      "before": "error.",
+      "after": "So",
+      "visual_change_first_to_middle": 0.37322465473948524,
+      "visual_change_middle_to_last": 0.26324642969240425,
+      "visual_change_first_to_last": 0.34431399089767734,
+      "kept_seconds": 4.8,
+      "removed_seconds": 1.4300000000000184,
+      "reason": "visual demonstration"
+    },
+    {
+      "index": 70,
+      "start": 922.27,
+      "end": 923.39,
+      "duration": 1.1200000000000045,
+      "before": "changes.",
+      "after": "And",
+      "visual_change_first_to_middle": 0.1012682438794727,
+      "visual_change_middle_to_last": 0.009607462335216572,
+      "visual_change_first_to_last": 0.10604009730069053,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.7400000000000045,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 71,
+      "start": 927.47,
+      "end": 929.26,
+      "duration": 1.7899999999999636,
+      "before": "runs.",
+      "after": "Okay.",
+      "visual_change_first_to_middle": 0.009460334274952919,
+      "visual_change_middle_to_last": 0.06286291588198367,
+      "visual_change_first_to_last": 0.06855677181418707,
+      "kept_seconds": 0.38,
+      "removed_seconds": 1.4099999999999637,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 72,
+      "start": 971.64,
+      "end": 973.0,
+      "duration": 1.3600000000000136,
+      "before": "data.",
+      "after": "Second",
+      "visual_change_first_to_middle": 0.010205783113622097,
+      "visual_change_middle_to_last": 0.00738092435655995,
+      "visual_change_first_to_last": 0.009170982423101067,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.9800000000000136,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 73,
+      "start": 1013.96,
+      "end": 1015.15,
+      "duration": 1.1899999999999409,
+      "before": "project.",
+      "after": "The",
+      "visual_change_first_to_middle": 0.09053279974890144,
+      "visual_change_middle_to_last": 0.09876706685499058,
+      "visual_change_first_to_last": 0.05125451192718142,
+      "kept_seconds": 0.38,
+      "removed_seconds": 0.8099999999999409,
+      "reason": "speech hesitation"
+    },
+    {
+      "index": 74,
+      "start": 1052.83,
+      "end": 1054.53,
+      "duration": 1.7000000000000455,
+      "before": "event.",
+      "after": "Okay,",
+      "visual_change_first_to_middle": 0.009175886691776523,
+      "visual_change_middle_to_last": 54.985449034839924,
+      "visual_change_first_to_last": 54.985267576898934,
+      "kept_seconds": 1.55,
+      "removed_seconds": 0.15000000000004543,
+      "reason": "visual demonstration"
+    }
+  ],
+  "cuts": [
+    {
+      "start": 35.7748,
+      "end": 36.6548
+    },
+    {
+      "start": 39.653,
+      "end": 40.083
+    },
+    {
+      "start": 68.7548,
+      "end": 69.73479999999999
+    },
+    {
+      "start": 85.2608,
+      "end": 86.84079999999999
+    },
+    {
+      "start": 90.866,
+      "end": 91.176
+    },
+    {
+      "start": 97.12480000000001,
+      "end": 97.8048
+    },
+    {
+      "start": 120.4208,
+      "end": 122.2208
+    },
+    {
+      "start": 141.8748,
+      "end": 142.6148
+    },
+    {
+      "start": 144.3748,
+      "end": 145.0748
+    },
+    {
+      "start": 146.9148,
+      "end": 147.87480000000002
+    },
+    {
+      "start": 154.7748,
+      "end": 156.1348
+    },
+    {
+      "start": 180.0148,
+      "end": 180.7748
+    },
+    {
+      "start": 183.6548,
+      "end": 184.8348
+    },
+    {
+      "start": 208.1348,
+      "end": 208.7748
+    },
+    {
+      "start": 219.3948,
+      "end": 220.37480000000002
+    },
+    {
+      "start": 224.19480000000001,
+      "end": 225.1748
+    },
+    {
+      "start": 229.157,
+      "end": 229.357
+    },
+    {
+      "start": 240.361,
+      "end": 240.49099999999999
+    },
+    {
+      "start": 243.5248,
+      "end": 245.0848
+    },
+    {
+      "start": 263.4108,
+      "end": 265.32079999999996
+    },
+    {
+      "start": 283.146,
+      "end": 283.57599999999996
+    },
+    {
+      "start": 294.14480000000003,
+      "end": 294.89480000000003
+    },
+    {
+      "start": 299.0948,
+      "end": 300.6948
+    },
+    {
+      "start": 305.024,
+      "end": 305.354
+    },
+    {
+      "start": 312.2048,
+      "end": 313.3548
+    },
+    {
+      "start": 316.1208,
+      "end": 318.5608
+    },
+    {
+      "start": 330.8748,
+      "end": 331.6548
+    },
+    {
+      "start": 369.00079999999997,
+      "end": 371.3408
+    },
+    {
+      "start": 387.865,
+      "end": 388.315
+    },
+    {
+      "start": 408.3148,
+      "end": 409.2548
+    },
+    {
+      "start": 417.0348,
+      "end": 417.89480000000003
+    },
+    {
+      "start": 428.33480000000003,
+      "end": 429.4948
+    },
+    {
+      "start": 436.721,
+      "end": 437.161
+    },
+    {
+      "start": 448.805,
+      "end": 449.195
+    },
+    {
+      "start": 451.68399999999997,
+      "end": 452.004
+    },
+    {
+      "start": 453.36100000000005,
+      "end": 453.641
+    },
+    {
+      "start": 464.496,
+      "end": 465.536
+    },
+    {
+      "start": 472.6348,
+      "end": 473.9648
+    },
+    {
+      "start": 516.7108000000001,
+      "end": 518.8608
+    },
+    {
+      "start": 535.6748,
+      "end": 536.3848
+    },
+    {
+      "start": 597.841,
+      "end": 598.711
+    },
+    {
+      "start": 610.0748,
+      "end": 611.1448
+    },
+    {
+      "start": 620.0048,
+      "end": 620.9748
+    },
+    {
+      "start": 631.1748,
+      "end": 631.7748
+    },
+    {
+      "start": 649.1848,
+      "end": 650.3448
+    },
+    {
+      "start": 667.5248,
+      "end": 668.6048
+    },
+    {
+      "start": 669.549,
+      "end": 673.859
+    },
+    {
+      "start": 676.6248,
+      "end": 677.4248
+    },
+    {
+      "start": 681.2908000000001,
+      "end": 682.8608
+    },
+    {
+      "start": 685.6748,
+      "end": 686.9648
+    },
+    {
+      "start": 727.0508000000001,
+      "end": 728.9408000000001
+    },
+    {
+      "start": 757.953,
+      "end": 758.763
+    },
+    {
+      "start": 792.174,
+      "end": 792.274
+    },
+    {
+      "start": 796.9350000000001,
+      "end": 797.075
+    },
+    {
+      "start": 818.234,
+      "end": 818.314
+    },
+    {
+      "start": 823.522,
+      "end": 824.382
+    },
+    {
+      "start": 832.5999999999999,
+      "end": 833.6099999999999
+    },
+    {
+      "start": 839.296,
+      "end": 840.096
+    },
+    {
+      "start": 852.1908000000001,
+      "end": 854.3908
+    },
+    {
+      "start": 869.9648,
+      "end": 871.3748
+    },
+    {
+      "start": 874.9548,
+      "end": 875.6648
+    },
+    {
+      "start": 876.5708000000001,
+      "end": 878.4408000000001
+    },
+    {
+      "start": 878.9208000000001,
+      "end": 880.7508
+    },
+    {
+      "start": 882.6708000000001,
+      "end": 884.3608
+    },
+    {
+      "start": 887.928,
+      "end": 889.3580000000001
+    },
+    {
+      "start": 922.4448,
+      "end": 923.1848
+    },
+    {
+      "start": 927.6448,
+      "end": 929.0548
+    },
+    {
+      "start": 971.8148,
+      "end": 972.7948
+    },
+    {
+      "start": 1014.1348,
+      "end": 1014.9448
+    },
+    {
+      "start": 1053.543,
+      "end": 1053.693
+    }
+  ]
+}

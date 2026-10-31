@@ -3,67 +3,66 @@
 **Project:** SG Commute Pulse — calendar-aware Singapore commute recommender
 **Author:** DLim86 · SIT Data Engineering, Week 2 Assessment
 
-These five bullets are the content for the submitted PDF. Every claim below was
-verified against running code, not documentation.
+These five bullets are the content for the submitted PDF. Written in plain professional English:
+a non-technical reader should understand the achievement, a technical assessor should still see the
+evidence. Every claim was verified against running code, not documentation.
 
 ---
 
-**1 — Problem and outcome**
+**1 — What it does**
 
-Built a calendar-aware commute recommender that answers a single question — *when do I
-need to leave?* — by joining a user's next Google Calendar event to live Singapore
-transport and weather data, replacing a three-app manual check with one ranked
-leave-by recommendation delivered through a live dashboard and a REST API.
+Built a commute recommender that reads my next Google Calendar event and answers one question:
+when do I need to leave? It replaces checking three separate apps with a single ranked leave-by
+time, delivered on a live dashboard and through a REST API.
 
-**2 — End-to-end data pipeline**
+**2 — The data pipeline**
 
-Engineered a five-source ingestion pipeline (Google Calendar via OAuth2, OneMap
-geocoding and routing, LTA DataMall real-time bus arrivals and rail disruption alerts,
-data.gov.sg weather, configured-postal origin with IP-geolocation fallback) that lands
-date-partitioned Parquet and loads a
-typed nine-table DuckDB store, then ranks three route options and derives the leave-by
-time in a SQL view using `ROW_NUMBER()` and `MIN() OVER (PARTITION BY …)` window
-functions with a weather-based ranking penalty.
+Built a pipeline that combines five sources — Google Calendar, OneMap geocoding and routing, LTA
+live bus arrivals and train alerts, data.gov.sg weather, and a configured origin location. Raw
+pulls are saved as dated Parquet files and the cleaned data is loaded into a nine-table DuckDB
+database, where a SQL view ranks up to three routes using window functions and works out the
+leave-by time, pushing rainy routes with long walks down the ranking.
 
-**3 — Production robustness and containerisation**
+**3 — Making it reliable**
 
-Hardened the pipeline with exponential-backoff retries (3 attempts, 1/2/4 s), idempotent
-upserts proven by re-running ingestion and confirming unchanged row counts, Singapore
-coordinate-bounds validation, graceful degradation from expired OAuth credentials to a
-time-of-day fallback destination, and a `pipeline_runs` monitoring table capturing
-status, row counts, duration and errors per source; containerised the runtime as three
-Docker Compose services over a shared named-volume DuckDB, with all API keys and OAuth
-tokens excluded from the image and mounted at runtime (verified by inspecting the built
-image filesystem).
+Made the pipeline safe to run unattended: failed API calls retry three times with waits of 1, 2
+and 4 seconds; re-running ingestion replaces rows instead of duplicating them, proven by unchanged
+row counts; coordinates are checked against Singapore's bounds; and every run is logged with row
+counts, duration and errors. Packaged the system as three Docker services sharing one database
+volume, with all keys and tokens kept out of the image and mounted at runtime.
 
-**4 — Machine learning and real-time output**
+**4 — Finding and fixing a modelling mistake**
 
-Diagnosed target-proxy dominance in an initial duration model — the routing engine's
-own estimate carried 0.875 feature importance because the training target was itself
-largely derived from that baseline, so the model re-derived the schedule rather than
-learning contextual delay — and redesigned it to predict the *residual delay* over that
-baseline instead of the total journey, cutting that feature's importance to 0.05 and
-removing a hard prediction ceiling; engineered `bus_headway_gap`
-(`next_bus2_mins − next_bus_mins`) as a crowd-buildup signal feeding both a
-`RandomForestRegressor` for delay and a `RandomForestClassifier` for bus crowding,
-scoring all three route options individually and refreshing a Streamlit dashboard and
-FastAPI endpoints every 60 seconds.
+Found that my first model was mostly copying its own input: it predicted total journey time while
+being given the routing engine's journey time, which carried 87.5% of the model's importance and
+also capped predictions for long routes. I changed it to predict only the extra delay on top of
+that estimate, cutting the input to about 5% and removing the ceiling. I also built
+`bus_headway_gap` — the gap between the next bus and the one after it — as a crowding signal
+feeding a delay model and a bus-crowding model that score all three routes separately.
 
-**5 — Measurable evaluation and monitoring**
+**5 — Measuring whether the model earns its place**
 
-Implemented a once-daily automated MLOps evaluation computing rolling 7-day MAE against
-available outcome data and a no-ML OneMap baseline, with `actual_source` distinguishing
-hand-logged journey observations from reconstructed proxies; evaluation results are
-written to pipeline monitoring and trigger a dashboard warning when MAE exceeds the
-configured 10-minute threshold.
+Built a daily evaluation that measures the model's average error over a rolling seven days and
+compares it against using no model at all, with every outcome recording whether it was hand-logged
+or reconstructed. It currently reports 6.1 minutes against a 10-minute warning threshold, and shows
+the model is not yet beating the plain routing baseline at 3.7 minutes — a gap I traced to the
+baseline being scored only on reconstructed outcomes derived from its own schedule.
 
 ---
 
 ## Notes for the PDF (not for inclusion)
 
-- Bullet 4 is the strongest differentiator: it shows a defect found by measurement, a
-  redesign, and a measured improvement. Keep the two numbers.
+- Bullet 4 is still the strongest: a defect found by measurement, a redesign, and a measured
+  improvement. Keep both numbers (87.5% and about 5%).
 - `bus_headway_gap` is the one genuinely original feature — keep it named.
-- Nothing here claims GPS ground truth, a formal star schema, replayable raw archives,
-  or that one command starts Airflow. Those claims were removed after verification.
+- **Bullet 5 was rewritten on 1 Sep 2026.** The hand-logged actuals were corrected by −9 minutes
+  and `model.py --evaluate` was re-run. The real output is now: model MAE **6.1 min** over 9
+  outcomes, OneMap-only baseline MAE **3.7 min** over 3 outcomes. The old "16.3 min MAE with an
+  active drift warning" is no longer true — there is no drift warning, and the honest headline is
+  that the model does not yet beat the baseline.
+- Reporting that the model loses to the baseline is deliberate. The comparison was built into the
+  evaluator on purpose, and the diagnosis (the baseline is scored only on outcomes reconstructed
+  from its own schedule) is the part that shows analytical judgement.
+- Nothing here claims GPS ground truth, a formal star schema, replayable raw archives, or that one
+  command starts Airflow.
 - If a bullet must be cut for length, cut bullet 1 and open with bullet 2.
